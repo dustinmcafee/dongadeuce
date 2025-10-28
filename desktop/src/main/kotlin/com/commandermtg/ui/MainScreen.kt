@@ -20,11 +20,11 @@ fun MainScreen(
     when (uiState.currentScreen) {
         Screen.Menu -> MenuScreen(
             viewModel = menuViewModel,
-            loadedDeckName = uiState.loadedDeck?.commander?.name
+            uiState = uiState
         )
         Screen.HostLobby -> HostLobbyScreen(viewModel = menuViewModel)
         Screen.JoinLobby -> JoinLobbyScreen(viewModel = menuViewModel)
-        Screen.Game -> GameScreen()
+        Screen.Game -> GameScreen(loadedDeck = uiState.loadedDeck)
     }
 
     // Show error snackbar if there's an error
@@ -45,7 +45,7 @@ fun MainScreen(
 @Composable
 fun MenuScreen(
     viewModel: MenuViewModel,
-    loadedDeckName: String?
+    uiState: com.commandermtg.viewmodel.MenuUiState
 ) {
     Box(
         modifier = Modifier.fillMaxSize(),
@@ -62,8 +62,26 @@ fun MenuScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
+            // Show loading progress
+            if (uiState.isLoading) {
+                Card(
+                    modifier = Modifier.width(300.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        CircularProgressIndicator(modifier = Modifier.size(32.dp))
+                        Text(uiState.loadingProgress, style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
+            }
             // Show loaded deck info
-            if (loadedDeckName != null) {
+            else if (uiState.loadedDeck != null) {
                 Card(
                     modifier = Modifier.width(300.dp),
                     colors = CardDefaults.cardColors(
@@ -75,7 +93,8 @@ fun MenuScreen(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text("Deck Loaded", style = MaterialTheme.typography.labelMedium)
-                        Text(loadedDeckName, style = MaterialTheme.typography.titleMedium)
+                        Text(uiState.loadedDeck.commander.name, style = MaterialTheme.typography.titleMedium)
+                        Text("${uiState.loadedDeck.totalCards} cards", style = MaterialTheme.typography.bodySmall)
                     }
                 }
             }
@@ -85,7 +104,7 @@ fun MenuScreen(
             Button(
                 onClick = { viewModel.startHosting() },
                 modifier = Modifier.width(200.dp),
-                enabled = loadedDeckName != null
+                enabled = uiState.loadedDeck != null && !uiState.isLoading
             ) {
                 Text("Host Game")
             }
@@ -93,7 +112,7 @@ fun MenuScreen(
             Button(
                 onClick = { viewModel.navigateToJoin() },
                 modifier = Modifier.width(200.dp),
-                enabled = loadedDeckName != null
+                enabled = uiState.loadedDeck != null && !uiState.isLoading
             ) {
                 Text("Join Game")
             }
@@ -109,7 +128,8 @@ fun MenuScreen(
                         viewModel.loadDeck(fileChooser.selectedFile.absolutePath)
                     }
                 },
-                modifier = Modifier.width(200.dp)
+                modifier = Modifier.width(200.dp),
+                enabled = !uiState.isLoading
             ) {
                 Text("Load Deck")
             }

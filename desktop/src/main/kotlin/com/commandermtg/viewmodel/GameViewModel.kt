@@ -112,6 +112,15 @@ class GameViewModel {
     }
 
     /**
+     * Draw starting hand (7 cards)
+     */
+    fun drawStartingHand(playerId: String, cardCount: Int = 7) {
+        repeat(cardCount) {
+            drawCard(playerId)
+        }
+    }
+
+    /**
      * Update life total for a player
      */
     fun updateLife(playerId: String, newLife: Int) {
@@ -200,6 +209,14 @@ class GameViewModel {
     fun getCardCount(playerId: String, zone: Zone): Int {
         val gameState = _uiState.value.gameState ?: return 0
         return gameState.getPlayerCards(playerId, zone).size
+    }
+
+    /**
+     * Get card instances in a specific zone for a player
+     */
+    fun getCards(playerId: String, zone: Zone): List<CardInstance> {
+        val gameState = _uiState.value.gameState ?: return emptyList()
+        return gameState.getPlayerCards(playerId, zone)
     }
 
     /**

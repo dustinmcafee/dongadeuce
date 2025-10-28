@@ -1,11 +1,16 @@
 package com.commandermtg.viewmodel
 
+import com.commandermtg.api.ScryfallApi
 import com.commandermtg.game.DeckParser
+import com.commandermtg.models.Card
 import com.commandermtg.models.Deck
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import java.io.File
 
 /**
@@ -19,6 +24,7 @@ data class MenuUiState(
     val serverAddress: String = "",
     val serverPort: Int = 8080,
     val isLoading: Boolean = false,
+    val loadingProgress: String = "",
     val error: String? = null,
     val currentScreen: Screen = Screen.Menu
 )
@@ -34,6 +40,9 @@ class MenuViewModel {
     private val _uiState = MutableStateFlow(MenuUiState())
     val uiState: StateFlow<MenuUiState> = _uiState.asStateFlow()
 
+    private val viewModelScope = CoroutineScope(Dispatchers.IO)
+    private val scryfallApi = ScryfallApi()
+
     /**
      * Update player name
      */
@@ -42,38 +51,67 @@ class MenuViewModel {
     }
 
     /**
-     * Load a deck from file
+     * Load a deck from file and fetch card data from Scryfall
      */
     fun loadDeck(filePath: String) {
-        _uiState.update { it.copy(isLoading = true, error = null) }
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, loadingProgress = "Parsing deck file...", error = null) }
 
-        try {
-            val file = File(filePath)
-            if (!file.exists()) {
+            try {
+                val file = File(filePath)
+                if (!file.exists()) {
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            loadingProgress = "",
+                            error = "File not found: $filePath"
+                        )
+                    }
+                    return@launch
+                }
+
+                // Parse the deck file
+                val parsedDeck = DeckParser.parseCockatriceFile(file)
+
+                _uiState.update { it.copy(loadingProgress = "Fetching card data from Scryfall...") }
+
+                // Fetch commander data
+                val commanderWithData = scryfallApi.getCardByName(parsedDeck.commander.name)
+                    ?: parsedDeck.commander
+
+                // Fetch card data for all cards in deck
+                val cardsWithData = mutableListOf<Card>()
+                parsedDeck.cards.forEachIndexed { index, card ->
+                    val progress = "Loading cards... (${index + 1}/${parsedDeck.cards.size})"
+                    _uiState.update { it.copy(loadingProgress = progress) }
+
+                    val cardWithData = scryfallApi.getCardByName(card.name) ?: card
+                    cardsWithData.add(cardWithData)
+                }
+
+                // Create deck with fetched data
+                val deckWithData = Deck(
+                    name = parsedDeck.name,
+                    commander = commanderWithData,
+                    cards = cardsWithData
+                )
+
+                _uiState.update {
+                    it.copy(
+                        loadedDeck = deckWithData,
+                        isLoading = false,
+                        loadingProgress = "",
+                        error = null
+                    )
+                }
+            } catch (e: Exception) {
                 _uiState.update {
                     it.copy(
                         isLoading = false,
-                        error = "File not found: $filePath"
+                        loadingProgress = "",
+                        error = "Failed to load deck: ${e.message}"
                     )
                 }
-                return
-            }
-
-            val deck = DeckParser.parseCockatriceFile(file)
-
-            _uiState.update {
-                it.copy(
-                    loadedDeck = deck,
-                    isLoading = false,
-                    error = null
-                )
-            }
-        } catch (e: Exception) {
-            _uiState.update {
-                it.copy(
-                    isLoading = false,
-                    error = "Failed to load deck: ${e.message}"
-                )
             }
         }
     }

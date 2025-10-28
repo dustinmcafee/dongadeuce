@@ -7,13 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.1] - 2025-10-27
+
 ### Added
-- Scryfall API integration for card data
-- Deck loading populates game state with actual cards
-- Draw card functionality with UI button
-- Hand view to see cards in your hand
-- Basic card actions (play to battlefield, tap/untap)
-- Starting hand draw (7 cards + mulligan)
+- Scryfall API integration for fetching card data (mana cost, type, oracle text, images)
+- Deck loading now populates game state with actual CardInstance objects
+- Automatic starting hand draw (7 cards for each player)
+- Draw card button in player area
+- Hand view dialog showing all cards in hand with card details
+- Play card from hand to battlefield functionality
+- Loading progress indicator during deck/card data fetching
+- Rate limiting for Scryfall API requests (100ms between calls)
+
+### Changed
+- MenuViewModel now uses coroutines to fetch card data asynchronously
+- Cards now contain full data from Scryfall (not just names)
+- Game initialization automatically loads deck and draws starting hands
+
+### Technical Details
+- Added Ktor content negotiation and JSON serialization dependencies
+- Created ScryfallApi client with proper error handling
+- Enhanced GameViewModel with `drawStartingHand` and `getCards` methods
+- HandDialog composable for viewing and playing cards from hand
 
 ## [1.0.0] - 2025-10-27
 
