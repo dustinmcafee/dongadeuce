@@ -151,13 +151,16 @@ fun DraggableBattlefieldGrid(
                             .offset { finalOffset }
                             .then(
                                 if (canDrag) {
-                                    Modifier.pointerInput(card.instanceId) {
+                                    Modifier.pointerInput(card.instanceId, cardPositions) {
                                         detectDragGestures(
                                             onDragStart = { _ ->
                                                 draggedCardId = card.instanceId
                                                 dragOffset = Offset.Zero
-                                                // Capture the starting pixel position
-                                                dragStartPixelPos = Offset(xPos, yPos)
+                                                // Look up current position from map and calculate pixel position
+                                                val currentPos = cardPositions[card.instanceId] ?: Pair(0, 0)
+                                                val startX = currentPos.first * cellWidth
+                                                val startY = currentPos.second * cellHeight
+                                                dragStartPixelPos = Offset(startX, startY)
                                             },
                                             onDrag = { change, dragAmount ->
                                                 change.consume()

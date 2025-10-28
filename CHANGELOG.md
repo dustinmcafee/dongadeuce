@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.10.5] - 2025-10-28
+
+### Fixed
+- **Grid Drop Position Closure Bug** - Fixed stale closure capturing in pointerInput
+  - Added cardPositions to pointerInput key to recreate gesture detector on updates
+  - Gesture callbacks now always access current cardPositions map
+  - Cards now snap to correct grid position based on their actual current location
+  - Fixes issue where cards would drop at wrong position on subsequent drags
+
+### Technical Details
+- Changed pointerInput key from (card.instanceId) to (card.instanceId, cardPositions)
+- Ensures gesture detector is recreated when cardPositions map changes
+- Prevents stale closure from capturing old cardPositions values
+
 ## [2.10.4] - 2025-10-28
 
 ### Fixed
