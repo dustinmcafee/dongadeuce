@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.3.0] - 2025-10-27
+
+### Added
+- **Comprehensive Input Validation**
+  - DeckParser now validates file format, card quantities, and card names
+  - Added line number tracking for better error messages
+  - Validates commander quantity must be exactly 1
+  - Validates deck size is exactly 99 cards (excluding commander)
+  - File existence, readability, and path validation
+- **Input Validation for Game Operations**
+  - Counter operations validate positive amounts and non-blank types
+  - Commander damage validates non-negative values
+  - All validation uses descriptive error messages
+
+### Changed
+- **Improved Error Handling in Deck Loading**
+  - Separate error handling for parse vs file read errors
+  - More specific error messages for user feedback
+  - Graceful handling of invalid deck files
+- **Enhanced DeckParser Validation**
+  - Empty content validation
+  - Positive quantity validation with line numbers
+  - Non-empty card name validation
+  - File path validation (not blank, exists, readable)
+
+### Technical Details
+- All validation uses `require()` with descriptive messages
+- Error messages include context (line numbers, values)
+- Improves user experience with clear feedback
+- Prevents invalid state in game logic
+
 ## [2.2.0] - 2025-10-27
 
 ### Added

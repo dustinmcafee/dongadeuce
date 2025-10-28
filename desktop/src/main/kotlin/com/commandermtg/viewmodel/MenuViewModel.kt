@@ -66,20 +66,28 @@ class MenuViewModel {
             _uiState.update { it.copy(isLoading = true, loadingProgress = "Parsing deck file...", error = null) }
 
             try {
-                val file = File(filePath)
-                if (!file.exists()) {
+                // Parse the deck file (validation is now in DeckParser)
+                val parsedDeck = try {
+                    DeckParser.parseTextFile(filePath)
+                } catch (e: IllegalArgumentException) {
                     _uiState.update {
                         it.copy(
                             isLoading = false,
                             loadingProgress = "",
-                            error = "File not found: $filePath"
+                            error = "Invalid deck file: ${e.message}"
+                        )
+                    }
+                    return@launch
+                } catch (e: Exception) {
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            loadingProgress = "",
+                            error = "Failed to read deck file: ${e.message}"
                         )
                     }
                     return@launch
                 }
-
-                // Parse the deck file
-                val parsedDeck = DeckParser.parseTextFile(file)
 
                 _uiState.update { it.copy(loadingProgress = "Fetching card data from Scryfall...") }
 

@@ -345,6 +345,8 @@ class GameViewModel {
      * Update commander damage dealt to a player
      */
     fun updateCommanderDamage(playerId: String, commanderId: String, newDamage: Int) {
+        require(newDamage >= 0) { "Commander damage cannot be negative, got $newDamage" }
+
         val currentState = _uiState.value
         val gameState = currentState.gameState ?: return
 
@@ -359,7 +361,11 @@ class GameViewModel {
                 player.copy(
                     commanderDamage = player.commanderDamage + (commanderId to newDamage),
                     hasLost = player.commanderDamage.any { (id, damage) ->
-                        if (id == commanderId) newDamage >= 21 else damage >= 21
+                        if (id == commanderId) {
+                            newDamage >= GameConstants.COMMANDER_DAMAGE_THRESHOLD
+                        } else {
+                            damage >= GameConstants.COMMANDER_DAMAGE_THRESHOLD
+                        }
                     }
                 )
             } else {
@@ -424,6 +430,9 @@ class GameViewModel {
      * Add counter(s) to a card
      */
     fun addCounter(cardId: String, type: String, amount: Int = 1) {
+        require(type.isNotBlank()) { "Counter type cannot be blank" }
+        require(amount > 0) { "Counter amount must be positive, got $amount" }
+
         val currentState = _uiState.value
         val gameState = currentState.gameState ?: return
 
@@ -440,6 +449,9 @@ class GameViewModel {
      * Remove counter(s) from a card
      */
     fun removeCounter(cardId: String, type: String, amount: Int = 1) {
+        require(type.isNotBlank()) { "Counter type cannot be blank" }
+        require(amount > 0) { "Counter amount must be positive, got $amount" }
+
         val currentState = _uiState.value
         val gameState = currentState.gameState ?: return
 
