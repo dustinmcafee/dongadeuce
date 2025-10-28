@@ -657,8 +657,8 @@ fun HotseatPlayerSection(
         if (showTokenCreationDialog) {
             TokenCreationDialog(
                 onDismiss = { showTokenCreationDialog = false },
-                onCreateToken = { tokenName, tokenType, power, toughness, color, quantity ->
-                    viewModel.createToken(player.id, tokenName, tokenType, power, toughness, color, quantity)
+                onCreateToken = { tokenName, tokenType, power, toughness, color, imageUri, quantity ->
+                    viewModel.createToken(player.id, tokenName, tokenType, power, toughness, color, imageUri, quantity)
                 }
             )
         }
@@ -1152,8 +1152,8 @@ fun PlayerArea(
     if (showTokenCreationDialog) {
         TokenCreationDialog(
             onDismiss = { showTokenCreationDialog = false },
-            onCreateToken = { tokenName, tokenType, power, toughness, color, quantity ->
-                viewModel.createToken(player.id, tokenName, tokenType, power, toughness, color, quantity)
+            onCreateToken = { tokenName, tokenType, power, toughness, color, imageUri, quantity ->
+                viewModel.createToken(player.id, tokenName, tokenType, power, toughness, color, imageUri, quantity)
             }
         )
     }
@@ -1696,13 +1696,14 @@ fun HandCardDisplay(
 @Composable
 fun TokenCreationDialog(
     onDismiss: () -> Unit,
-    onCreateToken: (tokenName: String, tokenType: String, power: String?, toughness: String?, color: String, quantity: Int) -> Unit
+    onCreateToken: (tokenName: String, tokenType: String, power: String?, toughness: String?, color: String, imageUri: String?, quantity: Int) -> Unit
 ) {
     var tokenName by remember { mutableStateOf("") }
     var tokenType by remember { mutableStateOf("Creature Token") }
     var power by remember { mutableStateOf("") }
     var toughness by remember { mutableStateOf("") }
     var selectedColor by remember { mutableStateOf("Colorless") }
+    var tokenImageUri by remember { mutableStateOf<String?>(null) }
     var quantity by remember { mutableStateOf("1") }
     var searchQuery by remember { mutableStateOf("") }
     var searchResults by remember { mutableStateOf<List<com.commandermtg.models.Card>>(emptyList()) }
@@ -1788,6 +1789,7 @@ fun TokenCreationDialog(
                                             tokenType = card.type ?: "Creature Token"
                                             power = card.power ?: ""
                                             toughness = card.toughness ?: ""
+                                            tokenImageUri = card.imageUri
                                             selectedColor = when {
                                                 card.colors.isEmpty() -> "Colorless"
                                                 card.colors.size > 1 -> "Multicolor"
@@ -1906,7 +1908,7 @@ fun TokenCreationDialog(
                     val qty = quantity.toIntOrNull()?.coerceAtLeast(1) ?: 1
                     val colorValue = if (selectedColor == "Colorless") "" else selectedColor
 
-                    onCreateToken(name, type, pow, tough, colorValue, qty)
+                    onCreateToken(name, type, pow, tough, colorValue, tokenImageUri, qty)
                     onDismiss()
                 },
                 enabled = tokenName.isNotBlank()

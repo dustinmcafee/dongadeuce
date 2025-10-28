@@ -681,6 +681,7 @@ class GameViewModel {
         power: String?,
         toughness: String?,
         color: String,
+        imageUri: String? = null,
         quantity: Int = 1
     ) {
         val currentState = _uiState.value
@@ -693,7 +694,7 @@ class GameViewModel {
             power = power,
             toughness = toughness,
             colors = if (color.isNotBlank()) listOf(color) else emptyList(),
-            imageUri = null, // Tokens don't have images from Scryfall by default
+            imageUri = imageUri,
             scryfallId = null
         )
 
