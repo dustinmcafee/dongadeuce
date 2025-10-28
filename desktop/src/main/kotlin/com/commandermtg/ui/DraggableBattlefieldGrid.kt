@@ -1,6 +1,5 @@
 package com.commandermtg.ui
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -14,7 +13,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.commandermtg.models.CardInstance
@@ -23,6 +21,7 @@ import kotlin.math.roundToInt
 /**
  * A draggable grid layout for battlefield cards.
  * Allows users to drag and drop cards to rearrange them in a grid.
+ * Only allows dragging cards owned by the current player.
  */
 @Composable
 fun DraggableBattlefieldGrid(
@@ -31,7 +30,8 @@ fun DraggableBattlefieldGrid(
     onCardClick: (CardInstance) -> Unit,
     onContextAction: (CardAction) -> Unit,
     onCardPositionChanged: (String, Int, Int) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    currentPlayerId: String? = null // ID of the player who can drag cards
 ) {
     if (cards.isEmpty()) {
         Box(
@@ -51,6 +51,8 @@ fun DraggableBattlefieldGrid(
     val cardWidth = 168.dp // Max width for tapped cards
     val cardHeight = 168.dp // Max height for tapped cards
     val gridSpacing = 8.dp
+    val cellWidth = cardWidth.value + gridSpacing.value
+    val cellHeight = cardHeight.value + gridSpacing.value
 
     // Track dragging state
     var draggedCardId by remember { mutableStateOf<String?>(null) }
@@ -58,12 +60,11 @@ fun DraggableBattlefieldGrid(
 
     // Container size
     var containerWidth by remember { mutableStateOf(0f) }
-    var containerHeight by remember { mutableStateOf(0f) }
 
     // Calculate grid columns based on container width
     val columns = remember(containerWidth) {
         if (containerWidth > 0) {
-            ((containerWidth / (cardWidth.value + gridSpacing.value)).toInt()).coerceAtLeast(1)
+            ((containerWidth / cellWidth).toInt()).coerceAtLeast(1)
         } else {
             4 // Default
         }
@@ -109,85 +110,120 @@ fun DraggableBattlefieldGrid(
         positionMap
     }
 
+    // Build a map of occupied positions (excluding the dragged card)
+    val occupiedPositions = remember(cardPositions, draggedCardId) {
+        cardPositions.filter { it.key != draggedCardId }.values.toSet()
+    }
+
     Box(
         modifier = modifier
             .onGloballyPositioned { coordinates ->
                 containerWidth = coordinates.size.width.toFloat()
-                containerHeight = coordinates.size.height.toFloat()
             }
-            .verticalScroll(rememberScrollState())
     ) {
-        // Calculate total rows needed
-        val totalRows = (cardPositions.values.maxOfOrNull { it.second } ?: 0) + 1
+        // Calculate total rows needed - limit height to avoid overflow
+        val totalRows = ((cardPositions.values.maxOfOrNull { it.second } ?: 0) + 1).coerceAtMost(10)
 
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height((totalRows * (cardHeight.value + gridSpacing.value)).dp)
+                .heightIn(max = (totalRows * cellHeight).dp)
+                .verticalScroll(rememberScrollState())
         ) {
-            cards.forEach { card ->
-                val position = cardPositions[card.instanceId] ?: Pair(0, 0)
-                val (col, row) = position
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height((totalRows * cellHeight).dp)
+            ) {
+                cards.forEach { card ->
+                    val position = cardPositions[card.instanceId] ?: Pair(0, 0)
+                    val (col, row) = position
 
-                val isDragged = draggedCardId == card.instanceId
+                    val isDragged = draggedCardId == card.instanceId
+                    val canDrag = currentPlayerId != null && card.ownerId == currentPlayerId
 
-                val xPos = col * (cardWidth.value + gridSpacing.value)
-                val yPos = row * (cardHeight.value + gridSpacing.value)
+                    val xPos = col * cellWidth
+                    val yPos = row * cellHeight
 
-                val finalOffset = if (isDragged) {
-                    IntOffset(
-                        (xPos + dragOffset.x).roundToInt(),
-                        (yPos + dragOffset.y).roundToInt()
-                    )
-                } else {
-                    IntOffset(xPos.roundToInt(), yPos.roundToInt())
-                }
+                    val finalOffset = if (isDragged) {
+                        IntOffset(
+                            (xPos + dragOffset.x).roundToInt(),
+                            (yPos + dragOffset.y).roundToInt()
+                        )
+                    } else {
+                        IntOffset(xPos.roundToInt(), yPos.roundToInt())
+                    }
 
-                Box(
-                    modifier = Modifier
-                        .offset { finalOffset }
-                        .pointerInput(card.instanceId) {
-                            detectDragGestures(
-                                onDragStart = {
-                                    draggedCardId = card.instanceId
-                                    dragOffset = Offset.Zero
-                                },
-                                onDrag = { change, dragAmount ->
-                                    change.consume()
-                                    dragOffset += dragAmount
-                                },
-                                onDragEnd = {
-                                    // Calculate new grid position based on final position
-                                    val finalX = (xPos + dragOffset.x).roundToInt()
-                                    val finalY = (yPos + dragOffset.y).roundToInt()
+                    Box(
+                        modifier = Modifier
+                            .offset { finalOffset }
+                            .then(
+                                if (canDrag) {
+                                    Modifier.pointerInput(card.instanceId) {
+                                        detectDragGestures(
+                                            onDragStart = {
+                                                draggedCardId = card.instanceId
+                                                dragOffset = Offset.Zero
+                                            },
+                                            onDrag = { change, dragAmount ->
+                                                change.consume()
+                                                val newOffset = dragOffset + dragAmount
 
-                                    val newCol = ((finalX + (cardWidth.value / 2)) / (cardWidth.value + gridSpacing.value))
-                                        .roundToInt()
-                                        .coerceIn(0, columns - 1)
-                                    val newRow = ((finalY + (cardHeight.value / 2)) / (cardHeight.value + gridSpacing.value))
-                                        .roundToInt()
-                                        .coerceAtLeast(0)
+                                                // Calculate bounds to prevent dragging off screen
+                                                val maxX = (columns - 1) * cellWidth - xPos
+                                                val minX = -xPos
+                                                val maxY = (10 * cellHeight) - yPos // Max 10 rows visible
+                                                val minY = -yPos
 
-                                    // Update card position
-                                    onCardPositionChanged(card.instanceId, newCol, newRow)
+                                                // Constrain offset to keep card on battlefield
+                                                dragOffset = Offset(
+                                                    x = newOffset.x.coerceIn(minX, maxX),
+                                                    y = newOffset.y.coerceIn(minY, maxY)
+                                                )
+                                            },
+                                            onDragEnd = {
+                                                // Calculate new grid position based on final position
+                                                val finalX = xPos + dragOffset.x
+                                                val finalY = yPos + dragOffset.y
 
-                                    // Reset drag state
-                                    draggedCardId = null
-                                    dragOffset = Offset.Zero
-                                },
-                                onDragCancel = {
-                                    draggedCardId = null
-                                    dragOffset = Offset.Zero
+                                                // Calculate target grid cell (center of card)
+                                                val newCol = ((finalX + (cardWidth.value / 2)) / cellWidth)
+                                                    .roundToInt()
+                                                    .coerceIn(0, columns - 1)
+                                                val newRow = ((finalY + (cardHeight.value / 2)) / cellHeight)
+                                                    .roundToInt()
+                                                    .coerceAtLeast(0)
+
+                                                // Check if target position is occupied
+                                                val targetPosition = Pair(newCol, newRow)
+                                                if (!occupiedPositions.contains(targetPosition)) {
+                                                    // Position is free, update card position
+                                                    onCardPositionChanged(card.instanceId, newCol, newRow)
+                                                }
+                                                // If occupied, card snaps back to original position
+
+                                                // Reset drag state
+                                                draggedCardId = null
+                                                dragOffset = Offset.Zero
+                                            },
+                                            onDragCancel = {
+                                                draggedCardId = null
+                                                dragOffset = Offset.Zero
+                                            }
+                                        )
+                                    }
+                                } else {
+                                    Modifier
                                 }
                             )
-                        }
-                ) {
-                    BattlefieldCard(
-                        cardInstance = card,
-                        isLocalPlayer = isLocalPlayer,
-                        onCardClick = onCardClick,
-                        onContextAction = onContextAction
-                    )
+                    ) {
+                        BattlefieldCard(
+                            cardInstance = card,
+                            isLocalPlayer = isLocalPlayer,
+                            onCardClick = onCardClick,
+                            onContextAction = onContextAction
+                        )
+                    }
                 }
             }
         }

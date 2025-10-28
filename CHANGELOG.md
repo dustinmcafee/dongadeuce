@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.9.1] - 2025-10-28
+
+### Fixed
+- **Battlefield Grid Collision Prevention** - Cards can no longer occupy the same grid tile
+  - Prevents overlapping when dragging cards to occupied positions
+  - Cards snap back to original position if target is occupied
+- **Drag-and-Drop Ownership Restrictions** - Players can only drag their own cards
+  - Added currentPlayerId parameter to DraggableBattlefieldGrid
+  - Opponent cards cannot be dragged in any mode
+  - Active player in hotseat mode can only drag their own cards
+- **Improved Drag Positioning Accuracy** - Fixed cards going to wrong tiles
+  - More accurate grid cell calculation using center of card
+  - Consistent cell width/height calculations
+- **Battlefield Height Constraints** - Fixed missing UI composables
+  - Changed battlefield from fixed height to heightIn(min=180dp, max=400dp)
+  - Prevents battlefield from hiding other UI elements
+  - Graveyard, exile, draw button, life, and commander damage now always visible
+- **Drag Boundary Constraints** - Cards cannot be dragged off visible battlefield area
+  - Horizontal dragging constrained to grid columns
+  - Vertical dragging constrained to 10 visible rows
+  - Cards stay within battlefield bounds during drag
+
+### Technical Details
+- Added occupiedPositions set to track filled grid cells
+- Added canDrag check based on card ownership
+- Improved grid position calculation using consistent cellWidth/cellHeight
+- Changed battlefield Card modifiers to use heightIn instead of height
+
 ## [2.9.0] - 2025-10-28
 
 ### Added

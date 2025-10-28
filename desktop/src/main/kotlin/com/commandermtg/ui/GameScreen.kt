@@ -396,7 +396,8 @@ fun HotseatPlayerSection(
                         onCardPositionChanged = { cardId, gridX, gridY ->
                             viewModel.updateCardGridPosition(cardId, gridX, gridY)
                         },
-                        modifier = Modifier.fillMaxSize()
+                        modifier = Modifier.fillMaxSize(),
+                        currentPlayerId = if (isActivePlayer) player.id else null
                     )
                 }
             }
@@ -677,12 +678,12 @@ fun OpponentArea(
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(180.dp),
+                .heightIn(min = 180.dp, max = 400.dp),
             colors = CardDefaults.cardColors(containerColor = Color(0xFF1B5E20))
         ) {
             Box(
                 modifier = Modifier
-                    .fillMaxSize()
+                    .fillMaxWidth()
                     .padding(8.dp)
             ) {
                 DraggableBattlefieldGrid(
@@ -693,7 +694,8 @@ fun OpponentArea(
                     onCardPositionChanged = { cardId, gridX, gridY ->
                         viewModel.updateCardGridPosition(cardId, gridX, gridY)
                     },
-                    modifier = Modifier.fillMaxSize()
+                    modifier = Modifier.fillMaxWidth(),
+                    currentPlayerId = null // Opponent cards cannot be dragged
                 )
             }
         }
@@ -837,12 +839,12 @@ fun PlayerArea(
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(180.dp),
+                .heightIn(min = 180.dp, max = 400.dp),
             colors = CardDefaults.cardColors(containerColor = Color(0xFF1B5E20))
         ) {
             Box(
                 modifier = Modifier
-                    .fillMaxSize()
+                    .fillMaxWidth()
                     .padding(8.dp)
             ) {
                 DraggableBattlefieldGrid(
@@ -853,7 +855,8 @@ fun PlayerArea(
                     onCardPositionChanged = { cardId, gridX, gridY ->
                         viewModel.updateCardGridPosition(cardId, gridX, gridY)
                     },
-                    modifier = Modifier.fillMaxSize()
+                    modifier = Modifier.fillMaxWidth(),
+                    currentPlayerId = player.id // Only this player can drag their cards
                 )
             }
         }
