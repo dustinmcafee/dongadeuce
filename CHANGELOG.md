@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.0] - 2025-10-27
+
+### Added
+- Zone Viewers for Graveyard and Exile zones
+  - GraveyardDialog displays all cards in graveyard with full details
+  - ExileDialog displays all cards in exile zone with full details
+  - Dialogs show card name, mana cost, type, oracle text, and power/toughness
+  - "Return to Hand" button moves cards back to hand
+  - "Return to Battlefield" button puts cards directly onto battlefield
+- Clickable zone cards
+  - Graveyard and Exile zones now have onClick handlers
+  - Click zone to open dialog and view all cards
+  - Works for both local player and opponents
+
+### Changed
+- ZoneCard composable now accepts optional onClick parameter
+- Graveyard and Exile zones are now interactive for all players
+
+### Technical Details
+- Created `ZoneViewers.kt` with GraveyardDialog and ExileDialog
+- Added clickable support to ZoneCard with ripple effect
+- Integrated dialogs into PlayerArea and OpponentArea
+- Zone dialogs scroll when containing many cards
+
 ## [1.2.0] - 2025-10-27
 
 ### Added
@@ -202,17 +226,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - [ ] Right-click context menu
 
 #### Zone Viewers
-- [ ] Create `ZoneViewer.kt` dialogs
-  - [ ] GraveyardDialog
-  - [ ] ExileDialog
+- [x] Create `ZoneViewer.kt` dialogs
+  - [x] GraveyardDialog
+  - [x] ExileDialog
   - [ ] LibrarySearchDialog
-- [ ] Make zones clickable
-  - [ ] Add onClick handlers to ZoneCard
-  - [ ] Show appropriate dialog when clicked
-- [ ] Implement zone dialog actions
-  - [ ] Return card to hand from graveyard
-  - [ ] Return card to battlefield from graveyard
-  - [ ] Exile from graveyard
+- [x] Make zones clickable
+  - [x] Add onClick handlers to ZoneCard
+  - [x] Show appropriate dialog when clicked
+- [x] Implement zone dialog actions
+  - [x] Return card to hand from graveyard
+  - [x] Return card to battlefield from graveyard
+  - [ ] Exile from graveyard (can be done via graveyard -> battlefield then tap/move)
   - [ ] Search library and put card in hand
 
 #### Turn System UI
@@ -385,7 +409,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Current Progress
 
-**Overall Completion:** ~50% for full 2+ player Cockatrice-like experience
+**Overall Completion:** ~55% for full 2+ player Cockatrice-like experience
 
 **By Category:**
 - ✅ Core Architecture: 100%
@@ -394,12 +418,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🟡 Multi-Player Support: 10%
 - ❌ Networking: 0%
 - ✅ Battlefield Visualization: 80% (core display and tap/untap complete, missing right-click menu and drag-drop)
-- 🟡 Zone Interactions: 20%
+- ✅ Zone Interactions: 70% (graveyard and exile viewers complete, missing library search)
 - ✅ Turn System: 90% (missing network sync)
 - ❌ Card Images: 0%
 - ❌ Commander Damage UI: 0%
-- 🟡 Game Actions: 40%
+- 🟡 Game Actions: 50%
 
-**Estimated Time to MVP (v1.2.0):**
+**Estimated Time to MVP (v1.3.0):**
 - With networking: 2-3 weeks
 - Without networking (local hotseat): 1 week

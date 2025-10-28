@@ -2,6 +2,7 @@ package com.commandermtg.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -124,11 +125,44 @@ fun OpponentArea(
     viewModel: GameViewModel,
     modifier: Modifier = Modifier
 ) {
+    var showGraveyardDialog by remember { mutableStateOf(false) }
+    var showExileDialog by remember { mutableStateOf(false) }
+
     val libraryCount = viewModel.getCardCount(player.id, Zone.LIBRARY)
     val handCount = viewModel.getCardCount(player.id, Zone.HAND)
     val graveyardCount = viewModel.getCardCount(player.id, Zone.GRAVEYARD)
     val exileCount = viewModel.getCardCount(player.id, Zone.EXILE)
     val commanderCount = viewModel.getCardCount(player.id, Zone.COMMAND_ZONE)
+
+    // Show graveyard dialog if requested
+    if (showGraveyardDialog) {
+        GraveyardDialog(
+            cards = viewModel.getCards(player.id, Zone.GRAVEYARD),
+            playerName = player.name,
+            onDismiss = { showGraveyardDialog = false },
+            onReturnToHand = { cardInstance ->
+                viewModel.moveCard(cardInstance.instanceId, Zone.HAND)
+            },
+            onReturnToBattlefield = { cardInstance ->
+                viewModel.moveCard(cardInstance.instanceId, Zone.BATTLEFIELD)
+            }
+        )
+    }
+
+    // Show exile dialog if requested
+    if (showExileDialog) {
+        ExileDialog(
+            cards = viewModel.getCards(player.id, Zone.EXILE),
+            playerName = player.name,
+            onDismiss = { showExileDialog = false },
+            onReturnToHand = { cardInstance ->
+                viewModel.moveCard(cardInstance.instanceId, Zone.HAND)
+            },
+            onReturnToBattlefield = { cardInstance ->
+                viewModel.moveCard(cardInstance.instanceId, Zone.BATTLEFIELD)
+            }
+        )
+    }
 
     Row(modifier = modifier) {
         // Opponent's library, graveyard, exile
@@ -138,8 +172,20 @@ fun OpponentArea(
         ) {
             ZoneCard("Library", Zone.LIBRARY, libraryCount, Modifier.weight(1f))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                ZoneCard("GY", Zone.GRAVEYARD, graveyardCount, Modifier.weight(1f))
-                ZoneCard("Exile", Zone.EXILE, exileCount, Modifier.weight(1f))
+                ZoneCard(
+                    "GY",
+                    Zone.GRAVEYARD,
+                    graveyardCount,
+                    Modifier.weight(1f),
+                    onClick = { showGraveyardDialog = true }
+                )
+                ZoneCard(
+                    "Exile",
+                    Zone.EXILE,
+                    exileCount,
+                    Modifier.weight(1f),
+                    onClick = { showExileDialog = true }
+                )
             }
         }
 
@@ -235,6 +281,8 @@ fun PlayerArea(
     modifier: Modifier = Modifier
 ) {
     var showHandDialog by remember { mutableStateOf(false) }
+    var showGraveyardDialog by remember { mutableStateOf(false) }
+    var showExileDialog by remember { mutableStateOf(false) }
 
     val libraryCount = viewModel.getCardCount(player.id, Zone.LIBRARY)
     val handCount = viewModel.getCardCount(player.id, Zone.HAND)
@@ -250,6 +298,36 @@ fun PlayerArea(
             onPlayCard = { cardInstance ->
                 viewModel.moveCard(cardInstance.instanceId, Zone.BATTLEFIELD)
                 showHandDialog = false
+            }
+        )
+    }
+
+    // Show graveyard dialog if requested
+    if (showGraveyardDialog) {
+        GraveyardDialog(
+            cards = viewModel.getCards(player.id, Zone.GRAVEYARD),
+            playerName = player.name,
+            onDismiss = { showGraveyardDialog = false },
+            onReturnToHand = { cardInstance ->
+                viewModel.moveCard(cardInstance.instanceId, Zone.HAND)
+            },
+            onReturnToBattlefield = { cardInstance ->
+                viewModel.moveCard(cardInstance.instanceId, Zone.BATTLEFIELD)
+            }
+        )
+    }
+
+    // Show exile dialog if requested
+    if (showExileDialog) {
+        ExileDialog(
+            cards = viewModel.getCards(player.id, Zone.EXILE),
+            playerName = player.name,
+            onDismiss = { showExileDialog = false },
+            onReturnToHand = { cardInstance ->
+                viewModel.moveCard(cardInstance.instanceId, Zone.HAND)
+            },
+            onReturnToBattlefield = { cardInstance ->
+                viewModel.moveCard(cardInstance.instanceId, Zone.BATTLEFIELD)
             }
         )
     }
@@ -318,8 +396,20 @@ fun PlayerArea(
         ) {
             ZoneCard("Library", Zone.LIBRARY, libraryCount, Modifier.weight(1f))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                ZoneCard("Graveyard", Zone.GRAVEYARD, graveyardCount, Modifier.weight(1f))
-                ZoneCard("Exile", Zone.EXILE, exileCount, Modifier.weight(1f))
+                ZoneCard(
+                    "Graveyard",
+                    Zone.GRAVEYARD,
+                    graveyardCount,
+                    Modifier.weight(1f),
+                    onClick = { showGraveyardDialog = true }
+                )
+                ZoneCard(
+                    "Exile",
+                    Zone.EXILE,
+                    exileCount,
+                    Modifier.weight(1f),
+                    onClick = { showExileDialog = true }
+                )
             }
         }
     }
@@ -330,11 +420,19 @@ fun ZoneCard(
     label: String,
     zone: Zone,
     cardCount: Int,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null
 ) {
     Card(
         modifier = modifier
-            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp)),
+            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp))
+            .then(
+                if (onClick != null) {
+                    Modifier.clickableWithRipple { onClick() }
+                } else {
+                    Modifier
+                }
+            ),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Box(
@@ -351,6 +449,11 @@ fun ZoneCard(
             }
         }
     }
+}
+
+@Composable
+private fun Modifier.clickableWithRipple(onClick: () -> Unit): Modifier {
+    return this.clickable(onClick = onClick)
 }
 
 @Composable
