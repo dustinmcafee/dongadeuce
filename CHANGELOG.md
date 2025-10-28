@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2025-10-27
+
+### Added
+- Turn System UI with TurnIndicator component
+  - Displays active player name
+  - Shows current phase with all MTG phases listed
+  - Highlights current phase
+  - "Next Phase" button to advance through phases
+  - "Pass Turn" button to skip to next player's turn
+  - Turn number tracking
+- Phase advancement functionality in GameViewModel
+  - `nextPhase()` advances to next phase
+  - `passTurn()` advances to next player's untap phase
+  - `untapAll()` untaps all permanents for a player
+  - Automatic untap on turn start
+- Updated game layout with turn indicator sidebar
+
+### Changed
+- Game screen now uses Row layout with turn indicator on right side
+- Phase transitions now properly track game flow
+- Battlefield cards automatically untap at start of owner's turn
+
+### Technical Details
+- Created `TurnIndicator.kt` with phase visualization
+- Added turn management functions to GameViewModel
+- Integrated turn system into game flow
+- Turn indicator shows all 12 MTG phases grouped by category
+
 ## [1.0.1] - 2025-10-27
 
 ### Added
@@ -161,20 +189,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - [ ] Search library and put card in hand
 
 #### Turn System UI
-- [ ] Create `TurnIndicator.kt` component
-  - [ ] Show active player name
-  - [ ] Show current phase
-  - [ ] Show turn number
-  - [ ] Highlight active player
-- [ ] Add turn control buttons
-  - [ ] "Next Phase" button
-  - [ ] "Pass Turn" button
-  - [ ] Phase list display
-- [ ] Implement turn/phase advancement
-  - [ ] `advancePhase()` in GameViewModel
-  - [ ] `passTurn()` in GameViewModel
-  - [ ] Update active player
-  - [ ] Sync turn changes over network
+- [x] Create `TurnIndicator.kt` component
+  - [x] Show active player name
+  - [x] Show current phase
+  - [x] Show turn number
+  - [x] Highlight active player
+- [x] Add turn control buttons
+  - [x] "Next Phase" button
+  - [x] "Pass Turn" button
+  - [x] Phase list display
+- [x] Implement turn/phase advancement
+  - [x] `nextPhase()` in GameViewModel
+  - [x] `passTurn()` in GameViewModel
+  - [x] Update active player
+  - [ ] Sync turn changes over network (networking not yet implemented)
 
 #### Card Images
 - [ ] Create `CardImage.kt` component

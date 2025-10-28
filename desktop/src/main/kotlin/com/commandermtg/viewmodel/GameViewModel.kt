@@ -225,8 +225,66 @@ class GameViewModel {
 
         val updatedGameState = gameState.nextPhase()
 
+        // If we just moved to UNTAP phase (new turn), untap all cards for the active player
+        if (updatedGameState.phase == com.commandermtg.models.GamePhase.UNTAP) {
+            val activePlayerId = updatedGameState.activePlayer.id
+            untapAll(activePlayerId)
+        } else {
+            _uiState.update {
+                it.copy(gameState = updatedGameState)
+            }
+        }
+    }
+
+    /**
+     * Pass turn (advance through all phases to next player's untap)
+     */
+    fun passTurn() {
+        val currentState = _uiState.value
+        val gameState = currentState.gameState ?: return
+
+        // Keep advancing phases until we reach the next UNTAP phase (new turn)
+        var updatedState = gameState
+        do {
+            updatedState = updatedState.nextPhase()
+        } while (updatedState.phase != com.commandermtg.models.GamePhase.UNTAP)
+
+        // Untap all permanents for the new active player
+        val newActivePlayerId = updatedState.activePlayer.id
+        val untappedCards = updatedState.cardInstances.map { card ->
+            if (card.controllerId == newActivePlayerId && card.zone == com.commandermtg.models.Zone.BATTLEFIELD) {
+                card.untap()
+            } else {
+                card
+            }
+        }
+
         _uiState.update {
-            it.copy(gameState = updatedGameState)
+            it.copy(
+                gameState = updatedState.copy(cardInstances = untappedCards)
+            )
+        }
+    }
+
+    /**
+     * Untap all permanents for a player
+     */
+    fun untapAll(playerId: String) {
+        val currentState = _uiState.value
+        val gameState = currentState.gameState ?: return
+
+        val untappedCards = gameState.cardInstances.map { card ->
+            if (card.controllerId == playerId && card.zone == com.commandermtg.models.Zone.BATTLEFIELD) {
+                card.untap()
+            } else {
+                card
+            }
+        }
+
+        _uiState.update {
+            it.copy(
+                gameState = gameState.copy(cardInstances = untappedCards)
+            )
         }
     }
 

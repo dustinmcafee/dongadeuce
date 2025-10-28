@@ -48,45 +48,64 @@ fun GameScreen(
         }
     }
 
-    Column(
+    Row(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp)
+            .padding(16.dp),
+        horizontalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Get opponent (first opponent in list)
-        val opponent = uiState.opponents.firstOrNull()
-        val localPlayer = uiState.localPlayer
+        // Main game area (left side)
+        Column(
+            modifier = Modifier.weight(1f)
+        ) {
+            // Get opponent (first opponent in list)
+            val opponent = uiState.opponents.firstOrNull()
+            val localPlayer = uiState.localPlayer
 
-        // Opponent's area (top)
-        if (opponent != null) {
-            OpponentArea(
-                player = opponent,
-                viewModel = viewModel,
+            // Opponent's area (top)
+            if (opponent != null) {
+                OpponentArea(
+                    player = opponent,
+                    viewModel = viewModel,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(0.3f)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Shared battlefield (middle)
+            BattlefieldArea(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(0.3f)
+                    .weight(0.4f)
             )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Your area (bottom)
+            if (localPlayer != null) {
+                PlayerArea(
+                    player = localPlayer,
+                    viewModel = viewModel,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(0.3f)
+                )
+            }
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
-
-        // Shared battlefield (middle)
-        BattlefieldArea(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(0.4f)
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        // Your area (bottom)
-        if (localPlayer != null) {
-            PlayerArea(
-                player = localPlayer,
-                viewModel = viewModel,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(0.3f)
+        // Turn indicator (right sidebar)
+        val gameState = uiState.gameState
+        if (gameState != null) {
+            TurnIndicator(
+                activePlayer = gameState.activePlayer,
+                currentPhase = gameState.phase,
+                turnNumber = gameState.turnNumber,
+                onNextPhase = { viewModel.nextPhase() },
+                onPassTurn = { viewModel.passTurn() },
+                modifier = Modifier.width(250.dp)
             )
         }
     }
