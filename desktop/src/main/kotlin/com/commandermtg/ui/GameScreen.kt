@@ -1612,6 +1612,7 @@ fun HandCardDisplay(
             modifier = Modifier
                 .width(60.dp)
                 .height(84.dp)
+                // Drag gesture support (always available if dragDropState exists)
                 .then(
                     if (dragDropState != null) {
                         Modifier.pointerInput(cardInstance.instanceId) {
@@ -1634,25 +1635,27 @@ fun HandCardDisplay(
                             )
                         }
                     } else {
-                        Modifier.clickable {
-                            val currentTime = System.currentTimeMillis()
-                            if (currentTime - lastClickTime < 300) {
-                                // Double-click detected
-                                selectionState?.clearSelection() // Clear selection on double-click
-                                onDoubleClick()
-                                lastClickTime = 0L
-                            } else {
-                                // Single click - toggle selection if selectionState exists
-                                lastClickTime = currentTime
-                                if (selectionState != null) {
-                                    selectionState.toggleSelection(cardInstance.instanceId)
-                                } else {
-                                    onCardClick(cardInstance)
-                                }
-                            }
-                        }
+                        Modifier
                     }
                 )
+                // Click gesture support (always available)
+                .clickable {
+                    val currentTime = System.currentTimeMillis()
+                    if (currentTime - lastClickTime < 300) {
+                        // Double-click detected
+                        selectionState?.clearSelection() // Clear selection on double-click
+                        onDoubleClick()
+                        lastClickTime = 0L
+                    } else {
+                        // Single click - toggle selection if selectionState exists
+                        lastClickTime = currentTime
+                        if (selectionState != null) {
+                            selectionState.toggleSelection(cardInstance.instanceId)
+                        } else {
+                            onCardClick(cardInstance)
+                        }
+                    }
+                }
                 .then(
                     if (isDragging) Modifier.alpha(0.5f) else Modifier
                 )
