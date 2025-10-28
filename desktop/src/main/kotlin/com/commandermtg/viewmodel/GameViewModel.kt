@@ -524,4 +524,37 @@ class GameViewModel {
         // Draw 7 cards
         drawStartingHand(playerId, 7)
     }
+
+    /**
+     * Move a card to the top of its owner's library
+     */
+    fun moveCardToTopOfLibrary(cardId: String) {
+        val currentState = _uiState.value
+        val gameState = currentState.gameState ?: return
+
+        // Find the card
+        val card = gameState.cardInstances.find { it.instanceId == cardId } ?: return
+        val ownerId = card.ownerId
+
+        // Move card to library first
+        val updatedCard = card.moveToZone(Zone.LIBRARY)
+
+        // Get all cards except the target card
+        val otherCards = gameState.cardInstances.filter { it.instanceId != cardId }
+
+        // Get all library cards for this player (excluding the moved card)
+        val libraryCards = otherCards.filter { it.ownerId == ownerId && it.zone == Zone.LIBRARY }
+
+        // Get all non-library cards
+        val nonLibraryCards = otherCards.filter { !(it.ownerId == ownerId && it.zone == Zone.LIBRARY) }
+
+        // Rebuild card list: non-library cards + target card (top of library) + rest of library
+        val reorderedCards = nonLibraryCards + listOf(updatedCard) + libraryCards
+
+        _uiState.update {
+            it.copy(
+                gameState = gameState.copy(cardInstances = reorderedCards)
+            )
+        }
+    }
 }

@@ -301,6 +301,7 @@ fun PlayerArea(
     var showGraveyardDialog by remember { mutableStateOf(false) }
     var showExileDialog by remember { mutableStateOf(false) }
     var showCommanderDamageDialog by remember { mutableStateOf(false) }
+    var showLibrarySearchDialog by remember { mutableStateOf(false) }
 
     val libraryCount = viewModel.getCardCount(player.id, Zone.LIBRARY)
     val handCount = viewModel.getCardCount(player.id, Zone.HAND)
@@ -370,6 +371,30 @@ fun PlayerArea(
             onDismiss = { showCommanderDamageDialog = false },
             onDamageChange = { playerId, commanderId, newDamage ->
                 viewModel.updateCommanderDamage(playerId, commanderId, newDamage)
+            }
+        )
+    }
+
+    // Show library search dialog if requested
+    if (showLibrarySearchDialog) {
+        LibrarySearchDialog(
+            cards = viewModel.getCards(player.id, Zone.LIBRARY),
+            playerName = player.name,
+            onDismiss = { showLibrarySearchDialog = false },
+            onToHand = { cardInstance ->
+                viewModel.moveCard(cardInstance.instanceId, Zone.HAND)
+                showLibrarySearchDialog = false
+            },
+            onToBattlefield = { cardInstance ->
+                viewModel.moveCard(cardInstance.instanceId, Zone.BATTLEFIELD)
+                showLibrarySearchDialog = false
+            },
+            onToTop = { cardInstance ->
+                viewModel.moveCardToTopOfLibrary(cardInstance.instanceId)
+                showLibrarySearchDialog = false
+            },
+            onShuffle = {
+                viewModel.shuffleLibrary(player.id)
             }
         )
     }
@@ -461,7 +486,13 @@ fun PlayerArea(
             modifier = Modifier.width(200.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            ZoneCard("Library", Zone.LIBRARY, libraryCount, Modifier.weight(1f))
+            ZoneCard(
+                "Library",
+                Zone.LIBRARY,
+                libraryCount,
+                Modifier.weight(1f),
+                onClick = { showLibrarySearchDialog = true }
+            )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 ZoneCard(
                     "Graveyard",

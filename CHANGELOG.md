@@ -7,6 +7,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.8.0] - 2025-10-27
+
+### Added
+- Library Search Dialog with full search and filtering functionality
+  - Search cards by name, type, or oracle text
+  - Real-time filtering as you type
+  - Shows result count (e.g., "Showing 5 of 99 cards")
+  - Three action buttons per card:
+    - "To Hand" - Move card to hand
+    - "To Field" - Move card directly to battlefield
+    - "To Top" - Move card to top of library (for tutoring)
+  - "Shuffle Library and Close" button for post-search shuffling
+  - 600dp height dialog with scrollable card list
+- Library zone card now clickable in PlayerArea
+  - Click on Library zone to open search dialog
+  - Consistent with Graveyard and Exile zone interactions
+- Added moveCardToTopOfLibrary() function to GameViewModel
+  - Moves specified card to top position of owner's library
+  - Maintains library order for other cards
+  - Used for tutoring effects (search for card and put on top)
+
+### Changed
+- Library zone is now fully interactive (was previously view-only)
+- Players can now search and manipulate their library contents
+- Zone Interactions completion increased from 75% to 90%
+
+### Technical Details
+- Created LibrarySearchDialog.kt with search UI and card list
+- Search uses case-insensitive contains() for name, type, and oracle text
+- LibraryCard private composable for card display in search results
+- moveCardToTopOfLibrary() reorders cardInstances list to place card first in library zone
+- Search state managed with remember and mutableStateOf
+- All actions properly close dialog and update game state
+- Consistent with existing zone viewer patterns (GraveyardDialog, ExileDialog)
+
 ## [1.7.0] - 2025-10-27
 
 ### Added
@@ -543,7 +578,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Current Progress
 
-**Overall Completion:** ~72% for full 2+ player Cockatrice-like experience
+**Overall Completion:** ~75% for full 2+ player Cockatrice-like experience
 
 **By Category:**
 - ✅ Core Architecture: 100%
@@ -552,12 +587,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🟡 Multi-Player Support: 10%
 - ❌ Networking: 0%
 - ✅ Battlefield Visualization: 85% (core display, tap/untap, and images complete, missing right-click menu and drag-drop)
-- ✅ Zone Interactions: 75% (hand, graveyard and exile viewers complete with multiple actions, missing library search)
+- ✅ Zone Interactions: 90% (hand, graveyard, exile, and library search complete with multiple actions)
 - ✅ Turn System: 90% (missing network sync)
 - ✅ Card Images: 95% (loading and caching complete, missing hover preview)
 - ✅ Commander Damage UI: 100%
-- ✅ Game Actions: 95% (all essential functions implemented, only searchLibrary needs UI component)
+- ✅ Game Actions: 100% (all essential functions implemented including library search)
 
-**Estimated Time to MVP (v1.7.0):**
+**Estimated Time to MVP (v1.8.0):**
 - With networking: 2-3 weeks
-- Without networking (local hotseat): 1 day
+- Without networking (local hotseat): 1 day (all core features complete!)
