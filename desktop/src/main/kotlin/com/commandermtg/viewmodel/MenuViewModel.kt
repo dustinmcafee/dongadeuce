@@ -29,6 +29,7 @@ data class MenuUiState(
     val serverPort: Int = 8080,
     val isLoading: Boolean = false,
     val loadingProgress: String = "",
+    val loadingProgressPercent: Float = 0f,
     val error: String? = null,
     val currentScreen: Screen = Screen.Menu,
     val cacheAvailable: Boolean = false,
@@ -77,11 +78,11 @@ class MenuViewModel {
      */
     fun updateCardCache() {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, loadingProgress = "Starting cache update...", error = null) }
+            _uiState.update { it.copy(isLoading = true, loadingProgress = "Starting cache update...", loadingProgressPercent = 0f, error = null) }
 
             try {
-                cardCache.updateCache { progress ->
-                    _uiState.update { it.copy(loadingProgress = progress) }
+                cardCache.updateCache { message, percent ->
+                    _uiState.update { it.copy(loadingProgress = message, loadingProgressPercent = percent) }
                 }
 
                 updateCacheStatus()
@@ -90,6 +91,7 @@ class MenuViewModel {
                     it.copy(
                         isLoading = false,
                         loadingProgress = "",
+                        loadingProgressPercent = 0f,
                         error = null
                     )
                 }
@@ -98,6 +100,7 @@ class MenuViewModel {
                     it.copy(
                         isLoading = false,
                         loadingProgress = "",
+                        loadingProgressPercent = 0f,
                         error = "Failed to update cache: ${e.message}"
                     )
                 }

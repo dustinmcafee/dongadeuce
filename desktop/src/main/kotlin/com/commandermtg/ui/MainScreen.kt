@@ -81,8 +81,21 @@ fun MenuScreen(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        CircularProgressIndicator(modifier = Modifier.size(32.dp))
                         Text(uiState.loadingProgress, style = MaterialTheme.typography.bodyMedium)
+
+                        if (uiState.loadingProgressPercent > 0) {
+                            LinearProgressIndicator(
+                                progress = uiState.loadingProgressPercent / 100f,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            Text(
+                                "${uiState.loadingProgressPercent.toInt()}%",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
+                        } else {
+                            CircularProgressIndicator(modifier = Modifier.size(32.dp))
+                        }
                     }
                 }
             }

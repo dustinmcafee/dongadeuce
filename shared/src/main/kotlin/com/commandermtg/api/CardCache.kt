@@ -5,8 +5,11 @@ import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.engine.cio.*
 import io.ktor.client.plugins.contentnegotiation.*
+import io.ktor.client.plugins.*
 import io.ktor.client.request.*
+import io.ktor.client.statement.*
 import io.ktor.serialization.kotlinx.json.*
+import io.ktor.utils.io.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
@@ -29,6 +32,18 @@ class CardCache(
                 isLenient = true
             })
         }
+
+        // Increase timeouts for very large bulk data download (500MB+ file)
+        install(HttpTimeout) {
+            requestTimeoutMillis = 900_000 // 15 minutes
+            connectTimeoutMillis = 60_000 // 60 seconds
+            socketTimeoutMillis = 900_000 // 15 minutes
+        }
+
+        // Configure engine for large downloads
+        engine {
+            pipelining = true
+        }
     }
 
     private val cacheFile = File(cacheDir, "cards.json")
@@ -45,21 +60,43 @@ class CardCache(
      * Download and cache all cards from Scryfall bulk data
      * Returns progress updates via callback
      */
-    suspend fun updateCache(onProgress: (String) -> Unit = {}) {
+    suspend fun updateCache(onProgress: (message: String, percent: Float) -> Unit = { _, _ -> }) {
         try {
-            onProgress("Fetching bulk data information...")
+            onProgress("Fetching bulk data information...", 0f)
 
             // Get bulk data info
             val bulkDataList = client.get("https://api.scryfall.com/bulk-data").body<BulkDataList>()
             val defaultCards = bulkDataList.data.find { it.type == "default_cards" }
                 ?: throw Exception("Could not find default_cards bulk data")
 
-            onProgress("Downloading ${defaultCards.size} cards (${defaultCards.size / 1024 / 1024}MB)...")
+            val sizeMB = defaultCards.size / 1024 / 1024
+            onProgress("Downloading $sizeMB MB...", 0f)
 
-            // Download the bulk data file
-            val cardsJson: String = client.get(defaultCards.downloadUri).body()
+            // Download the bulk data file with progress tracking
+            val response: HttpResponse = client.get(defaultCards.downloadUri)
+            val contentLength = defaultCards.size
+            val channel: ByteReadChannel = response.bodyAsChannel()
 
-            onProgress("Parsing card data...")
+            val buffer = ByteArray(8192)
+            var downloadedBytes = 0L
+            val chunks = mutableListOf<ByteArray>()
+
+            while (!channel.isClosedForRead) {
+                val bytesRead = channel.readAvailable(buffer, 0, buffer.size)
+                if (bytesRead > 0) {
+                    downloadedBytes += bytesRead
+                    chunks.add(buffer.copyOf(bytesRead))
+
+                    val percent = (downloadedBytes.toFloat() / contentLength * 100).coerceIn(0f, 100f)
+                    val downloadedMB = downloadedBytes / 1024 / 1024
+                    onProgress("Downloaded $downloadedMB / $sizeMB MB", percent)
+                }
+            }
+
+            // Combine all chunks into the final string
+            val cardsJson = chunks.flatMap { it.toList() }.toByteArray().decodeToString()
+
+            onProgress("Parsing card data...", 95f)
 
             // Parse to Scryfall format
             val json = Json {
@@ -68,12 +105,12 @@ class CardCache(
             }
             val scryfallCards = json.decodeFromString<List<ScryfallCard>>(cardsJson)
 
-            onProgress("Converting ${scryfallCards.size} cards...")
+            onProgress("Converting ${scryfallCards.size} cards...", 97f)
 
             // Convert to our Card model
             val cards = scryfallCards.map { it.toCard() }
 
-            onProgress("Saving cache to disk...")
+            onProgress("Saving cache to disk...", 98f)
 
             // Save to disk
             withContext(Dispatchers.IO) {
@@ -93,9 +130,9 @@ class CardCache(
             // Update in-memory cache
             cardMap = cards.associateBy { it.name.lowercase() }
 
-            onProgress("Cache updated successfully! ${cards.size} cards cached.")
+            onProgress("Cache updated successfully! ${cards.size} cards cached.", 100f)
         } catch (e: Exception) {
-            onProgress("Error updating cache: ${e.message}")
+            onProgress("Error updating cache: ${e.message}", 0f)
             throw e
         }
     }
