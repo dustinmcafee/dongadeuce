@@ -19,6 +19,14 @@ dependencies {
 
     // Image loading - TODO: Find a desktop-compatible solution
     // Kamel or other libraries for loading images on desktop
+
+    // Testing
+    testImplementation(kotlin("test"))
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
+}
+
+tasks.test {
+    useJUnitPlatform()
 }
 
 compose.desktop {

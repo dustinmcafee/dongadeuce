@@ -20,6 +20,7 @@ sealed class CardAction {
     data class ToExile(val cardInstance: CardInstance) : CardAction()
     data class ToLibrary(val cardInstance: CardInstance) : CardAction()
     data class ToTop(val cardInstance: CardInstance) : CardAction()
+    data class ToCommandZone(val cardInstance: CardInstance) : CardAction()
     data class AddCounter(val cardInstance: CardInstance, val counterType: String) : CardAction()
     data class RemoveCounter(val cardInstance: CardInstance, val counterType: String) : CardAction()
     data class ViewDetails(val cardInstance: CardInstance) : CardAction()
@@ -86,6 +87,11 @@ private fun buildContextMenuItems(
             items.add(ContextMenuItem("To Graveyard") { onAction(CardAction.ToGraveyard(cardInstance)) })
             items.add(ContextMenuItem("Exile") { onAction(CardAction.ToExile(cardInstance)) })
             items.add(ContextMenuItem("To Library") { onAction(CardAction.ToLibrary(cardInstance)) })
+
+            // Commander-specific: can go to command zone from anywhere
+            if (cardInstance.card.isLegendary && cardInstance.card.isCreature) {
+                items.add(ContextMenuItem("To Command Zone") { onAction(CardAction.ToCommandZone(cardInstance)) })
+            }
         }
 
         Zone.HAND -> {
@@ -94,6 +100,11 @@ private fun buildContextMenuItems(
             items.add(ContextMenuItem("Exile") { onAction(CardAction.ToExile(cardInstance)) })
             items.add(ContextMenuItem("To Library") { onAction(CardAction.ToLibrary(cardInstance)) })
             items.add(ContextMenuItem("To Top of Library") { onAction(CardAction.ToTop(cardInstance)) })
+
+            // Commander-specific: can go to command zone from anywhere
+            if (cardInstance.card.isLegendary && cardInstance.card.isCreature) {
+                items.add(ContextMenuItem("To Command Zone") { onAction(CardAction.ToCommandZone(cardInstance)) })
+            }
         }
 
         Zone.GRAVEYARD -> {
@@ -102,6 +113,11 @@ private fun buildContextMenuItems(
             items.add(ContextMenuItem("Exile") { onAction(CardAction.ToExile(cardInstance)) })
             items.add(ContextMenuItem("To Library") { onAction(CardAction.ToLibrary(cardInstance)) })
             items.add(ContextMenuItem("To Top of Library") { onAction(CardAction.ToTop(cardInstance)) })
+
+            // Commander-specific: can go to command zone from anywhere
+            if (cardInstance.card.isLegendary && cardInstance.card.isCreature) {
+                items.add(ContextMenuItem("To Command Zone") { onAction(CardAction.ToCommandZone(cardInstance)) })
+            }
         }
 
         Zone.EXILE -> {
@@ -109,6 +125,11 @@ private fun buildContextMenuItems(
             items.add(ContextMenuItem("Return to Battlefield") { onAction(CardAction.ToBattlefield(cardInstance)) })
             items.add(ContextMenuItem("To Graveyard") { onAction(CardAction.ToGraveyard(cardInstance)) })
             items.add(ContextMenuItem("To Library") { onAction(CardAction.ToLibrary(cardInstance)) })
+
+            // Commander-specific: can go to command zone from anywhere
+            if (cardInstance.card.isLegendary && cardInstance.card.isCreature) {
+                items.add(ContextMenuItem("To Command Zone") { onAction(CardAction.ToCommandZone(cardInstance)) })
+            }
         }
 
         Zone.LIBRARY -> {
@@ -152,6 +173,7 @@ fun handleCardAction(
         is CardAction.ToExile -> viewModel.moveCard(action.cardInstance.instanceId, Zone.EXILE)
         is CardAction.ToLibrary -> viewModel.moveCard(action.cardInstance.instanceId, Zone.LIBRARY)
         is CardAction.ToTop -> viewModel.moveCardToTopOfLibrary(action.cardInstance.instanceId)
+        is CardAction.ToCommandZone -> viewModel.moveCard(action.cardInstance.instanceId, Zone.COMMAND_ZONE)
         is CardAction.AddCounter -> viewModel.addCounter(action.cardInstance.instanceId, action.counterType, 1)
         is CardAction.RemoveCounter -> viewModel.removeCounter(action.cardInstance.instanceId, action.counterType, 1)
         is CardAction.ViewDetails -> {

@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.1.0] - 2025-10-27
+
+### Added
+- **Comprehensive Unit Test Suite** (44 tests)
+  - PlayerTest: 17 tests covering all loss conditions (life total, commander damage)
+  - GameViewModelTest: 13 tests for library operations, game state management
+  - GameStateTest: 11 tests for validation, phase cycling, player updates
+  - DeckTest: 13 tests for deck validation rules, singleton enforcement, basic lands
+  - All tests passing with 100% coverage of critical game logic
+
+- **Commander to Command Zone** (MTG rules compliance)
+  - Commanders (legendary creatures) can now be moved to command zone from any zone
+  - Added "To Command Zone" context menu option for commanders
+  - Available from battlefield, hand, graveyard, and exile
+  - Follows official MTG Commander format rules
+
+### Changed
+- Added test dependencies to desktop/build.gradle.kts
+  - kotlin-test for unit testing
+  - kotlinx-coroutines-test for async testing
+  - JUnit Platform configuration
+
+### Technical Details
+- Test framework: kotlin.test with JUnit Platform
+- Test coverage: Player models, GameViewModel, GameState, Deck validation
+- Build configuration updated for both shared and desktop modules
+- All tests verify MTG rules compliance (40 life, 21 commander damage, 99-card decks)
+
 ## [2.0.1] - 2025-10-27
 
 ### Fixed
