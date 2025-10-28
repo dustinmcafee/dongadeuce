@@ -27,12 +27,15 @@ import com.commandermtg.api.ScryfallCard
 class CardCache(
     private val cacheDir: File = File(System.getProperty("user.home"), ".commandermtg/cache")
 ) {
+    // Shared JSON configuration
+    private val json = Json {
+        ignoreUnknownKeys = true
+        isLenient = true
+    }
+
     private val client = HttpClient(CIO) {
         install(ContentNegotiation) {
-            json(Json {
-                ignoreUnknownKeys = true
-                isLenient = true
-            })
+            json(json)
         }
 
         // Increase timeouts for very large bulk data download (500MB+ file)
@@ -65,34 +68,50 @@ class CardCache(
     suspend fun updateCache(onProgress: (message: String, percent: Float) -> Unit = { _, _ -> }) {
         try {
             onProgress("Fetching bulk data information...", 0f)
+            println("[CardCache] Starting cache update...")
 
             // Get bulk data info
             val bulkDataList = client.get("https://api.scryfall.com/bulk-data").body<BulkDataList>()
+            println("[CardCache] Got bulk data list: ${bulkDataList.data.size} items")
+
             val defaultCards = bulkDataList.data.find { it.type == "default_cards" }
                 ?: throw Exception("Could not find default_cards bulk data")
 
             val sizeMB = defaultCards.size / 1024 / 1024
             onProgress("Starting download of $sizeMB MB...", 1f)
 
-            println("Downloading from: ${defaultCards.downloadUri}")
-            println("Expected size: $sizeMB MB")
+            println("[CardCache] Downloading from: ${defaultCards.downloadUri}")
+            println("[CardCache] Expected size: $sizeMB MB")
 
             // Download Scryfall JSON directly to cache file (they're already in correct format)
             withContext(Dispatchers.IO) {
+                println("[CardCache] Starting HTTP GET request...")
                 val response: HttpResponse = client.get(defaultCards.downloadUri)
+                println("[CardCache] Got response, status: ${response.status}")
+
                 val contentLength = defaultCards.size
                 val channel: ByteReadChannel = response.bodyAsChannel()
+                println("[CardCache] Starting stream download to: ${cacheFile.absolutePath}")
 
                 cacheFile.outputStream().buffered(1024 * 1024).use { output ->
                     val buffer = ByteArray(1024 * 1024) // 1MB buffer
                     var downloadedBytes = 0L
                     var lastReportedPercent = 0f
+                    var readCount = 0
 
                     while (true) {
                         val bytesRead = channel.readAvailable(buffer, 0, buffer.size)
+                        readCount++
+
+                        if (readCount % 100 == 0) {
+                            println("[CardCache] Read operation #$readCount, downloaded: ${downloadedBytes / 1024 / 1024} MB")
+                        }
 
                         // Break on end of stream
-                        if (bytesRead == -1) break
+                        if (bytesRead == -1) {
+                            println("[CardCache] End of stream reached. Total downloaded: ${downloadedBytes / 1024 / 1024} MB")
+                            break
+                        }
 
                         if (bytesRead > 0) {
                             output.write(buffer, 0, bytesRead)
@@ -106,20 +125,18 @@ class CardCache(
                                 val downloadedMB = downloadedBytes / 1024 / 1024
                                 onProgress("Downloaded $downloadedMB / $sizeMB MB", currentPercent)
                                 lastReportedPercent = currentPercent
+                                println("[CardCache] Progress: $currentPercent% ($downloadedMB MB / $sizeMB MB)")
                             }
                         }
                     }
                 }
+
+                println("[CardCache] File written. File size: ${cacheFile.length() / 1024 / 1024} MB")
             }
 
             onProgress("Download complete!", 90f)
 
             // Save metadata (don't load cache yet - too much memory)
-            val json = Json {
-                ignoreUnknownKeys = true
-                isLenient = true
-            }
-
             withContext(Dispatchers.IO) {
                 val metadata = CacheMetadata(
                     lastUpdated = System.currentTimeMillis(),
@@ -127,10 +144,14 @@ class CardCache(
                     bulkDataUpdatedAt = defaultCards.updatedAt
                 )
                 metadataFile.writeText(json.encodeToString(metadata))
+                println("[CardCache] Metadata saved")
             }
 
+            println("[CardCache] Cache update complete!")
             onProgress("Cache ready for use!", 100f)
         } catch (e: Exception) {
+            println("[CardCache] ERROR: ${e.javaClass.simpleName}: ${e.message}")
+            e.printStackTrace()
             onProgress("Error updating cache: ${e.message}", 0f)
             throw e
         }
@@ -149,10 +170,6 @@ class CardCache(
 
         return try {
             withContext(Dispatchers.IO) {
-                val json = Json {
-                    ignoreUnknownKeys = true
-                    isLenient = true
-                }
                 val jsonString = cacheFile.readText()
                 // Parse Scryfall format directly
                 val scryfallCards = json.decodeFromString<List<ScryfallCard>>(jsonString)
@@ -201,10 +218,6 @@ class CardCache(
         if (!metadataFile.exists()) return null
 
         return try {
-            val json = Json {
-                ignoreUnknownKeys = true
-                isLenient = true
-            }
             json.decodeFromString<CacheMetadata>(metadataFile.readText())
         } catch (e: Exception) {
             null

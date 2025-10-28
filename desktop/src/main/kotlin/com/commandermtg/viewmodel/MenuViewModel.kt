@@ -7,6 +7,7 @@ import com.commandermtg.models.Card
 import com.commandermtg.models.Deck
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -48,7 +49,8 @@ class MenuViewModel {
     private val _uiState = MutableStateFlow(MenuUiState())
     val uiState: StateFlow<MenuUiState> = _uiState.asStateFlow()
 
-    private val viewModelScope = CoroutineScope(Dispatchers.IO)
+    // Use SupervisorJob so exceptions don't cancel the whole scope
+    private val viewModelScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val scryfallApi = ScryfallApi()
     private val cardCache = CardCache()
 

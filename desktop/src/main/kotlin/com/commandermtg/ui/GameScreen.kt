@@ -32,12 +32,42 @@ fun GameScreen(
     var cardDetailsToShow by remember { mutableStateOf<com.commandermtg.models.CardInstance?>(null) }
 
     // Handler for card actions that shows details dialog when needed
+    // and enforces ownership restrictions
     val handleAction: (CardAction) -> Unit = { action ->
         when (action) {
             is CardAction.ViewDetails -> {
+                // Anyone can view card details
                 cardDetailsToShow = action.cardInstance
             }
-            else -> handleCardAction(action, viewModel)
+            else -> {
+                // Only allow actions on cards you own (except in hotseat mode)
+                val localPlayer = uiState.localPlayer
+                val cardInstance = when (action) {
+                    is CardAction.Tap -> action.cardInstance
+                    is CardAction.Untap -> action.cardInstance
+                    is CardAction.FlipCard -> action.cardInstance
+                    is CardAction.ToHand -> action.cardInstance
+                    is CardAction.ToBattlefield -> action.cardInstance
+                    is CardAction.ToGraveyard -> action.cardInstance
+                    is CardAction.ToExile -> action.cardInstance
+                    is CardAction.ToLibrary -> action.cardInstance
+                    is CardAction.ToTop -> action.cardInstance
+                    is CardAction.ToCommandZone -> action.cardInstance
+                    is CardAction.AddCounter -> action.cardInstance
+                    is CardAction.RemoveCounter -> action.cardInstance
+                    else -> null
+                }
+
+                // In hotseat mode, current player can only interact with their own cards
+                // In network mode, you can only interact with your cards
+                if (localPlayer != null && cardInstance != null) {
+                    if (cardInstance.ownerId == localPlayer.id) {
+                        handleCardAction(action, viewModel)
+                    } else {
+                        println("Cannot interact with opponent's card: ${cardInstance.card.name}")
+                    }
+                }
+            }
         }
     }
 

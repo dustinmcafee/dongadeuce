@@ -92,11 +92,21 @@ fun MenuScreen(
                                 modifier = Modifier.fillMaxWidth()
                             )
                             Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                "${uiState.loadingProgressPercent.toInt()}%",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSecondaryContainer
-                            )
+
+                            // Show helpful message if stuck at low percentage
+                            if (uiState.loadingProgressPercent <= 5f && uiState.loadingProgress.contains("Downloaded")) {
+                                Text(
+                                    "${uiState.loadingProgressPercent.toInt()}% - Initial download may take 1-2 minutes...",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                                )
+                            } else {
+                                Text(
+                                    "${uiState.loadingProgressPercent.toInt()}%",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                                )
+                            }
                         } else {
                             // Show indeterminate progress bar
                             LinearProgressIndicator(
@@ -204,7 +214,11 @@ fun MenuScreen(
 
                     if (uiState.cacheAvailable) {
                         Text(
-                            "${uiState.cacheCardCount} cards cached",
+                            if (uiState.cacheCardCount > 0) {
+                                "${uiState.cacheCardCount} cards cached"
+                            } else {
+                                "Cache available"
+                            },
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
