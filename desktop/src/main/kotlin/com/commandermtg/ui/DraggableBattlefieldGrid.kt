@@ -15,6 +15,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import com.commandermtg.models.CardInstance
 import kotlin.math.roundToInt
 
@@ -71,14 +72,24 @@ fun DraggableBattlefieldGrid(
         }
     }
 
-    // Organize cards into grid positions
+    // Organize cards into grid positions with stacking support
     // Key by the grid positions of all cards to ensure recalculation when positions change
     val gridPositionsKey = remember(cards) {
         cards.map { "${it.instanceId}:${it.gridX}:${it.gridY}" }.joinToString(",")
     }
 
+    // Card stacking offsets (Cockatrice-style)
+    val stackOffsetX = (cardWidth.value * 0.33f).dp // CARD_WIDTH / 3
+    val stackOffsetY = (gridSpacing.value * 0.33f).dp // PADDING_Y / 3
+
+    data class CardStackInfo(
+        val gridPos: Pair<Int, Int>,
+        val stackIndex: Int  // 0 = bottom, 1 = middle, 2 = top
+    )
+
     val cardPositions = remember(gridPositionsKey, columns) {
         val positionMap = mutableMapOf<String, Pair<Int, Int>>()
+        val stackInfo = mutableMapOf<String, CardStackInfo>()
 
         // First, place cards that have explicit grid positions
         val cardsWithPositions = cards.filter { it.gridX != null && it.gridY != null }
@@ -91,33 +102,51 @@ fun DraggableBattlefieldGrid(
         var nextRow = 0
         var nextCol = 0
 
-        // Find next available position
+        // Find next available position (with stacking support)
         fun findNextAvailablePosition(): Pair<Int, Int> {
-            while (positionMap.containsValue(Pair(nextCol, nextRow))) {
-                nextCol++
-                if (nextCol >= columns) {
-                    nextCol = 0
-                    nextRow++
-                }
-            }
-            return Pair(nextCol, nextRow)
-        }
+            // Count how many cards are at the current position
+            val cardsAtPosition = positionMap.values.count { it == Pair(nextCol, nextRow) }
 
-        cardsWithoutPositions.forEach { card ->
-            val (col, row) = findNextAvailablePosition()
-            positionMap[card.instanceId] = Pair(col, row)
+            // If less than 3 cards, can stack here
+            if (cardsAtPosition < 3) {
+                return Pair(nextCol, nextRow)
+            }
+
+            // Move to next position
             nextCol++
             if (nextCol >= columns) {
                 nextCol = 0
                 nextRow++
             }
+            return findNextAvailablePosition()
         }
 
-        positionMap
+        cardsWithoutPositions.forEach { card ->
+            val (col, row) = findNextAvailablePosition()
+            positionMap[card.instanceId] = Pair(col, row)
+        }
+
+        // Calculate stack indices for all cards
+        val gridGroupedCards = cards.groupBy { card ->
+            positionMap[card.instanceId] ?: Pair(0, 0)
+        }
+
+        gridGroupedCards.forEach { (gridPos, cardsAtPos) ->
+            cardsAtPos.forEachIndexed { index, card ->
+                stackInfo[card.instanceId] = CardStackInfo(
+                    gridPos = gridPos,
+                    stackIndex = index.coerceAtMost(2) // Max 3 cards per stack
+                )
+            }
+        }
+
+        Pair(positionMap, stackInfo)
     }
 
+    val (gridPositions, stackInfoMap) = cardPositions
+
     // Calculate total rows needed
-    val totalRows = ((cardPositions.values.maxOfOrNull { it.second } ?: 0) + 1).coerceAtMost(10)
+    val totalRows = ((gridPositions.values.maxOfOrNull { it.second } ?: 0) + 1).coerceAtMost(10)
 
     Box(
         modifier = modifier
@@ -128,14 +157,22 @@ fun DraggableBattlefieldGrid(
             .height((totalRows * cellHeight).dp)
     ) {
                 cards.forEach { card ->
-                    val position = cardPositions[card.instanceId] ?: Pair(0, 0)
+                    val position = gridPositions[card.instanceId] ?: Pair(0, 0)
                     val (col, row) = position
+                    val stackInfo = stackInfoMap[card.instanceId]
 
                     val isDragged = draggedCardId == card.instanceId
                     val canDrag = currentPlayerId != null && card.ownerId == currentPlayerId
 
-                    val xPos = col * cellWidth
-                    val yPos = row * cellHeight
+                    // Base position
+                    var xPos = col * cellWidth
+                    var yPos = row * cellHeight
+
+                    // Apply stacking offset (Cockatrice-style)
+                    if (stackInfo != null) {
+                        xPos += stackInfo.stackIndex * stackOffsetX.value
+                        yPos += stackInfo.stackIndex * stackOffsetY.value
+                    }
 
                     val finalOffset = if (isDragged) {
                         IntOffset(
@@ -149,17 +186,19 @@ fun DraggableBattlefieldGrid(
                     Box(
                         modifier = Modifier
                             .offset { finalOffset }
+                            .zIndex((row * 1000 + col * 10 + (stackInfo?.stackIndex ?: 0)).toFloat())
                             .then(
                                 if (canDrag) {
-                                    Modifier.pointerInput(card.instanceId, cardPositions) {
+                                    Modifier.pointerInput(card.instanceId, gridPositions) {
                                         detectDragGestures(
                                             onDragStart = { _ ->
                                                 draggedCardId = card.instanceId
                                                 dragOffset = Offset.Zero
                                                 // Look up current position from map and calculate pixel position
-                                                val currentPos = cardPositions[card.instanceId] ?: Pair(0, 0)
-                                                val startX = currentPos.first * cellWidth
-                                                val startY = currentPos.second * cellHeight
+                                                val currentPos = gridPositions[card.instanceId] ?: Pair(0, 0)
+                                                val currentStack = stackInfoMap[card.instanceId]
+                                                val startX = currentPos.first * cellWidth + (currentStack?.stackIndex ?: 0) * stackOffsetX.value
+                                                val startY = currentPos.second * cellHeight + (currentStack?.stackIndex ?: 0) * stackOffsetY.value
                                                 dragStartPixelPos = Offset(startX, startY)
                                             },
                                             onDrag = { change, dragAmount ->
