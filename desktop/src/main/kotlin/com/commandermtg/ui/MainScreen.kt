@@ -166,6 +166,58 @@ fun MenuScreen(
                 }
             }
 
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Card cache status and update
+            Card(
+                modifier = Modifier.width(300.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                )
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text("Card Cache", style = MaterialTheme.typography.labelMedium)
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    if (uiState.cacheAvailable) {
+                        Text(
+                            "${uiState.cacheCardCount} cards cached",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        if (uiState.cacheLastUpdated != null) {
+                            val lastUpdated = java.text.SimpleDateFormat("MMM dd, yyyy").format(
+                                java.util.Date(uiState.cacheLastUpdated)
+                            )
+                            Text(
+                                "Last updated: $lastUpdated",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    } else {
+                        Text(
+                            "No cache available",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    OutlinedButton(
+                        onClick = { viewModel.updateCardCache() },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !uiState.isLoading
+                    ) {
+                        Text(if (uiState.cacheAvailable) "Update Cache" else "Download Cache")
+                    }
+                }
+            }
+
             Spacer(modifier = Modifier.height(16.dp))
 
             // Show different UI based on mode

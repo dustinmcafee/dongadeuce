@@ -1,6 +1,7 @@
 package com.commandermtg.viewmodel
 
 import com.commandermtg.api.ScryfallApi
+import com.commandermtg.api.CardCache
 import com.commandermtg.game.DeckParser
 import com.commandermtg.models.Card
 import com.commandermtg.models.Deck
@@ -29,7 +30,10 @@ data class MenuUiState(
     val isLoading: Boolean = false,
     val loadingProgress: String = "",
     val error: String? = null,
-    val currentScreen: Screen = Screen.Menu
+    val currentScreen: Screen = Screen.Menu,
+    val cacheAvailable: Boolean = false,
+    val cacheCardCount: Int = 0,
+    val cacheLastUpdated: Long? = null
 )
 
 sealed class Screen {
@@ -45,6 +49,61 @@ class MenuViewModel {
 
     private val viewModelScope = CoroutineScope(Dispatchers.IO)
     private val scryfallApi = ScryfallApi()
+    private val cardCache = CardCache()
+
+    init {
+        // Check cache status on initialization
+        updateCacheStatus()
+    }
+
+    /**
+     * Update cache status information
+     */
+    private fun updateCacheStatus() {
+        viewModelScope.launch {
+            val metadata = cardCache.getCacheMetadata()
+            _uiState.update {
+                it.copy(
+                    cacheAvailable = cardCache.isCacheAvailable(),
+                    cacheCardCount = metadata?.cardCount ?: 0,
+                    cacheLastUpdated = metadata?.lastUpdated
+                )
+            }
+        }
+    }
+
+    /**
+     * Download and update the card cache
+     */
+    fun updateCardCache() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, loadingProgress = "Starting cache update...", error = null) }
+
+            try {
+                cardCache.updateCache { progress ->
+                    _uiState.update { it.copy(loadingProgress = progress) }
+                }
+
+                updateCacheStatus()
+
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        loadingProgress = "",
+                        error = null
+                    )
+                }
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        loadingProgress = "",
+                        error = "Failed to update cache: ${e.message}"
+                    )
+                }
+            }
+        }
+    }
 
     /**
      * Update player name
@@ -103,20 +162,30 @@ class MenuViewModel {
                     return@launch
                 }
 
-                _uiState.update { it.copy(loadingProgress = "Fetching card data from Scryfall...") }
+                _uiState.update { it.copy(loadingProgress = "Loading card data from cache...") }
 
-                // Fetch commander data
-                val commanderWithData = scryfallApi.getCardByName(parsedDeck.commander.name)
-                    ?: parsedDeck.commander
+                // Load from cache if available, otherwise fall back to API
+                val commanderWithData = if (cardCache.isCacheAvailable()) {
+                    cardCache.getCardByName(parsedDeck.commander.name) ?: parsedDeck.commander
+                } else {
+                    scryfallApi.getCardByName(parsedDeck.commander.name) ?: parsedDeck.commander
+                }
 
-                // Fetch card data for all cards in deck
-                val cardsWithData = mutableListOf<Card>()
-                parsedDeck.cards.forEachIndexed { index, card ->
-                    val progress = "Loading cards... (${index + 1}/${parsedDeck.cards.size})"
-                    _uiState.update { it.copy(loadingProgress = progress) }
-
-                    val cardWithData = scryfallApi.getCardByName(card.name) ?: card
-                    cardsWithData.add(cardWithData)
+                // Load card data
+                val cardsWithData = if (cardCache.isCacheAvailable()) {
+                    // Fast batch load from cache
+                    _uiState.update { it.copy(loadingProgress = "Loading ${parsedDeck.cards.size} cards from cache...") }
+                    cardCache.getCardsByNames(parsedDeck.cards.map { it.name })
+                } else {
+                    // Slow per-card API calls
+                    val cards = mutableListOf<Card>()
+                    parsedDeck.cards.forEachIndexed { index, card ->
+                        val progress = "Fetching from Scryfall... (${index + 1}/${parsedDeck.cards.size})"
+                        _uiState.update { it.copy(loadingProgress = progress) }
+                        val cardWithData = scryfallApi.getCardByName(card.name) ?: card
+                        cards.add(cardWithData)
+                    }
+                    cards
                 }
 
                 // Create deck with fetched data
@@ -177,20 +246,30 @@ class MenuViewModel {
                     return@launch
                 }
 
-                _uiState.update { it.copy(loadingProgress = "Fetching card data from Scryfall...") }
+                _uiState.update { it.copy(loadingProgress = "Loading card data from cache...") }
 
-                // Fetch commander data
-                val commanderWithData = scryfallApi.getCardByName(parsedDeck.commander.name)
-                    ?: parsedDeck.commander
+                // Load from cache if available, otherwise fall back to API
+                val commanderWithData = if (cardCache.isCacheAvailable()) {
+                    cardCache.getCardByName(parsedDeck.commander.name) ?: parsedDeck.commander
+                } else {
+                    scryfallApi.getCardByName(parsedDeck.commander.name) ?: parsedDeck.commander
+                }
 
-                // Fetch card data for all cards in deck
-                val cardsWithData = mutableListOf<Card>()
-                parsedDeck.cards.forEachIndexed { index, card ->
-                    val progress = "Loading Player ${playerIndex + 1} cards... (${index + 1}/${parsedDeck.cards.size})"
-                    _uiState.update { it.copy(loadingProgress = progress) }
-
-                    val cardWithData = scryfallApi.getCardByName(card.name) ?: card
-                    cardsWithData.add(cardWithData)
+                // Load card data
+                val cardsWithData = if (cardCache.isCacheAvailable()) {
+                    // Fast batch load from cache
+                    _uiState.update { it.copy(loadingProgress = "Loading Player ${playerIndex + 1} cards from cache...") }
+                    cardCache.getCardsByNames(parsedDeck.cards.map { it.name })
+                } else {
+                    // Slow per-card API calls
+                    val cards = mutableListOf<Card>()
+                    parsedDeck.cards.forEachIndexed { index, card ->
+                        val progress = "Fetching Player ${playerIndex + 1} from Scryfall... (${index + 1}/${parsedDeck.cards.size})"
+                        _uiState.update { it.copy(loadingProgress = progress) }
+                        val cardWithData = scryfallApi.getCardByName(card.name) ?: card
+                        cards.add(cardWithData)
+                    }
+                    cards
                 }
 
                 // Create deck with fetched data
