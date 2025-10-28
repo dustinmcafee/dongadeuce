@@ -72,46 +72,47 @@ class CardCache(
             val sizeMB = defaultCards.size / 1024 / 1024
             onProgress("Starting download of $sizeMB MB...", 1f)
 
-            // Download the bulk data file - just get it directly as a string
-            // Ktor will handle the download efficiently
             println("Downloading from: ${defaultCards.downloadUri}")
             println("Expected size: $sizeMB MB")
 
+            // Download to temporary file first
+            val tempFile = File(cacheDir, "download.tmp")
             val cardsJson: String = withContext(Dispatchers.IO) {
                 val response: HttpResponse = client.get(defaultCards.downloadUri)
                 val contentLength = defaultCards.size
                 val channel: ByteReadChannel = response.bodyAsChannel()
 
-                val allBytes = mutableListOf<Byte>()
-                val byteBuffer = ByteArray(8192 * 16) // 128KB buffer
-                var downloadedBytes = 0L
-                var lastReportedPercent = 0f
+                tempFile.outputStream().use { output ->
+                    val buffer = ByteArray(1024 * 1024) // 1MB buffer
+                    var downloadedBytes = 0L
+                    var lastReportedPercent = 0f
 
-                while (!channel.isClosedForRead) {
-                    val bytesRead = channel.readAvailable(byteBuffer, 0, byteBuffer.size)
+                    while (!channel.isClosedForRead) {
+                        val bytesRead = channel.readAvailable(buffer, 0, buffer.size)
 
-                    if (bytesRead > 0) {
-                        downloadedBytes += bytesRead
+                        if (bytesRead > 0) {
+                            output.write(buffer, 0, bytesRead)
+                            downloadedBytes += bytesRead
 
-                        // Add bytes to our list
-                        for (i in 0 until bytesRead) {
-                            allBytes.add(byteBuffer[i])
-                        }
+                            val percent = (downloadedBytes.toFloat() / contentLength * 100).coerceIn(0f, 100f)
+                            val currentPercent = percent.toInt().toFloat()
 
-                        val percent = (downloadedBytes.toFloat() / contentLength * 100).coerceIn(0f, 100f)
-                        val currentPercent = percent.toInt().toFloat()
-
-                        // Report progress when percentage changes
-                        if (currentPercent > lastReportedPercent) {
-                            val downloadedMB = downloadedBytes / 1024 / 1024
-                            onProgress("Downloaded $downloadedMB / $sizeMB MB", currentPercent)
-                            lastReportedPercent = currentPercent
-                            println("Progress: $currentPercent% ($downloadedMB MB / $sizeMB MB)")
+                            // Report progress when percentage changes
+                            if (currentPercent > lastReportedPercent) {
+                                val downloadedMB = downloadedBytes / 1024 / 1024
+                                onProgress("Downloaded $downloadedMB / $sizeMB MB", currentPercent)
+                                lastReportedPercent = currentPercent
+                                println("Progress: $currentPercent% ($downloadedMB MB / $sizeMB MB)")
+                            }
                         }
                     }
                 }
 
-                allBytes.toByteArray().decodeToString()
+                // Read the file
+                onProgress("Reading downloaded file...", 92f)
+                val json = tempFile.readText()
+                tempFile.delete()
+                json
             }
 
             onProgress("Parsing card data...", 95f)
