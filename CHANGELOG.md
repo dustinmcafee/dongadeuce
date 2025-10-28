@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.9.9] - 2025-10-28
+
+### Fixed
+- **Drag Constraint - Leftward Movement** - Cards can now be dragged freely left
+  - Removed incorrect boundary constraints that prevented leftward dragging
+  - Cards were limited to only dragging left to column 0
+  - Now can drag to any column position
+- **Opponent Card Tap Restriction** - Opponent cards can no longer be tapped
+  - Added isLocalPlayer check before allowing tap/untap
+  - Only local player's cards are clickable for tap/untap
+  - Opponent cards show proper border but don't respond to double-click
+
+### Technical Details
+- Removed minX/maxX/minY/maxY boundary constraints in onDrag
+- Added conditional Modifier.clickable based on isLocalPlayer in BattlefieldCard
+- Simplified drag handling to just accumulate dragOffset without bounds
+
 ## [2.9.8] - 2025-10-28
 
 ### Fixed

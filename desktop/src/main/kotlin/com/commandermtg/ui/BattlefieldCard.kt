@@ -53,17 +53,23 @@ fun BattlefieldCard(
                 modifier = Modifier
                     .size(width = 120.dp, height = 168.dp)
                     .rotate(rotation)
-                    .clickable {
-                    val currentTime = System.currentTimeMillis()
-                    if (currentTime - lastClickTime < 300) {
-                        // Double-click detected - tap/untap
-                        onCardClick(cardInstance)
-                        lastClickTime = 0L
-                    } else {
-                        // Single click - do nothing or could show details
-                        lastClickTime = currentTime
-                    }
-                },
+                    .then(
+                        if (isLocalPlayer) {
+                            Modifier.clickable {
+                                val currentTime = System.currentTimeMillis()
+                                if (currentTime - lastClickTime < 300) {
+                                    // Double-click detected - tap/untap
+                                    onCardClick(cardInstance)
+                                    lastClickTime = 0L
+                                } else {
+                                    // Single click - do nothing or could show details
+                                    lastClickTime = currentTime
+                                }
+                            }
+                        } else {
+                            Modifier
+                        }
+                    ),
             colors = CardDefaults.cardColors(containerColor = Color.Transparent),
             shape = RoundedCornerShape(8.dp),
             border = BorderStroke(3.dp, borderColor),

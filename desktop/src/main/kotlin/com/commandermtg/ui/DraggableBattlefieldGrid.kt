@@ -158,19 +158,7 @@ fun DraggableBattlefieldGrid(
                                             },
                                             onDrag = { change, dragAmount ->
                                                 change.consume()
-                                                val newOffset = dragOffset + dragAmount
-
-                                                // Calculate bounds to prevent dragging off screen
-                                                val maxX = (columns - 1) * cellWidth - xPos
-                                                val minX = -xPos
-                                                val maxY = (10 * cellHeight) - yPos // Max 10 rows visible
-                                                val minY = -yPos
-
-                                                // Constrain offset to keep card on battlefield
-                                                dragOffset = Offset(
-                                                    x = newOffset.x.coerceIn(minX, maxX),
-                                                    y = newOffset.y.coerceIn(minY, maxY)
-                                                )
+                                                dragOffset += dragAmount
                                             },
                                             onDragEnd = {
                                                 // Calculate new grid position based on final position
