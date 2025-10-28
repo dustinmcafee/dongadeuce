@@ -62,6 +62,28 @@ class ScryfallApi {
     }
 
     /**
+     * Search for tokens by name
+     */
+    suspend fun searchTokens(query: String): List<Card> {
+        if (query.isBlank()) return emptyList()
+
+        rateLimitDelay()
+
+        return try {
+            val response = client.get("$baseUrl/cards/search") {
+                parameter("q", "t:token $query")
+                parameter("unique", "cards")
+            }
+
+            val searchResults = response.body<ScryfallSearchResults>()
+            searchResults.data.map { it.toCard() }.take(20) // Limit to 20 results
+        } catch (e: Exception) {
+            println("Failed to search tokens for '$query': ${e.message}")
+            emptyList()
+        }
+    }
+
+    /**
      * Ensure we don't exceed Scryfall's rate limit
      */
     private suspend fun rateLimitDelay() {
@@ -116,6 +138,12 @@ data class ScryfallCard(
         )
     }
 }
+
+@Serializable
+data class ScryfallSearchResults(
+    val data: List<ScryfallCard> = emptyList(),
+    @SerialName("has_more") val hasMore: Boolean = false
+)
 
 @Serializable
 data class ScryfallImageUris(

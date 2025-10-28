@@ -24,6 +24,7 @@ import com.commandermtg.viewmodel.GameViewModel
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.material3.ExperimentalMaterial3Api
+import kotlinx.coroutines.launch
 
 @Composable
 fun GameScreen(
@@ -1703,8 +1704,20 @@ fun TokenCreationDialog(
     var toughness by remember { mutableStateOf("") }
     var selectedColor by remember { mutableStateOf("Colorless") }
     var quantity by remember { mutableStateOf("1") }
+    var searchQuery by remember { mutableStateOf("") }
+    var searchResults by remember { mutableStateOf<List<com.commandermtg.models.Card>>(emptyList()) }
+    var isSearching by remember { mutableStateOf(false) }
 
     val colors = listOf("Colorless", "White", "Blue", "Black", "Red", "Green", "Multicolor")
+    val coroutineScope = rememberCoroutineScope()
+    val scryfallApi = remember { com.commandermtg.api.ScryfallApi() }
+
+    // Cleanup on dismiss
+    DisposableEffect(Unit) {
+        onDispose {
+            scryfallApi.close()
+        }
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -1713,9 +1726,106 @@ fun TokenCreationDialog(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .height(600.dp)
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
+                // Search field
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = {
+                        searchQuery = it
+                        if (it.isNotBlank()) {
+                            isSearching = true
+                            coroutineScope.launch {
+                                try {
+                                    searchResults = scryfallApi.searchTokens(it)
+                                } catch (e: Exception) {
+                                    println("Search error: ${e.message}")
+                                    searchResults = emptyList()
+                                } finally {
+                                    isSearching = false
+                                }
+                            }
+                        } else {
+                            searchResults = emptyList()
+                        }
+                    },
+                    label = { Text("Search Scryfall Tokens") },
+                    placeholder = { Text("e.g., Goblin, Soldier, Treasure") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    trailingIcon = {
+                        if (isSearching) {
+                            CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                        }
+                    }
+                )
+
+                // Search results
+                if (searchResults.isNotEmpty()) {
+                    Text("Search Results (tap to use):", style = MaterialTheme.typography.labelMedium)
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 200.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .verticalScroll(rememberScrollState())
+                                .padding(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            searchResults.forEach { card ->
+                                Card(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable {
+                                            // Auto-fill form with selected token
+                                            tokenName = card.name
+                                            tokenType = card.type ?: "Creature Token"
+                                            power = card.power ?: ""
+                                            toughness = card.toughness ?: ""
+                                            selectedColor = when {
+                                                card.colors.isEmpty() -> "Colorless"
+                                                card.colors.size > 1 -> "Multicolor"
+                                                card.colors.contains("W") -> "White"
+                                                card.colors.contains("U") -> "Blue"
+                                                card.colors.contains("B") -> "Black"
+                                                card.colors.contains("R") -> "Red"
+                                                card.colors.contains("G") -> "Green"
+                                                else -> "Colorless"
+                                            }
+                                            searchQuery = ""
+                                            searchResults = emptyList()
+                                        },
+                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(8.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(card.name, style = MaterialTheme.typography.bodyMedium)
+                                            Text(
+                                                "${card.type ?: "Token"} ${if (card.power != null && card.toughness != null) "${card.power}/${card.toughness}" else ""}",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Divider()
+
+                Text("Or create custom token:", style = MaterialTheme.typography.labelMedium)
+
                 // Token Name
                 OutlinedTextField(
                     value = tokenName,
