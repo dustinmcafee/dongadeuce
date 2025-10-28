@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.9.3] - 2025-10-28
+
+### Fixed
+- **Player Zone Visibility** - Fixed graveyard and exile zone buttons not visible for local player
+  - Added explicit height (170dp) to player zones Row
+  - Added fillMaxHeight to all zone columns and commander zone card
+  - Graveyard and exile buttons now properly sized and visible
+  - Library, graveyard, and exile zones now have consistent, proper sizing
+
+### Technical Details
+- Player zones Row: height(170dp)
+- Commander ZoneCard: width(120dp).fillMaxHeight()
+- Player info Column: weight(1f).fillMaxHeight()
+- Library/Graveyard/Exile Column: width(200dp).fillMaxHeight()
+- Graveyard/Exile Row: fillMaxWidth().height(60dp)
+
 ## [2.9.2] - 2025-10-28
 
 ### Fixed

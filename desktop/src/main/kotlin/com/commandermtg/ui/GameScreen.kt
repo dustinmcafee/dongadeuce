@@ -851,7 +851,7 @@ fun PlayerArea(
 
         // Player zones row
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().height(170.dp),
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // Commander zone
@@ -859,13 +859,13 @@ fun PlayerArea(
                 "Commander",
                 Zone.COMMAND_ZONE,
                 commanderCount,
-                Modifier.width(120.dp),
+                Modifier.width(120.dp).fillMaxHeight(),
                 onClick = { showCommandZoneDialog = true }
             )
 
             // Your hand and info
             Column(
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.weight(1f).fillMaxHeight(),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Card(
@@ -927,7 +927,7 @@ fun PlayerArea(
 
             // Your library, graveyard, exile
             Column(
-                modifier = Modifier.width(200.dp),
+                modifier = Modifier.width(200.dp).fillMaxHeight(),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 ZoneCard(
@@ -937,19 +937,22 @@ fun PlayerArea(
                     Modifier.height(100.dp),
                     onClick = { showLibrarySearchDialog = true }
                 )
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().height(60.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
                     ZoneCard(
                         "Graveyard",
                         Zone.GRAVEYARD,
                         graveyardCount,
-                        Modifier.weight(1f),
+                        Modifier.weight(1f).fillMaxHeight(),
                         onClick = { showGraveyardDialog = true }
                     )
                     ZoneCard(
                         "Exile",
                         Zone.EXILE,
                         exileCount,
-                        Modifier.weight(1f),
+                        Modifier.weight(1f).fillMaxHeight(),
                         onClick = { showExileDialog = true }
                     )
                 }
