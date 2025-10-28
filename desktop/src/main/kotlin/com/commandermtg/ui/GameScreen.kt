@@ -316,6 +316,18 @@ fun PlayerArea(
             onPlayCard = { cardInstance ->
                 viewModel.moveCard(cardInstance.instanceId, Zone.BATTLEFIELD)
                 showHandDialog = false
+            },
+            onDiscard = { cardInstance ->
+                viewModel.moveCard(cardInstance.instanceId, Zone.GRAVEYARD)
+                showHandDialog = false
+            },
+            onExile = { cardInstance ->
+                viewModel.moveCard(cardInstance.instanceId, Zone.EXILE)
+                showHandDialog = false
+            },
+            onToLibrary = { cardInstance ->
+                viewModel.moveCard(cardInstance.instanceId, Zone.LIBRARY)
+                showHandDialog = false
             }
         )
     }
@@ -515,7 +527,10 @@ private fun Modifier.clickableWithRipple(onClick: () -> Unit): Modifier {
 fun HandDialog(
     cards: List<com.commandermtg.models.CardInstance>,
     onDismiss: () -> Unit,
-    onPlayCard: (com.commandermtg.models.CardInstance) -> Unit
+    onPlayCard: (com.commandermtg.models.CardInstance) -> Unit,
+    onDiscard: (com.commandermtg.models.CardInstance) -> Unit = {},
+    onExile: (com.commandermtg.models.CardInstance) -> Unit = {},
+    onToLibrary: (com.commandermtg.models.CardInstance) -> Unit = {}
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -538,47 +553,76 @@ fun HandDialog(
                                 containerColor = MaterialTheme.colorScheme.secondaryContainer
                             )
                         ) {
-                            Row(
+                            Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(12.dp),
-                                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                                verticalAlignment = Alignment.CenterVertically
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                // Card image thumbnail
-                                CardImageThumbnail(
-                                    imageUrl = cardInstance.card.imageUri,
-                                    contentDescription = cardInstance.card.name
-                                )
-
-                                // Card info
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = cardInstance.card.name,
-                                        style = MaterialTheme.typography.titleSmall
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    // Card image thumbnail
+                                    CardImageThumbnail(
+                                        imageUrl = cardInstance.card.imageUri,
+                                        contentDescription = cardInstance.card.name
                                     )
-                                    val manaCost = cardInstance.card.manaCost
-                                    if (manaCost != null) {
+
+                                    // Card info
+                                    Column(modifier = Modifier.weight(1f)) {
                                         Text(
-                                            text = manaCost,
-                                            style = MaterialTheme.typography.bodySmall
+                                            text = cardInstance.card.name,
+                                            style = MaterialTheme.typography.titleSmall
                                         )
-                                    }
-                                    val cardType = cardInstance.card.type
-                                    if (cardType != null) {
-                                        Text(
-                                            text = cardType,
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
-                                        )
+                                        val manaCost = cardInstance.card.manaCost
+                                        if (manaCost != null) {
+                                            Text(
+                                                text = manaCost,
+                                                style = MaterialTheme.typography.bodySmall
+                                            )
+                                        }
+                                        val cardType = cardInstance.card.type
+                                        if (cardType != null) {
+                                            Text(
+                                                text = cardType,
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
+                                            )
+                                        }
                                     }
                                 }
 
-                                // Play button
-                                Button(
-                                    onClick = { onPlayCard(cardInstance) }
+                                // Action buttons row
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
                                 ) {
-                                    Text("Play")
+                                    Button(
+                                        onClick = { onPlayCard(cardInstance) },
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Text("Play", style = MaterialTheme.typography.labelSmall)
+                                    }
+                                    OutlinedButton(
+                                        onClick = { onDiscard(cardInstance) },
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Text("Discard", style = MaterialTheme.typography.labelSmall)
+                                    }
+                                    OutlinedButton(
+                                        onClick = { onExile(cardInstance) },
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Text("Exile", style = MaterialTheme.typography.labelSmall)
+                                    }
+                                    OutlinedButton(
+                                        onClick = { onToLibrary(cardInstance) },
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Text("To Library", style = MaterialTheme.typography.labelSmall)
+                                    }
                                 }
                             }
                         }

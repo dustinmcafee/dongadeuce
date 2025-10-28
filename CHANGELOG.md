@@ -7,6 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.7.0] - 2025-10-27
+
+### Added
+- Enhanced Hand Dialog with multiple card actions
+  - "Play" button - Play card to battlefield (existing functionality)
+  - "Discard" button - Move card to graveyard
+  - "Exile" button - Move card to exile zone
+  - "To Library" button - Move card to library
+  - All actions close the dialog after execution
+  - Action buttons use labelSmall typography for better fit
+- Improved HandDialog UI layout
+  - Card info and action buttons now in vertical layout
+  - Action buttons displayed in a row below card info
+  - Better use of space with 4 equal-width buttons
+  - Consistent button styling (filled for Play, outlined for others)
+
+### Changed
+- HandDialog signature now accepts optional callbacks for additional actions
+  - onDiscard, onExile, onToLibrary default to empty lambdas
+  - Maintains backward compatibility with existing code
+- Card layout in hand dialog restructured
+  - Changed from horizontal Row to vertical Column layout
+  - Separated card info from action buttons
+  - Better visual hierarchy
+
+### Technical Details
+- HandDialog function signature extended with optional parameters
+- All actions use existing viewModel.moveCard() function
+- Actions automatically close dialog via showHandDialog = false
+- Default parameters allow HandDialog to work without specifying all actions
+- Uses existing Zone enum (GRAVEYARD, EXILE, LIBRARY, BATTLEFIELD)
+
 ## [1.6.0] - 2025-10-27
 
 ### Added
@@ -511,7 +543,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Current Progress
 
-**Overall Completion:** ~70% for full 2+ player Cockatrice-like experience
+**Overall Completion:** ~72% for full 2+ player Cockatrice-like experience
 
 **By Category:**
 - ✅ Core Architecture: 100%
@@ -520,12 +552,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🟡 Multi-Player Support: 10%
 - ❌ Networking: 0%
 - ✅ Battlefield Visualization: 85% (core display, tap/untap, and images complete, missing right-click menu and drag-drop)
-- ✅ Zone Interactions: 70% (graveyard and exile viewers complete, missing library search)
+- ✅ Zone Interactions: 75% (hand, graveyard and exile viewers complete with multiple actions, missing library search)
 - ✅ Turn System: 90% (missing network sync)
 - ✅ Card Images: 95% (loading and caching complete, missing hover preview)
 - ✅ Commander Damage UI: 100%
 - ✅ Game Actions: 95% (all essential functions implemented, only searchLibrary needs UI component)
 
-**Estimated Time to MVP (v1.6.0):**
+**Estimated Time to MVP (v1.7.0):**
 - With networking: 2-3 weeks
-- Without networking (local hotseat): 1-2 days
+- Without networking (local hotseat): 1 day
