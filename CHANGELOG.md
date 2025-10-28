@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.8.1] - 2025-10-28
+
+### Fixed
+- **Tapped Card Overlap** - Tapped cards no longer overlap with adjacent cards
+  - BattlefieldCard now reserves 168x168dp space when tapped
+  - Untapped cards use 120x168dp space
+  - Card rotates within centered box to prevent overlap
+  - FlowRow layout properly respects reserved space
+
+### Technical Details
+- Added Box container around BattlefieldCard with dynamic sizing
+- containerSize modifier changes based on isTapped state
+- Card rotation happens inside centered box for consistent positioning
+
 ## [2.8.0] - 2025-10-28
 
 ### Added

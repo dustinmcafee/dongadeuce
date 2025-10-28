@@ -33,16 +33,27 @@ fun BattlefieldCard(
 
     val rotation = if (cardInstance.isTapped) 90f else 0f
 
-    CardWithContextMenu(
-        cardInstance = cardInstance,
-        onAction = onContextAction,
-        modifier = modifier
+    // When tapped, card rotates so width and height swap
+    // Reserve enough space to prevent overlap
+    val containerSize = if (cardInstance.isTapped) {
+        Modifier.size(width = 168.dp, height = 168.dp) // Reserve square space for rotated card
+    } else {
+        Modifier.size(width = 120.dp, height = 168.dp)
+    }
+
+    Box(
+        modifier = modifier.then(containerSize),
+        contentAlignment = Alignment.Center
     ) {
-        Card(
-            modifier = Modifier
-                .size(width = 120.dp, height = 168.dp)
-                .rotate(rotation)
-                .clickable {
+        CardWithContextMenu(
+            cardInstance = cardInstance,
+            onAction = onContextAction
+        ) {
+            Card(
+                modifier = Modifier
+                    .size(width = 120.dp, height = 168.dp)
+                    .rotate(rotation)
+                    .clickable {
                     val currentTime = System.currentTimeMillis()
                     if (currentTime - lastClickTime < 300) {
                         // Double-click detected - tap/untap
@@ -122,6 +133,7 @@ fun BattlefieldCard(
                     }
                 }
             }
+        }
         }
     }
 }
