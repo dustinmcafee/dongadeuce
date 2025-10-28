@@ -5,13 +5,13 @@ import com.commandermtg.models.Deck
 import java.io.File
 
 /**
- * Parses Cockatrice deck format:
+ * Parses text-based deck format:
  * // Category
  * quantity cardname
  */
 object DeckParser {
 
-    fun parseCockatriceFormat(content: String): Deck {
+    fun parseTextFormat(content: String): Deck {
         val lines = content.lines()
         var commander: Card? = null
         val cards = mutableListOf<Card>()
@@ -60,11 +60,11 @@ object DeckParser {
         )
     }
 
-    fun parseCockatriceFile(file: File): Deck {
-        return parseCockatriceFormat(file.readText())
+    fun parseTextFile(file: File): Deck {
+        return parseTextFormat(file.readText())
     }
 
-    fun parseCockatriceFile(filePath: String): Deck {
-        return parseCockatriceFile(File(filePath))
+    fun parseTextFile(filePath: String): Deck {
+        return parseTextFile(File(filePath))
     }
 }

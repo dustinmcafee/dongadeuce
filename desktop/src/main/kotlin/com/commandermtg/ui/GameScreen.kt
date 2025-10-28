@@ -280,7 +280,8 @@ fun BattlefieldArea(
                                 cardInstance = cardInstance,
                                 controller = controller,
                                 isLocalPlayer = cardInstance.controllerId == localPlayerId,
-                                onCardClick = { viewModel.toggleTap(it.instanceId) }
+                                onCardClick = { viewModel.toggleTap(it.instanceId) },
+                                onContextAction = { action -> handleCardAction(action, viewModel) }
                             )
                         }
                     }
@@ -329,7 +330,8 @@ fun PlayerArea(
             onToLibrary = { cardInstance ->
                 viewModel.moveCard(cardInstance.instanceId, Zone.LIBRARY)
                 showHandDialog = false
-            }
+            },
+            onContextAction = { action -> handleCardAction(action, viewModel) }
         )
     }
 
@@ -561,7 +563,8 @@ fun HandDialog(
     onPlayCard: (com.commandermtg.models.CardInstance) -> Unit,
     onDiscard: (com.commandermtg.models.CardInstance) -> Unit = {},
     onExile: (com.commandermtg.models.CardInstance) -> Unit = {},
-    onToLibrary: (com.commandermtg.models.CardInstance) -> Unit = {}
+    onToLibrary: (com.commandermtg.models.CardInstance) -> Unit = {},
+    onContextAction: (CardAction) -> Unit = {}
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -578,12 +581,16 @@ fun HandDialog(
                     Text("No cards in hand", style = MaterialTheme.typography.bodyMedium)
                 } else {
                     cards.forEach { cardInstance ->
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.secondaryContainer
-                            )
+                        CardWithContextMenu(
+                            cardInstance = cardInstance,
+                            onAction = onContextAction
                         ) {
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.secondaryContainer
+                                )
+                            ) {
                             Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -656,6 +663,7 @@ fun HandDialog(
                                     }
                                 }
                             }
+                        }
                         }
                     }
                 }

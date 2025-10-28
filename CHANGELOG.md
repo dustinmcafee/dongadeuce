@@ -7,6 +7,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.9.0] - 2025-10-27
+
+### Added
+- Card Context Menu system for all card interactions
+  - Right-click any card to access contextual actions
+  - Battlefield cards: Tap/Untap, Flip, Add/Remove Counters, Move to zones
+  - Hand cards: Play, Discard, Exile, To Library, To Top
+  - Graveyard/Exile cards: Return to Hand, Return to Battlefield, etc.
+  - Library cards: To Hand, To Battlefield, To Top
+  - Commander zone cards: Cast, To Hand
+  - "View Details" option on all cards (placeholder for future implementation)
+- Context menu integrated into BattlefieldCard component
+  - Replaces click-only tap/untap with full action menu
+  - Maintains left-click for quick tap/untap
+- Context menu integrated into HandDialog
+  - Supplements existing action buttons with right-click menu
+  - Consistent UX across all card locations
+
+### Changed
+- BattlefieldCard now accepts onContextAction callback
+- HandDialog now accepts onContextAction callback
+- Renamed DeckParser functions for clarity:
+  - parseCockatriceFormat() → parseTextFormat()
+  - parseCockatriceFile() → parseTextFile()
+- Removed external project name references from:
+  - README.md (project description, deck format)
+  - CHANGELOG.md (completion description, deck parser)
+  - DeckParser.kt (function names and comments)
+  - MenuViewModel.kt (function call)
+
+### Technical Details
+- Created CardContextMenu.kt with CardWithContextMenu composable
+- Uses Compose Desktop's ContextMenuArea for right-click functionality
+- CardAction sealed class for type-safe action dispatching
+- handleCardAction() helper function routes actions to ViewModel
+- Context menus dynamically generated based on card's current zone
+- Counter types shown in remove menu if card has counters
+- All context actions use existing ViewModel functions
+
 ## [1.8.0] - 2025-10-27
 
 ### Added
@@ -284,7 +323,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Initial project structure with Gradle + Compose Multiplatform
 - MVVM architecture with ViewModels and StateFlow
 - Core domain models (Card, Deck, Player, GameState, Zone, CardInstance)
-- Cockatrice deck format parser
+- Text-based deck format parser
 - Main menu with deck loading via file chooser
 - Host lobby screen (UI only, networking not implemented)
 - Join lobby screen (UI only, networking not implemented)
@@ -572,13 +611,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - [ ] Create/edit decks in-app
   - [ ] Search Scryfall
   - [ ] Validate Commander rules
-  - [ ] Save to Cockatrice format
+  - [ ] Save to text format
 
 ---
 
 ## Current Progress
 
-**Overall Completion:** ~75% for full 2+ player Cockatrice-like experience
+**Overall Completion:** ~78% for full 2+ player multiplayer experience
 
 **By Category:**
 - ✅ Core Architecture: 100%
@@ -586,13 +625,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - ✅ Scryfall Integration: 100%
 - 🟡 Multi-Player Support: 10%
 - ❌ Networking: 0%
-- ✅ Battlefield Visualization: 85% (core display, tap/untap, and images complete, missing right-click menu and drag-drop)
-- ✅ Zone Interactions: 90% (hand, graveyard, exile, and library search complete with multiple actions)
+- ✅ Battlefield Visualization: 95% (core display, tap/untap, images, and context menus complete, missing drag-drop)
+- ✅ Zone Interactions: 95% (all zones have dialogs and context menus)
 - ✅ Turn System: 90% (missing network sync)
 - ✅ Card Images: 95% (loading and caching complete, missing hover preview)
 - ✅ Commander Damage UI: 100%
-- ✅ Game Actions: 100% (all essential functions implemented including library search)
+- ✅ Game Actions: 100% (all essential functions implemented)
 
-**Estimated Time to MVP (v1.8.0):**
+**Estimated Time to MVP (v1.9.0):**
 - With networking: 2-3 weeks
-- Without networking (local hotseat): 1 day (all core features complete!)
+- Without networking (local hotseat): Complete! All core single-player features done.

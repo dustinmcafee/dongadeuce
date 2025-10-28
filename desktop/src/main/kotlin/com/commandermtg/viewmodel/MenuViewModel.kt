@@ -71,7 +71,7 @@ class MenuViewModel {
                 }
 
                 // Parse the deck file
-                val parsedDeck = DeckParser.parseCockatriceFile(file)
+                val parsedDeck = DeckParser.parseTextFile(file)
 
                 _uiState.update { it.copy(loadingProgress = "Fetching card data from Scryfall...") }
 

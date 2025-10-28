@@ -1,12 +1,12 @@
 # Commander MTG
 
-A lightweight, cross-platform MTG Commander game client built with Kotlin and Compose Multiplatform, inspired by Cockatrice.
+A lightweight, cross-platform MTG Commander game client built with Kotlin and Compose Multiplatform.
 
 ## Features (Planned)
 
 - **Commander-focused**: Designed specifically for EDH/Commander format
 - **P2P Networking**: Host or join games directly, no central server needed
-- **Deck Import**: Load decks from Cockatrice format
+- **Deck Import**: Load decks from text format
 - **Cross-platform**: Runs on Windows, macOS, and Linux
 
 ## Project Structure
@@ -70,7 +70,7 @@ cd commander-mtg
 ✅ Project structure and Gradle setup
 ✅ Core domain models (Card, Deck, Player, GameState, Zones)
 ✅ MVVM architecture with ViewModels and StateFlow
-✅ Cockatrice deck format parser
+✅ Text-based deck format parser
 ✅ Complete UI flow (menu, lobby, game screen)
 ✅ Deck loading with file chooser
 ✅ **Scryfall API integration** - Full card data (mana cost, type, text)
