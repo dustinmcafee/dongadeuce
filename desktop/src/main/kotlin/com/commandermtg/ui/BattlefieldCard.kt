@@ -7,7 +7,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
@@ -23,6 +23,8 @@ fun BattlefieldCard(
     onContextAction: (CardAction) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
+    var lastClickTime by remember { mutableStateOf(0L) }
+
     val borderColor = if (isLocalPlayer) {
         MaterialTheme.colorScheme.primary
     } else {
@@ -40,7 +42,17 @@ fun BattlefieldCard(
             modifier = Modifier
                 .size(width = 120.dp, height = 168.dp)
                 .rotate(rotation)
-                .clickable { onCardClick(cardInstance) },
+                .clickable {
+                    val currentTime = System.currentTimeMillis()
+                    if (currentTime - lastClickTime < 300) {
+                        // Double-click detected - tap/untap
+                        onCardClick(cardInstance)
+                        lastClickTime = 0L
+                    } else {
+                        // Single click - do nothing or could show details
+                        lastClickTime = currentTime
+                    }
+                },
             colors = CardDefaults.cardColors(containerColor = Color.Transparent),
             shape = RoundedCornerShape(8.dp),
             border = BorderStroke(3.dp, borderColor),

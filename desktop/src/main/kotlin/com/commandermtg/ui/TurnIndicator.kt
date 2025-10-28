@@ -21,6 +21,7 @@ fun TurnIndicator(
     turnNumber: Int,
     onNextPhase: () -> Unit,
     onPassTurn: () -> Unit,
+    onUntapAll: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -46,22 +47,34 @@ fun TurnIndicator(
             PhaseIndicator(currentPhase = currentPhase)
 
             // Control buttons
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            Column(
+                verticalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                OutlinedButton(
-                    onClick = onNextPhase,
-                    modifier = Modifier.weight(1f)
+                Button(
+                    onClick = onUntapAll,
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Next Phase")
+                    Text("Untap All")
                 }
 
-                Button(
-                    onClick = onPassTurn,
-                    modifier = Modifier.weight(1f)
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Pass Turn")
+                    OutlinedButton(
+                        onClick = onNextPhase,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("Next Phase")
+                    }
+
+                    Button(
+                        onClick = onPassTurn,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("Pass Turn")
+                    }
                 }
             }
         }

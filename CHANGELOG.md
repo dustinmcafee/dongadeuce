@@ -7,6 +7,80 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.8.0] - 2025-10-28
+
+### Added
+- **Scryfall Bulk Card Cache System** - Offline deck loading with complete card data
+  - Downloads 491MB bulk card database from Scryfall on first run
+  - Caches all MTG card data locally in ~/.commandermtg/cache/
+  - Eliminates slow per-card API calls when loading decks
+  - CardCache class handles download, storage, and lookup
+  - Cache metadata tracking (last updated, card count)
+  - Streaming download with real-time progress reporting
+  - Cache UI in main menu shows status and update button
+  - Progress bar with percentage and MB downloaded
+  - "Connecting to download server..." message during initial connection
+  - Deck loading falls back to API if cache not available
+
+- **Double-Click Card Interactions**
+  - Double-click cards in hand to play them to battlefield
+  - Double-click battlefield cards to tap/untap (changed from single-click)
+  - 300ms double-click detection window
+  - Single-click on battlefield cards now does nothing (prepare for other actions)
+
+- **Manual Untap Control**
+  - "Untap All" button added to turn indicator
+  - Removed automatic untap when passing turn
+  - Players must manually untap their permanents
+  - More accurate to paper MTG gameplay
+
+### Changed
+- **Hotseat Mode Layout Redesign** - Compact player sections with touching battlefields
+  - Each player section shows: hand strip (top/bottom), battlefield (center), player info (sidebar)
+  - Active player always positioned at bottom-left of screen
+  - Screen rotates when turn passes so active player is always at bottom
+  - Hand visibility: Only active player sees their cards, others see "Hidden"
+  - Player sections highlight with subtle background when active
+  - Battlefields directly adjacent with no gaps between them
+  - Compact hand strip shows card count and scrollable card list
+  - Player info sidebar shows name, life, library count, graveyard count
+  - Layout adapts to player count:
+    - 2 players: Vertical split (active bottom, opponent top)
+    - 3 players: Opponents on top row, active player bottom-left
+    - 4 players: 2x2 grid with active player bottom-left
+
+- **Ownership Enforcement in Hotseat Mode**
+  - Only active player can interact with their cards
+  - Prevents players from manipulating opponent cards
+  - Uses gameState.activePlayer to determine current controller
+  - ViewDetails still works on any card (read-only)
+
+### Fixed
+- **Image Loading Coroutine Cancellation** - Eliminated error spam in logs
+  - Fixed "The coroutine scope left the composition" errors
+  - Properly handles CancellationException in CardImage and ImageCache
+  - Silent cancellation when composable leaves composition
+  - Images load cleanly without console errors
+
+- **Turn Passing in Hotseat Mode** - Active player rotation now works correctly
+  - Fixed player list rotation using gameState.players instead of uiState.allPlayers
+  - Used key(activePlayerId) to force recomposition on turn change
+  - Screen properly rotates to show new active player at bottom
+  - Hand visibility updates correctly on turn change
+  - All players can now interact with their cards on their turn
+
+### Technical Details
+- CardCache uses Ktor CIO engine with 15-minute timeout for bulk download
+- Streaming download with 1MB buffer and progress callbacks every 500ms
+- Cache stored as JSON array of ScryfallCard objects
+- Cache metadata separate file for quick status checks
+- HotseatPlayerSection composable for compact player display
+- CompactHandStrip shows hand with showCards parameter for visibility control
+- BattlefieldCard and HandCardDisplay use remember { mutableStateOf(0L) } for double-click timing
+- GameViewModel.passTurn updated with detailed logging for debugging
+- Image coroutines use proper CancellationException handling pattern
+- key() composable forces recomposition on active player change
+
 ## [2.6.1] - 2025-10-28
 
 ### Fixed

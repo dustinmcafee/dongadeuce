@@ -60,7 +60,11 @@ object ImageCache {
                 } else {
                     null
                 }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                // Re-throw cancellation to propagate it properly
+                throw e
             } catch (e: Exception) {
+                // Only log non-cancellation exceptions
                 println("Error caching image from $imageUrl: ${e.message}")
                 null
             }

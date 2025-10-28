@@ -3,6 +3,7 @@ package com.commandermtg.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -40,8 +41,6 @@ fun GameScreen(
                 cardDetailsToShow = action.cardInstance
             }
             else -> {
-                // Only allow actions on cards you own (except in hotseat mode)
-                val localPlayer = uiState.localPlayer
                 val cardInstance = when (action) {
                     is CardAction.Tap -> action.cardInstance
                     is CardAction.Untap -> action.cardInstance
@@ -58,13 +57,25 @@ fun GameScreen(
                     else -> null
                 }
 
-                // In hotseat mode, current player can only interact with their own cards
-                // In network mode, you can only interact with your cards
-                if (localPlayer != null && cardInstance != null) {
-                    if (cardInstance.ownerId == localPlayer.id) {
-                        handleCardAction(action, viewModel)
-                    } else {
-                        println("Cannot interact with opponent's card: ${cardInstance.card.name}")
+                if (isHotseatMode) {
+                    // In hotseat mode, current active player can interact with their cards
+                    val activePlayer = uiState.gameState?.activePlayer
+                    if (activePlayer != null && cardInstance != null) {
+                        if (cardInstance.ownerId == activePlayer.id) {
+                            handleCardAction(action, viewModel)
+                        } else {
+                            println("Cannot interact with other player's card: ${cardInstance.card.name}")
+                        }
+                    }
+                } else {
+                    // In network mode, you can only interact with your cards
+                    val localPlayer = uiState.localPlayer
+                    if (localPlayer != null && cardInstance != null) {
+                        if (cardInstance.ownerId == localPlayer.id) {
+                            handleCardAction(action, viewModel)
+                        } else {
+                            println("Cannot interact with opponent's card: ${cardInstance.card.name}")
+                        }
                     }
                 }
             }
@@ -143,34 +154,146 @@ fun GameScreen(
         Column(
             modifier = Modifier.weight(1f)
         ) {
-            val opponents = uiState.opponents
-            val localPlayer = uiState.localPlayer
+            if (isHotseatMode) {
+                // Hotseat mode: Compact layout with battlefields touching
+                // Active player always at bottom-left
+                val gameState = uiState.gameState
+                // IMPORTANT: Use gameState.players, NOT uiState.allPlayers
+                // because allPlayers is derived from localPlayer+opponents which is already rotated
+                val allPlayers = gameState?.players ?: emptyList()
+                val activePlayerIndex = gameState?.activePlayerIndex ?: 0
+                val activePlayerId = gameState?.activePlayer?.id
 
-            // Opponents' area (top) - dynamic layout based on player count
-            if (opponents.isNotEmpty()) {
-                OpponentsArea(
-                    opponents = opponents,
-                    viewModel = viewModel,
-                    onCardAction = handleAction,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(0.4f)
-                )
-            }
+                println("[GameScreen] Hotseat mode - activePlayerIndex: $activePlayerIndex, activePlayerId: $activePlayerId, allPlayers: ${allPlayers.map { it.name }}")
 
-            Spacer(modifier = Modifier.height(8.dp))
+                // Rotate players so active player is first (will be at bottom)
+                val rotatedPlayers = allPlayers.drop(activePlayerIndex) + allPlayers.take(activePlayerIndex)
+                println("[GameScreen] Rotated players: ${rotatedPlayers.map { it.name }}")
 
-            // Your area (bottom)
-            if (localPlayer != null) {
-                PlayerArea(
-                    player = localPlayer,
-                    viewModel = viewModel,
-                    allPlayers = uiState.allPlayers,
-                    onCardAction = handleAction,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(0.6f)
-                )
+                // Use key to force recomposition when active player changes
+                key(activePlayerId) {
+                    Column(modifier = Modifier.fillMaxSize()) {
+                    when (rotatedPlayers.size) {
+                        2 -> {
+                            // 2 players: vertical split, opponent on top, active player on bottom
+                            HotseatPlayerSection(
+                                player = rotatedPlayers[1],
+                                viewModel = viewModel,
+                                isActivePlayer = false,
+                                onCardAction = handleAction,
+                                modifier = Modifier.fillMaxWidth().weight(1f)
+                            )
+                            HotseatPlayerSection(
+                                player = rotatedPlayers[0],
+                                viewModel = viewModel,
+                                isActivePlayer = true,
+                                onCardAction = handleAction,
+                                modifier = Modifier.fillMaxWidth().weight(1f),
+                                inverted = true
+                            )
+                        }
+                        3 -> {
+                            // 3 players: opponents on top, active player bottom-left
+                            Row(modifier = Modifier.fillMaxWidth().weight(1f)) {
+                                HotseatPlayerSection(
+                                    player = rotatedPlayers[1],
+                                    viewModel = viewModel,
+                                    isActivePlayer = false,
+                                    onCardAction = handleAction,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                HotseatPlayerSection(
+                                    player = rotatedPlayers[2],
+                                    viewModel = viewModel,
+                                    isActivePlayer = false,
+                                    onCardAction = handleAction,
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+                            Row(modifier = Modifier.fillMaxWidth().weight(1f)) {
+                                HotseatPlayerSection(
+                                    player = rotatedPlayers[0],
+                                    viewModel = viewModel,
+                                    isActivePlayer = true,
+                                    onCardAction = handleAction,
+                                    modifier = Modifier.weight(1f),
+                                    inverted = true
+                                )
+                                // Empty space to keep active player on left
+                                Spacer(modifier = Modifier.weight(1f))
+                            }
+                        }
+                        4 -> {
+                            // 4 players: 2 opponents on top, active player bottom-left, 1 opponent bottom-right
+                            Row(modifier = Modifier.fillMaxWidth().weight(1f)) {
+                                HotseatPlayerSection(
+                                    player = rotatedPlayers[2],
+                                    viewModel = viewModel,
+                                    isActivePlayer = false,
+                                    onCardAction = handleAction,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                HotseatPlayerSection(
+                                    player = rotatedPlayers[3],
+                                    viewModel = viewModel,
+                                    isActivePlayer = false,
+                                    onCardAction = handleAction,
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+                            Row(modifier = Modifier.fillMaxWidth().weight(1f)) {
+                                HotseatPlayerSection(
+                                    player = rotatedPlayers[0],
+                                    viewModel = viewModel,
+                                    isActivePlayer = true,
+                                    onCardAction = handleAction,
+                                    modifier = Modifier.weight(1f),
+                                    inverted = true
+                                )
+                                HotseatPlayerSection(
+                                    player = rotatedPlayers[1],
+                                    viewModel = viewModel,
+                                    isActivePlayer = false,
+                                    onCardAction = handleAction,
+                                    modifier = Modifier.weight(1f),
+                                    inverted = true
+                                )
+                            }
+                        }
+                    }
+                    }
+                }
+            } else {
+                // Network mode: Traditional local player vs opponents layout
+                val opponents = uiState.opponents
+                val localPlayer = uiState.localPlayer
+
+                // Opponents' area (top) - dynamic layout based on player count
+                if (opponents.isNotEmpty()) {
+                    OpponentsArea(
+                        opponents = opponents,
+                        viewModel = viewModel,
+                        onCardAction = handleAction,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(0.4f)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Your area (bottom)
+                if (localPlayer != null) {
+                    PlayerArea(
+                        player = localPlayer,
+                        viewModel = viewModel,
+                        allPlayers = uiState.allPlayers,
+                        onCardAction = handleAction,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(0.6f)
+                    )
+                }
             }
         }
 
@@ -183,6 +306,7 @@ fun GameScreen(
                 turnNumber = gameState.turnNumber,
                 onNextPhase = { viewModel.nextPhase() },
                 onPassTurn = { viewModel.passTurn() },
+                onUntapAll = { viewModel.untapAll(gameState.activePlayer.id) },
                 modifier = Modifier.width(250.dp)
             )
         }
@@ -194,6 +318,178 @@ fun GameScreen(
             cardInstance = cardInstance,
             onDismiss = { cardDetailsToShow = null }
         )
+    }
+}
+
+/**
+ * Compact player section for hotseat mode
+ * Shows: hand strip (top/bottom), battlefield (center), player info (side)
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun HotseatPlayerSection(
+    player: Player,
+    viewModel: GameViewModel,
+    isActivePlayer: Boolean,
+    onCardAction: (CardAction) -> Unit,
+    modifier: Modifier = Modifier,
+    inverted: Boolean = false // If true, hand at bottom; if false, hand at top
+) {
+    val handCards = if (isActivePlayer) viewModel.getCards(player.id, Zone.HAND) else emptyList()
+    val handCount = viewModel.getCardCount(player.id, Zone.HAND)
+    val battlefieldCards = viewModel.getCards(player.id, Zone.BATTLEFIELD)
+    val libraryCount = viewModel.getCardCount(player.id, Zone.LIBRARY)
+    val graveyardCount = viewModel.getCardCount(player.id, Zone.GRAVEYARD)
+
+    Column(
+        modifier = modifier.background(
+            if (isActivePlayer) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.1f)
+            else Color.Transparent
+        ),
+        verticalArrangement = if (inverted) Arrangement.Bottom else Arrangement.Top
+    ) {
+        if (!inverted) {
+            // Hand at top (normal orientation)
+            CompactHandStrip(
+                player = player,
+                handCards = handCards,
+                handCount = handCount,
+                showCards = isActivePlayer,
+                onCardAction = onCardAction,
+                modifier = Modifier.fillMaxWidth().height(100.dp)
+            )
+        }
+
+        // Battlefield in center
+        Card(
+            modifier = Modifier.fillMaxWidth().weight(1f),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF1B5E20))
+        ) {
+            Row(modifier = Modifier.fillMaxSize()) {
+                // Player info sidebar
+                Column(
+                    modifier = Modifier.width(120.dp).fillMaxHeight().padding(4.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(
+                        player.name,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color.White
+                    )
+                    Text(
+                        "Life: ${player.life}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.White
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text("Lib: $libraryCount", style = MaterialTheme.typography.labelSmall, color = Color.White)
+                    Text("GY: $graveyardCount", style = MaterialTheme.typography.labelSmall, color = Color.White)
+                }
+
+                // Battlefield cards
+                Box(modifier = Modifier.weight(1f).fillMaxHeight().padding(4.dp)) {
+                    if (battlefieldCards.isEmpty()) {
+                        Text(
+                            "Battlefield",
+                            modifier = Modifier.align(Alignment.Center),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color.White.copy(alpha = 0.5f)
+                        )
+                    } else {
+                        FlowRow(
+                            modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            battlefieldCards.forEach { cardInstance ->
+                                BattlefieldCard(
+                                    cardInstance = cardInstance,
+                                    isLocalPlayer = isActivePlayer,
+                                    onCardClick = { viewModel.toggleTap(it.instanceId) },
+                                    onContextAction = onCardAction
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        if (inverted) {
+            // Hand at bottom (inverted orientation)
+            CompactHandStrip(
+                player = player,
+                handCards = handCards,
+                handCount = handCount,
+                showCards = isActivePlayer,
+                onCardAction = onCardAction,
+                modifier = Modifier.fillMaxWidth().height(100.dp)
+            )
+        }
+    }
+}
+
+/**
+ * Compact hand display strip
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun CompactHandStrip(
+    player: Player,
+    handCards: List<CardInstance>,
+    handCount: Int,
+    showCards: Boolean,
+    onCardAction: (CardAction) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxSize().padding(4.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                "${player.name}'s Hand ($handCount)",
+                style = MaterialTheme.typography.labelSmall,
+                modifier = Modifier.width(120.dp)
+            )
+
+            if (!showCards) {
+                // For non-active players, just show card count, not actual cards
+                Text(
+                    "Hidden",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                )
+            } else if (handCards.isEmpty()) {
+                Text(
+                    "No cards",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                )
+            } else {
+                FlowRow(
+                    modifier = Modifier.weight(1f).horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    handCards.forEach { cardInstance ->
+                        HandCardDisplay(
+                            cardInstance = cardInstance,
+                            onCardClick = { /* Single click - could open dialog */ },
+                            onDoubleClick = {
+                                // Double-click plays card to battlefield
+                                onCardAction(CardAction.ToBattlefield(cardInstance))
+                            },
+                            onContextAction = onCardAction
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -767,6 +1063,10 @@ fun PlayerArea(
                             HandCardDisplay(
                                 cardInstance = cardInstance,
                                 onCardClick = { showHandDialog = true },
+                                onDoubleClick = {
+                                    // Double-click plays card to battlefield
+                                    viewModel.moveCard(cardInstance.instanceId, Zone.BATTLEFIELD)
+                                },
                                 onContextAction = onCardAction
                             )
                         }
@@ -943,8 +1243,11 @@ fun HandDialog(
 fun HandCardDisplay(
     cardInstance: CardInstance,
     onCardClick: (CardInstance) -> Unit,
+    onDoubleClick: () -> Unit = {},
     onContextAction: (CardAction) -> Unit
 ) {
+    var lastClickTime by remember { mutableStateOf(0L) }
+
     CardWithContextMenu(
         cardInstance = cardInstance,
         onAction = onContextAction
@@ -953,7 +1256,18 @@ fun HandCardDisplay(
             modifier = Modifier
                 .width(60.dp)
                 .height(84.dp)
-                .clickable { onCardClick(cardInstance) },
+                .clickable {
+                    val currentTime = System.currentTimeMillis()
+                    if (currentTime - lastClickTime < 300) {
+                        // Double-click detected
+                        onDoubleClick()
+                        lastClickTime = 0L
+                    } else {
+                        // Single click
+                        lastClickTime = currentTime
+                        onCardClick(cardInstance)
+                    }
+                },
             colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.secondaryContainer
             )

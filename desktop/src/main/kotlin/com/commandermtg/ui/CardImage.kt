@@ -14,6 +14,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import com.commandermtg.utils.ImageCache
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.jetbrains.skia.Image as SkiaImage
 
@@ -47,7 +48,10 @@ fun CardImage(
         loadState = ImageLoadState.Loading
 
         try {
-            val cachedFile = ImageCache.getCachedImage(imageUrl)
+            val cachedFile = withContext(Dispatchers.IO) {
+                ImageCache.getCachedImage(imageUrl)
+            }
+
             if (cachedFile != null && cachedFile.exists()) {
                 val imageBitmap = withContext(Dispatchers.IO) {
                     val bytes = cachedFile.readBytes()
@@ -57,6 +61,9 @@ fun CardImage(
             } else {
                 loadState = ImageLoadState.Error
             }
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            // Silently ignore cancellation - this is normal when the composable leaves
+            throw e // Re-throw to properly cancel the coroutine
         } catch (e: Exception) {
             println("Error loading image from $imageUrl: ${e.message}")
             loadState = ImageLoadState.Error

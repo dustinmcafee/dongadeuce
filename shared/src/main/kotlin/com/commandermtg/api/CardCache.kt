@@ -78,16 +78,18 @@ class CardCache(
                 ?: throw Exception("Could not find default_cards bulk data")
 
             val sizeMB = defaultCards.size / 1024 / 1024
-            onProgress("Starting download of $sizeMB MB...", 1f)
-
             println("[CardCache] Downloading from: ${defaultCards.downloadUri}")
             println("[CardCache] Expected size: $sizeMB MB")
+
+            onProgress("Connecting to download server...", 0f)
 
             // Download Scryfall JSON directly to cache file (they're already in correct format)
             withContext(Dispatchers.IO) {
                 println("[CardCache] Starting HTTP GET request...")
                 val response: HttpResponse = client.get(defaultCards.downloadUri)
                 println("[CardCache] Got response, status: ${response.status}")
+
+                onProgress("Connected! Starting download...", 1f)
 
                 val contentLength = defaultCards.size
                 val channel: ByteReadChannel = response.bodyAsChannel()
@@ -96,7 +98,7 @@ class CardCache(
                 cacheFile.outputStream().buffered(1024 * 1024).use { output ->
                     val buffer = ByteArray(1024 * 1024) // 1MB buffer
                     var downloadedBytes = 0L
-                    var lastReportedPercent = 0f
+                    var lastReportedTime = System.currentTimeMillis()
                     var readCount = 0
 
                     while (true) {
@@ -117,15 +119,15 @@ class CardCache(
                             output.write(buffer, 0, bytesRead)
                             downloadedBytes += bytesRead
 
+                            val currentTime = System.currentTimeMillis()
+                            val downloadedMB = downloadedBytes / 1024 / 1024
                             val percent = (downloadedBytes.toFloat() / contentLength * 100).coerceIn(0f, 100f)
-                            val currentPercent = percent.toInt().toFloat()
 
-                            // Report progress when percentage changes by 1%
-                            if (currentPercent > lastReportedPercent) {
-                                val downloadedMB = downloadedBytes / 1024 / 1024
-                                onProgress("Downloaded $downloadedMB / $sizeMB MB", currentPercent)
-                                lastReportedPercent = currentPercent
-                                println("[CardCache] Progress: $currentPercent% ($downloadedMB MB / $sizeMB MB)")
+                            // Report progress every 500ms OR every MB, whichever comes first
+                            if (currentTime - lastReportedTime >= 500) {
+                                onProgress("Downloaded $downloadedMB / $sizeMB MB", percent)
+                                lastReportedTime = currentTime
+                                println("[CardCache] Progress: ${percent.toInt()}% ($downloadedMB MB / $sizeMB MB)")
                             }
                         }
                     }

@@ -93,16 +93,17 @@ fun MenuScreen(
                             )
                             Spacer(modifier = Modifier.height(4.dp))
 
-                            // Show helpful message if stuck at low percentage
-                            if (uiState.loadingProgressPercent <= 5f && uiState.loadingProgress.contains("Downloaded")) {
+                            // Show helpful message during connection phase or initial download
+                            if (uiState.loadingProgress.contains("Connecting") ||
+                                (uiState.loadingProgressPercent <= 5f && uiState.loadingProgress.contains("Downloaded"))) {
                                 Text(
-                                    "${uiState.loadingProgressPercent.toInt()}% - Initial download may take 1-2 minutes...",
+                                    "${"%.1f".format(uiState.loadingProgressPercent)}% - This may take 1-2 minutes...",
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSecondaryContainer
                                 )
                             } else {
                                 Text(
-                                    "${uiState.loadingProgressPercent.toInt()}%",
+                                    "${"%.1f".format(uiState.loadingProgressPercent)}%",
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSecondaryContainer
                                 )
