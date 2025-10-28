@@ -340,6 +340,13 @@ fun HotseatPlayerSection(
     val battlefieldCards = viewModel.getCards(player.id, Zone.BATTLEFIELD)
     val libraryCount = viewModel.getCardCount(player.id, Zone.LIBRARY)
     val graveyardCount = viewModel.getCardCount(player.id, Zone.GRAVEYARD)
+    val exileCount = viewModel.getCardCount(player.id, Zone.EXILE)
+    val commanderCount = viewModel.getCardCount(player.id, Zone.COMMAND_ZONE)
+
+    var showGraveyardDialog by remember { mutableStateOf(false) }
+    var showExileDialog by remember { mutableStateOf(false) }
+    var showLibrarySearchDialog by remember { mutableStateOf(false) }
+    var showCommandZoneDialog by remember { mutableStateOf(false) }
 
     Column(
         modifier = modifier.background(
@@ -368,7 +375,7 @@ fun HotseatPlayerSection(
             Row(modifier = Modifier.fillMaxSize()) {
                 // Player info sidebar
                 Column(
-                    modifier = Modifier.width(120.dp).fillMaxHeight().padding(4.dp),
+                    modifier = Modifier.width(150.dp).fillMaxHeight().padding(4.dp),
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     Text(
@@ -382,8 +389,36 @@ fun HotseatPlayerSection(
                         color = Color.White
                     )
                     Spacer(modifier = Modifier.height(4.dp))
-                    Text("Lib: $libraryCount", style = MaterialTheme.typography.labelSmall, color = Color.White)
-                    Text("GY: $graveyardCount", style = MaterialTheme.typography.labelSmall, color = Color.White)
+
+                    // Clickable zone cards
+                    ZoneCard(
+                        "Commander",
+                        Zone.COMMAND_ZONE,
+                        commanderCount,
+                        Modifier.fillMaxWidth().height(28.dp),
+                        onClick = if (isActivePlayer) ({ showCommandZoneDialog = true }) else null
+                    )
+                    ZoneCard(
+                        "Library",
+                        Zone.LIBRARY,
+                        libraryCount,
+                        Modifier.fillMaxWidth().height(28.dp),
+                        onClick = if (isActivePlayer) ({ showLibrarySearchDialog = true }) else null
+                    )
+                    ZoneCard(
+                        "Graveyard",
+                        Zone.GRAVEYARD,
+                        graveyardCount,
+                        Modifier.fillMaxWidth().height(28.dp),
+                        onClick = if (isActivePlayer) ({ showGraveyardDialog = true }) else null
+                    )
+                    ZoneCard(
+                        "Exile",
+                        Zone.EXILE,
+                        exileCount,
+                        Modifier.fillMaxWidth().height(28.dp),
+                        onClick = if (isActivePlayer) ({ showExileDialog = true }) else null
+                    )
                 }
 
                 // Battlefield cards
@@ -412,6 +447,69 @@ fun HotseatPlayerSection(
                 showCards = isActivePlayer,
                 onCardAction = onCardAction,
                 modifier = Modifier.fillMaxWidth().height(100.dp)
+            )
+        }
+    }
+
+    // Zone dialogs for active player
+    if (isActivePlayer) {
+        if (showGraveyardDialog) {
+            GraveyardDialog(
+                cards = viewModel.getCards(player.id, Zone.GRAVEYARD),
+                playerName = player.name,
+                onDismiss = { showGraveyardDialog = false },
+                onReturnToHand = { cardInstance ->
+                    viewModel.moveCard(cardInstance.instanceId, Zone.HAND)
+                },
+                onReturnToBattlefield = { cardInstance ->
+                    viewModel.moveCard(cardInstance.instanceId, Zone.BATTLEFIELD)
+                }
+            )
+        }
+
+        if (showExileDialog) {
+            ExileDialog(
+                cards = viewModel.getCards(player.id, Zone.EXILE),
+                playerName = player.name,
+                onDismiss = { showExileDialog = false },
+                onReturnToHand = { cardInstance ->
+                    viewModel.moveCard(cardInstance.instanceId, Zone.HAND)
+                },
+                onReturnToBattlefield = { cardInstance ->
+                    viewModel.moveCard(cardInstance.instanceId, Zone.BATTLEFIELD)
+                }
+            )
+        }
+
+        if (showLibrarySearchDialog) {
+            LibrarySearchDialog(
+                cards = viewModel.getCards(player.id, Zone.LIBRARY),
+                playerName = player.name,
+                onDismiss = { showLibrarySearchDialog = false },
+                onToHand = { cardInstance ->
+                    viewModel.moveCard(cardInstance.instanceId, Zone.HAND)
+                },
+                onToBattlefield = { cardInstance ->
+                    viewModel.moveCard(cardInstance.instanceId, Zone.BATTLEFIELD)
+                },
+                onToTop = { cardInstance ->
+                    viewModel.moveCardToTopOfLibrary(cardInstance.instanceId)
+                },
+                onShuffle = { viewModel.shuffleLibrary(player.id) }
+            )
+        }
+
+        if (showCommandZoneDialog) {
+            CommandZoneDialog(
+                cards = viewModel.getCards(player.id, Zone.COMMAND_ZONE),
+                playerName = player.name,
+                onDismiss = { showCommandZoneDialog = false },
+                onCastToBattlefield = { cardInstance ->
+                    viewModel.moveCard(cardInstance.instanceId, Zone.BATTLEFIELD)
+                },
+                onToHand = { cardInstance ->
+                    viewModel.moveCard(cardInstance.instanceId, Zone.HAND)
+                }
             )
         }
     }

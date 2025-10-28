@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.9.6] - 2025-10-28
+
+### Added
+- **Hotseat Mode Zone Access** - Added clickable zone cards in hotseat mode
+  - Commander, Library, Graveyard, and Exile now clickable in sidebar
+  - Only active player can click zones (inactive player sees non-clickable cards)
+  - All zone dialogs work in hotseat mode (library search, graveyard, exile, command zone)
+  - Replaced text-only "Lib: X" and "GY: X" with proper ZoneCard buttons
+
+### Fixed
+- **Missing Graveyard/Exile Access in Hotseat** - Players can now access all zones in hotseat mode
+  - Previously only showed text labels with no way to view/interact with zones
+  - Active player can now click to view and move cards between zones
+
+### Technical Details
+- Added ZoneCard components to HotseatPlayerSection sidebar
+- Added all zone dialog state and handlers
+- Increased sidebar width from 120dp to 150dp to accommodate zone cards
+- Each zone card has 28dp height with proper onClick handlers
+
 ## [2.9.5] - 2025-10-28
 
 ### Fixed
