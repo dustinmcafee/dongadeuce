@@ -22,23 +22,28 @@ fun GameScreen(
     val uiState by viewModel.uiState.collectAsState()
 
     // Initialize game and load deck when entering the screen
-    LaunchedEffect(loadedDeck) {
+    LaunchedEffect(Unit) {
+        // Initialize game if not already done
         if (uiState.localPlayer == null) {
             viewModel.initializeGame(
                 localPlayerName = "You",
                 opponentNames = listOf("Opponent")
             )
         }
+    }
 
-        // Load the deck if provided and draw starting hands
-        if (loadedDeck != null && uiState.gameState != null) {
-            val currentHandCount = viewModel.getCardCount(uiState.localPlayer?.id ?: "", Zone.HAND)
-            if (currentHandCount == 0) {
+    // Load deck when it becomes available and game is initialized
+    LaunchedEffect(loadedDeck, uiState.gameState, uiState.localPlayer) {
+        val localPlayer = uiState.localPlayer
+        if (loadedDeck != null && uiState.gameState != null && localPlayer != null) {
+            val currentHandCount = viewModel.getCardCount(localPlayer.id, Zone.HAND)
+
+            // Only load deck if we haven't already loaded it (hand is empty and library is empty)
+            val libraryCount = viewModel.getCardCount(localPlayer.id, Zone.LIBRARY)
+            if (currentHandCount == 0 && libraryCount == 0) {
                 viewModel.loadDeck(loadedDeck)
-                // Wait a moment for the deck to load, then draw starting hands
-                kotlinx.coroutines.delay(100)
-                uiState.localPlayer?.let { viewModel.drawStartingHand(it.id, 7) }
-                uiState.opponents.firstOrNull()?.let { viewModel.drawStartingHand(it.id, 7) }
+                // Draw starting hand for local player (opponents will load their own decks in multiplayer)
+                viewModel.drawStartingHand(localPlayer.id, 7)
             }
         }
     }

@@ -94,18 +94,15 @@ class GameViewModel {
         }
 
         // Shuffle library (simple random shuffle)
-        val shuffledInstances = cardInstances.map { instance ->
-            if (instance.zone == Zone.LIBRARY) {
-                instance
-            } else {
-                instance
-            }
-        }.shuffled()
+        val shuffledInstances = cardInstances.shuffled()
+
+        // Replace existing cards for this player to avoid duplicates
+        val otherPlayerCards = gameState.cardInstances.filter { it.ownerId != localPlayer.id }
 
         _uiState.update {
             it.copy(
                 gameState = gameState.copy(
-                    cardInstances = gameState.cardInstances + shuffledInstances
+                    cardInstances = otherPlayerCards + shuffledInstances
                 )
             )
         }
