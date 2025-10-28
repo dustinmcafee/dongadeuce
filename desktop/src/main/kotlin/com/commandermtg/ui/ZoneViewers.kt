@@ -106,82 +106,94 @@ private fun ZoneCard(
             containerColor = MaterialTheme.colorScheme.secondaryContainer
         )
     ) {
-        Column(
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Card name and mana cost
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+            // Card image thumbnail
+            CardImageThumbnail(
+                imageUrl = cardInstance.card.imageUri,
+                contentDescription = cardInstance.card.name
+            )
+
+            // Card info and actions
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Text(
-                    text = cardInstance.card.name,
-                    style = MaterialTheme.typography.titleSmall,
-                    modifier = Modifier.weight(1f)
-                )
-                val manaCost = cardInstance.card.manaCost
-                if (manaCost != null && manaCost.isNotEmpty()) {
+                // Card name and mana cost
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Text(
-                        text = manaCost,
+                        text = cardInstance.card.name,
+                        style = MaterialTheme.typography.titleSmall,
+                        modifier = Modifier.weight(1f)
+                    )
+                    val manaCost = cardInstance.card.manaCost
+                    if (manaCost != null && manaCost.isNotEmpty()) {
+                        Text(
+                            text = manaCost,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
+                        )
+                    }
+                }
+
+                // Card type
+                val cardType = cardInstance.card.type
+                if (cardType != null && cardType.isNotEmpty()) {
+                    Text(
+                        text = cardType,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
                     )
                 }
-            }
 
-            // Card type
-            val cardType = cardInstance.card.type
-            if (cardType != null && cardType.isNotEmpty()) {
-                Text(
-                    text = cardType,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
-                )
-            }
-
-            // Oracle text
-            val oracleText = cardInstance.card.oracleText
-            if (oracleText != null && oracleText.isNotEmpty()) {
-                Text(
-                    text = oracleText,
-                    style = MaterialTheme.typography.bodySmall,
-                    maxLines = 3
-                )
-            }
-
-            // Power/Toughness for creatures
-            val power = cardInstance.card.power
-            val toughness = cardInstance.card.toughness
-            if (power != null && toughness != null) {
-                Text(
-                    text = "$power/$toughness",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer
-                )
-            }
-
-            // Action buttons
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                OutlinedButton(
-                    onClick = { onReturnToHand(cardInstance) },
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text("To Hand")
+                // Oracle text
+                val oracleText = cardInstance.card.oracleText
+                if (oracleText != null && oracleText.isNotEmpty()) {
+                    Text(
+                        text = oracleText,
+                        style = MaterialTheme.typography.bodySmall,
+                        maxLines = 3
+                    )
                 }
 
-                if (showBattlefieldAction) {
-                    Button(
-                        onClick = { onReturnToBattlefield(cardInstance) },
+                // Power/Toughness for creatures
+                val power = cardInstance.card.power
+                val toughness = cardInstance.card.toughness
+                if (power != null && toughness != null) {
+                    Text(
+                        text = "$power/$toughness",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                }
+
+                // Action buttons
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = { onReturnToHand(cardInstance) },
                         modifier = Modifier.weight(1f)
                     ) {
-                        Text("To Battlefield")
+                        Text("To Hand")
+                    }
+
+                    if (showBattlefieldAction) {
+                        Button(
+                            onClick = { onReturnToBattlefield(cardInstance) },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("To Battlefield")
+                        }
                     }
                 }
             }

@@ -4,7 +4,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -467,7 +469,10 @@ fun HandDialog(
         title = { Text("Your Hand (${cards.size} cards)") },
         text = {
             Column(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(500.dp)
+                    .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 if (cards.isEmpty()) {
@@ -484,9 +489,16 @@ fun HandDialog(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(12.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
+                                // Card image thumbnail
+                                CardImageThumbnail(
+                                    imageUrl = cardInstance.card.imageUri,
+                                    contentDescription = cardInstance.card.name
+                                )
+
+                                // Card info
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
                                         text = cardInstance.card.name,
@@ -509,9 +521,9 @@ fun HandDialog(
                                     }
                                 }
 
+                                // Play button
                                 Button(
-                                    onClick = { onPlayCard(cardInstance) },
-                                    modifier = Modifier.padding(start = 8.dp)
+                                    onClick = { onPlayCard(cardInstance) }
                                 ) {
                                     Text("Play")
                                 }

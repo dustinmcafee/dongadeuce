@@ -7,6 +7,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.0] - 2025-10-27
+
+### Added
+- Card Image Support with async loading and caching
+  - CardImage composable displays actual card art from Scryfall
+  - ImageCache utility downloads and caches images locally
+  - Images stored in ~/.commandermtg/image_cache directory
+  - Loading spinner shown while downloading
+  - Error fallback for missing/failed images
+  - CardImageThumbnail for compact display in lists
+- Card images integrated throughout UI
+  - Battlefield cards now display full card art with overlays
+  - Hand dialog shows thumbnails next to card info
+  - Graveyard/Exile dialogs show thumbnails next to card info
+  - Power/toughness overlaid on bottom-right of battlefield cards
+  - Counters overlaid on top of battlefield cards
+- Image caching features
+  - MD5-based filename generation for unique cache keys
+  - Automatic cache directory creation
+  - Persistent cache across app sessions
+  - Cache management utilities (size check, clear cache)
+
+### Changed
+- BattlefieldCard redesigned to feature card images prominently
+  - Transparent background with colored border (blue/red for controller)
+  - Semi-transparent overlays for counters and P/T
+  - Removed controller name display (border color indicates controller)
+- HandDialog now scrollable and includes card thumbnails
+- Zone dialogs use Row layout with thumbnail on left, info on right
+
+### Technical Details
+- Created `ImageCache.kt` utility for async image downloading and caching
+- Created `CardImage.kt` composable with loading states (Loading, Success, Error)
+- Uses Ktor HttpClient for image downloads
+- Uses Skia Image for decoding and Compose ImageBitmap for display
+- Coroutines with Dispatchers.IO for non-blocking image operations
+- MD5 hashing for cache key generation
+
 ## [1.3.0] - 2025-10-27
 
 ### Added
@@ -256,20 +294,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - [ ] Sync turn changes over network (networking not yet implemented)
 
 #### Card Images
-- [ ] Create `CardImage.kt` component
-  - [ ] Async image loading from Scryfall URI
-  - [ ] Loading placeholder
-  - [ ] Error fallback
-  - [ ] Image caching
-- [ ] Implement `ImageCache.kt`
-  - [ ] Download images to local cache
-  - [ ] Check cache before downloading
-  - [ ] Cache management (size limits)
-- [ ] Add card images throughout UI
-  - [ ] Hand dialog
-  - [ ] Battlefield cards
-  - [ ] Zone viewers
-  - [ ] Card preview on hover
+- [x] Create `CardImage.kt` component
+  - [x] Async image loading from Scryfall URI
+  - [x] Loading placeholder
+  - [x] Error fallback
+  - [x] Image caching
+- [x] Implement `ImageCache.kt`
+  - [x] Download images to local cache
+  - [x] Check cache before downloading
+  - [x] Cache management (size limits)
+- [x] Add card images throughout UI
+  - [x] Hand dialog
+  - [x] Battlefield cards
+  - [x] Zone viewers
+  - [ ] Card preview on hover (not implemented yet)
 
 ### 🟢 MEDIUM PRIORITY - Enhanced Features (v1.3.0)
 
@@ -409,7 +447,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Current Progress
 
-**Overall Completion:** ~55% for full 2+ player Cockatrice-like experience
+**Overall Completion:** ~60% for full 2+ player Cockatrice-like experience
 
 **By Category:**
 - ✅ Core Architecture: 100%
@@ -417,13 +455,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - ✅ Scryfall Integration: 100%
 - 🟡 Multi-Player Support: 10%
 - ❌ Networking: 0%
-- ✅ Battlefield Visualization: 80% (core display and tap/untap complete, missing right-click menu and drag-drop)
+- ✅ Battlefield Visualization: 85% (core display, tap/untap, and images complete, missing right-click menu and drag-drop)
 - ✅ Zone Interactions: 70% (graveyard and exile viewers complete, missing library search)
 - ✅ Turn System: 90% (missing network sync)
-- ❌ Card Images: 0%
+- ✅ Card Images: 95% (loading and caching complete, missing hover preview)
 - ❌ Commander Damage UI: 0%
-- 🟡 Game Actions: 50%
+- 🟡 Game Actions: 55%
 
-**Estimated Time to MVP (v1.3.0):**
+**Estimated Time to MVP (v1.4.0):**
 - With networking: 2-3 weeks
-- Without networking (local hotseat): 1 week
+- Without networking (local hotseat): 3-5 days

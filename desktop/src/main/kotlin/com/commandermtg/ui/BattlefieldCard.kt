@@ -24,12 +24,6 @@ fun BattlefieldCard(
     onCardClick: (CardInstance) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val backgroundColor = if (isLocalPlayer) {
-        MaterialTheme.colorScheme.primaryContainer
-    } else {
-        MaterialTheme.colorScheme.errorContainer
-    }
-
     val borderColor = if (isLocalPlayer) {
         MaterialTheme.colorScheme.primary
     } else {
@@ -40,79 +34,77 @@ fun BattlefieldCard(
 
     Card(
         modifier = modifier
-            .size(width = 120.dp, height = 160.dp)
+            .size(width = 120.dp, height = 168.dp)
             .rotate(rotation)
             .clickable { onCardClick(cardInstance) },
-        colors = CardDefaults.cardColors(containerColor = backgroundColor),
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
         shape = RoundedCornerShape(8.dp),
-        border = BorderStroke(2.dp, borderColor),
+        border = BorderStroke(3.dp, borderColor),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(8.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.SpaceBetween
-        ) {
-            // Card name (top)
-            Text(
-                text = cardInstance.card.name,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onPrimaryContainer,
-                maxLines = 2
+        Box(modifier = Modifier.fillMaxSize()) {
+            // Card image as background
+            CardImage(
+                imageUrl = cardInstance.card.imageUri,
+                contentDescription = cardInstance.card.name,
+                modifier = Modifier.fillMaxSize()
             )
 
-            Spacer(modifier = Modifier.weight(1f))
-
-            // Counters (middle)
-            if (cardInstance.counters.isNotEmpty()) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(2.dp)
-                ) {
-                    cardInstance.counters.forEach { (counterType, count) ->
-                        Text(
-                            text = "$count $counterType",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.secondary
-                        )
+            // Overlay for counters and controller info
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(4.dp),
+                verticalArrangement = Arrangement.SpaceBetween
+            ) {
+                // Counters (top)
+                if (cardInstance.counters.isNotEmpty()) {
+                    Surface(
+                        color = Color.Black.copy(alpha = 0.7f),
+                        shape = RoundedCornerShape(4.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(4.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(2.dp)
+                        ) {
+                            cardInstance.counters.forEach { (counterType, count) ->
+                                Text(
+                                    text = "$count $counterType",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = Color.White
+                                )
+                            }
+                        }
                     }
-                }
-            }
-
-            Spacer(modifier = Modifier.weight(1f))
-
-            // Card info (bottom)
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                // Mana cost
-                val manaCost = cardInstance.card.manaCost
-                if (manaCost != null && manaCost.isNotEmpty()) {
-                    Text(
-                        text = manaCost,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
-                    )
+                } else {
+                    Spacer(modifier = Modifier.height(1.dp))
                 }
 
-                // Power/Toughness for creatures
+                Spacer(modifier = Modifier.weight(1f))
+
+                // Power/Toughness indicator (bottom right for creatures)
                 val power = cardInstance.card.power
                 val toughness = cardInstance.card.toughness
                 if (power != null && toughness != null) {
-                    Text(
-                        text = "$power/$toughness",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End
+                    ) {
+                        Surface(
+                            color = Color.Black.copy(alpha = 0.7f),
+                            shape = RoundedCornerShape(4.dp)
+                        ) {
+                            Text(
+                                text = "$power/$toughness",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = Color.White,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
                 }
             }
-
-            // Controller indicator
-            Text(
-                text = controller.name,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.5f)
-            )
         }
     }
 }
