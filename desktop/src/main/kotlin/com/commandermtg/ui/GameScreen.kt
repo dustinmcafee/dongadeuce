@@ -15,6 +15,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.commandermtg.models.Player
 import com.commandermtg.models.Zone
+import com.commandermtg.models.CardInstance
 import com.commandermtg.viewmodel.GameViewModel
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -401,59 +402,6 @@ fun OpponentArea(
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun BattlefieldArea(
-    viewModel: GameViewModel,
-    allPlayers: List<Player>,
-    localPlayerId: String,
-    onCardAction: (CardAction) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        modifier = modifier,
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF1B5E20))
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp)
-        ) {
-            val battlefieldCards = viewModel.getBattlefieldCards()
-
-            if (battlefieldCards.isEmpty()) {
-                // Show placeholder when battlefield is empty
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        "Battlefield",
-                        style = MaterialTheme.typography.headlineSmall,
-                        color = Color.White.copy(alpha = 0.5f)
-                    )
-                }
-            } else {
-                // Display cards in a flowing grid
-                FlowRow(
-                    modifier = Modifier.fillMaxSize(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    battlefieldCards.forEach { cardInstance ->
-                        BattlefieldCard(
-                            cardInstance = cardInstance,
-                            isLocalPlayer = cardInstance.controllerId == localPlayerId,
-                            onCardClick = { viewModel.toggleTap(it.instanceId) },
-                            onContextAction = onCardAction
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
 fun PlayerArea(
     player: Player,
     viewModel: GameViewModel,
@@ -474,6 +422,7 @@ fun PlayerArea(
     val exileCount = viewModel.getCardCount(player.id, Zone.EXILE)
     val commanderCount = viewModel.getCardCount(player.id, Zone.COMMAND_ZONE)
     val battlefieldCards = viewModel.getCards(player.id, Zone.BATTLEFIELD)
+    val handCards = viewModel.getCards(player.id, Zone.HAND)
 
     // Show hand dialog if requested
     if (showHandDialog) {
@@ -693,18 +642,11 @@ fun PlayerArea(
                     }
 
                     OutlinedButton(
-                        onClick = { showHandDialog = true },
-                        modifier = Modifier.weight(2f)
+                        onClick = { showCommanderDamageDialog = true },
+                        modifier = Modifier.weight(1f)
                     ) {
-                        Text("Hand ($handCount)")
+                        Text("Commander Damage")
                     }
-                }
-
-                OutlinedButton(
-                    onClick = { showCommanderDamageDialog = true },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Commander Damage")
                 }
             }
         }
@@ -740,6 +682,67 @@ fun PlayerArea(
                 )
             }
         }
+        }
+
+        // Hand display - always visible for local player
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(140.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(8.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        "Hand ($handCount)",
+                        style = MaterialTheme.typography.titleSmall
+                    )
+                    OutlinedButton(
+                        onClick = { showHandDialog = true }
+                    ) {
+                        Text("Expand")
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                if (handCards.isEmpty()) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            "No cards in hand",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                        )
+                    }
+                } else {
+                    FlowRow(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .verticalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        handCards.forEach { cardInstance ->
+                            HandCardDisplay(
+                                cardInstance = cardInstance,
+                                onCardClick = { showHandDialog = true },
+                                onContextAction = onCardAction
+                            )
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -904,4 +907,48 @@ fun HandDialog(
             }
         }
     )
+}
+
+@Composable
+fun HandCardDisplay(
+    cardInstance: CardInstance,
+    onCardClick: (CardInstance) -> Unit,
+    onContextAction: (CardAction) -> Unit
+) {
+    CardWithContextMenu(
+        cardInstance = cardInstance,
+        onAction = onContextAction
+    ) {
+        Card(
+            modifier = Modifier
+                .width(60.dp)
+                .height(84.dp)
+                .clickable { onCardClick(cardInstance) },
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.secondaryContainer
+            )
+        ) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                if (cardInstance.card.imageUri != null) {
+                    CardImage(
+                        imageUrl = cardInstance.card.imageUri,
+                        contentDescription = cardInstance.card.name,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                } else {
+                    // Fallback text display
+                    Text(
+                        text = cardInstance.card.name,
+                        style = MaterialTheme.typography.labelSmall,
+                        modifier = Modifier.padding(4.dp),
+                        maxLines = 3,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    )
+                }
+            }
+        }
+    }
 }

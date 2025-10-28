@@ -7,6 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.6.1] - 2025-10-28
+
+### Fixed
+- **Battlefield Visibility** - Opponent battlefields are now fully visible (confirmed working)
+  - All battlefields are PUBLIC zones in MTG - everyone sees all permanents
+  - Opponent cards properly display in their battlefield sections
+  - Player cards display in player battlefield section
+  - No confusion about what's in play
+
+### Added
+- **Always-Visible Hand Display** - Current player's hand is now always visible on screen
+  - Hand cards display at bottom of player area (140dp tall section)
+  - Shows actual card images in scrollable grid (60x84dp per card)
+  - "Expand" button to open full hand dialog for card actions
+  - Empty state message when no cards in hand
+  - Right-click context menu on hand cards
+  - Removed redundant "Hand" button from controls
+  - **Hands remain PRIVATE** - only local player sees their own hand
+  - Opponents see only card counts, not actual cards
+
+### Changed
+- Removed unused BattlefieldArea function (was leftover from refactor)
+- Simplified player controls - Draw and Commander Damage buttons now equal width
+
+### Technical Details
+- HandCardDisplay component created for compact card visualization
+- Uses CardWithContextMenu for right-click actions
+- CardImage component for visual display with fallback text
+- FlowRow layout for responsive hand grid
+- Hand section integrated into PlayerArea Column layout
+- Added CardInstance import to GameScreen.kt
+- All 44 tests passing, build successful
+
 ## [2.6.0] - 2025-10-28
 
 ### Changed
