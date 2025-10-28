@@ -217,6 +217,14 @@ class GameViewModel {
     }
 
     /**
+     * Get all cards in the battlefield (across all players)
+     */
+    fun getBattlefieldCards(): List<CardInstance> {
+        val gameState = _uiState.value.gameState ?: return emptyList()
+        return gameState.cardInstances.filter { it.zone == Zone.BATTLEFIELD }
+    }
+
+    /**
      * Advance to next phase
      */
     fun nextPhase() {

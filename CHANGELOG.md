@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] - 2025-10-27
+
+### Added
+- Battlefield Visualization with BattlefieldCard component
+  - Displays card name, mana cost, power/toughness
+  - Shows tapped state with 90-degree rotation
+  - Displays counters on cards
+  - Color-codes cards by controller (blue for local player, red for opponents)
+  - Click to tap/untap cards
+- BattlefieldArea now shows actual cards from game state
+  - Displays all cards in the battlefield zone
+  - Uses FlowRow layout for automatic wrapping
+  - Shows placeholder when battlefield is empty
+- Added `getBattlefieldCards()` function to GameViewModel
+  - Returns all cards in battlefield across all players
+
+### Changed
+- Battlefield is no longer just a placeholder
+- Cards played from hand now appear visually on battlefield
+- Tapped cards rotate 90 degrees for visual indication
+
+### Technical Details
+- Created `BattlefieldCard.kt` with card visualization
+- Updated `BattlefieldArea` to use FlowRow layout with battlefield cards
+- Added `getBattlefieldCards()` method to GameViewModel
+- Used `@OptIn(ExperimentalLayoutApi::class)` for FlowRow support
+
 ## [1.1.0] - 2025-10-27
 
 ### Added
@@ -158,19 +185,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### 🟡 HIGH PRIORITY - Core Gameplay (v1.2.0)
 
 #### Battlefield Visualization
-- [ ] Create `BattlefieldCard.kt` component
-  - [ ] Display card name/image
-  - [ ] Show tapped state (rotation)
-  - [ ] Show counters
+- [x] Create `BattlefieldCard.kt` component
+  - [x] Display card name/image
+  - [x] Show tapped state (rotation)
+  - [x] Show counters
   - [ ] Show attached cards (auras/equipment)
-  - [ ] Color-code by controller
-- [ ] Implement `BattlefieldArea` with actual cards
-  - [ ] Get all battlefield cards from GameState
-  - [ ] Display in grid layout
-  - [ ] Support click to select
+  - [x] Color-code by controller
+- [x] Implement `BattlefieldArea` with actual cards
+  - [x] Get all battlefield cards from GameState
+  - [x] Display in grid layout
+  - [x] Support click to select
   - [ ] Support right-click for context menu
-- [ ] Add battlefield card interactions
-  - [ ] Click to tap/untap
+- [x] Add battlefield card interactions
+  - [x] Click to tap/untap
   - [ ] Drag to reorder/group
   - [ ] Right-click context menu
 
@@ -358,7 +385,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Current Progress
 
-**Overall Completion:** ~40% for full 2+ player Cockatrice-like experience
+**Overall Completion:** ~50% for full 2+ player Cockatrice-like experience
 
 **By Category:**
 - ✅ Core Architecture: 100%
@@ -366,12 +393,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - ✅ Scryfall Integration: 100%
 - 🟡 Multi-Player Support: 10%
 - ❌ Networking: 0%
-- ❌ Battlefield Visualization: 0%
+- ✅ Battlefield Visualization: 80% (core display and tap/untap complete, missing right-click menu and drag-drop)
 - 🟡 Zone Interactions: 20%
-- ❌ Turn System: 0%
+- ✅ Turn System: 90% (missing network sync)
 - ❌ Card Images: 0%
 - ❌ Commander Damage UI: 0%
-- 🟡 Game Actions: 30%
+- 🟡 Game Actions: 40%
 
 **Estimated Time to MVP (v1.2.0):**
 - With networking: 2-3 weeks

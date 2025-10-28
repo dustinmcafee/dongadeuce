@@ -13,6 +13,8 @@ import androidx.compose.ui.unit.dp
 import com.commandermtg.models.Player
 import com.commandermtg.models.Zone
 import com.commandermtg.viewmodel.GameViewModel
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 
 @Composable
 fun GameScreen(
@@ -76,11 +78,16 @@ fun GameScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             // Shared battlefield (middle)
-            BattlefieldArea(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(0.4f)
-            )
+            if (localPlayer != null) {
+                BattlefieldArea(
+                    viewModel = viewModel,
+                    allPlayers = uiState.allPlayers,
+                    localPlayerId = localPlayer.id,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(0.4f)
+                )
+            }
 
             Spacer(modifier = Modifier.height(8.dp))
 
@@ -166,8 +173,14 @@ fun OpponentArea(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun BattlefieldArea(modifier: Modifier = Modifier) {
+fun BattlefieldArea(
+    viewModel: GameViewModel,
+    allPlayers: List<Player>,
+    localPlayerId: String,
+    modifier: Modifier = Modifier
+) {
     Card(
         modifier = modifier,
         colors = CardDefaults.cardColors(containerColor = Color(0xFF1B5E20))
@@ -175,14 +188,42 @@ fun BattlefieldArea(modifier: Modifier = Modifier) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(16.dp),
-            contentAlignment = Alignment.Center
+                .padding(16.dp)
         ) {
-            Text(
-                "Battlefield",
-                style = MaterialTheme.typography.headlineSmall,
-                color = Color.White.copy(alpha = 0.5f)
-            )
+            val battlefieldCards = viewModel.getBattlefieldCards()
+
+            if (battlefieldCards.isEmpty()) {
+                // Show placeholder when battlefield is empty
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        "Battlefield",
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = Color.White.copy(alpha = 0.5f)
+                    )
+                }
+            } else {
+                // Display cards in a flowing grid
+                FlowRow(
+                    modifier = Modifier.fillMaxSize(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    battlefieldCards.forEach { cardInstance ->
+                        val controller = allPlayers.find { it.id == cardInstance.controllerId }
+                        if (controller != null) {
+                            BattlefieldCard(
+                                cardInstance = cardInstance,
+                                controller = controller,
+                                isLocalPlayer = cardInstance.controllerId == localPlayerId,
+                                onCardClick = { viewModel.toggleTap(it.instanceId) }
+                            )
+                        }
+                    }
+                }
+            }
         }
     }
 }
