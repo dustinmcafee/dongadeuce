@@ -39,19 +39,9 @@ fun GameScreen(
 ) {
     val dragDropState = rememberDragDropState()
     val selectionState = rememberSelectionState()
-    var showDropZoneDialog by remember { mutableStateOf(false) }
-    var cardToDrop by remember { mutableStateOf<CardInstance?>(null) }
 
     val uiState by viewModel.uiState.collectAsState()
     var cardDetailsToShow by remember { mutableStateOf<com.commandermtg.models.CardInstance?>(null) }
-
-    // Handle drag end - show drop zone selection dialog
-    LaunchedEffect(dragDropState.isDragging) {
-        if (!dragDropState.isDragging && dragDropState.draggedCard != null) {
-            cardToDrop = dragDropState.draggedCard
-            showDropZoneDialog = true
-        }
-    }
 
     // Handler for card actions that shows details dialog when needed
     // and enforces ownership restrictions
@@ -361,70 +351,6 @@ fun GameScreen(
         )
     }
 
-    // Drop zone selection dialog
-    if (showDropZoneDialog && cardToDrop != null) {
-        AlertDialog(
-            onDismissRequest = {
-                showDropZoneDialog = false
-                cardToDrop = null
-            },
-            title = { Text("Move ${cardToDrop?.card?.name} to:") },
-            text = {
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Button(
-                        onClick = {
-                            cardToDrop?.let { viewModel.moveCard(it.instanceId, Zone.BATTLEFIELD) }
-                            showDropZoneDialog = false
-                            cardToDrop = null
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("Battlefield")
-                    }
-                    Button(
-                        onClick = {
-                            cardToDrop?.let { viewModel.moveCard(it.instanceId, Zone.GRAVEYARD) }
-                            showDropZoneDialog = false
-                            cardToDrop = null
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("Graveyard")
-                    }
-                    Button(
-                        onClick = {
-                            cardToDrop?.let { viewModel.moveCard(it.instanceId, Zone.EXILE) }
-                            showDropZoneDialog = false
-                            cardToDrop = null
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("Exile")
-                    }
-                    Button(
-                        onClick = {
-                            cardToDrop?.let { viewModel.moveCard(it.instanceId, Zone.LIBRARY) }
-                            showDropZoneDialog = false
-                            cardToDrop = null
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("Top of Library")
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    showDropZoneDialog = false
-                    cardToDrop = null
-                }) {
-                    Text("Cancel")
-                }
-            }
-        )
-    }
 }
 
 /**
@@ -1604,7 +1530,6 @@ fun HandCardDisplay(
     selectionState: SelectionState? = null
 ) {
     var lastClickTime by remember { mutableStateOf(0L) }
-    val isDragging = dragDropState?.isDragging == true && dragDropState.draggedCard?.instanceId == cardInstance.instanceId
     val isSelected = selectionState?.isSelected(cardInstance.instanceId) == true
 
     CardWithContextMenu(
@@ -1615,32 +1540,6 @@ fun HandCardDisplay(
             modifier = Modifier
                 .width(60.dp)
                 .height(84.dp)
-                // Drag gesture support (always available if dragDropState exists)
-                .then(
-                    if (dragDropState != null) {
-                        Modifier.pointerInput(cardInstance.instanceId) {
-                            detectDragGestures(
-                                onDragStart = { offset ->
-                                    dragDropState.startDrag(cardInstance, offset)
-                                },
-                                onDrag = { change, dragAmount ->
-                                    change.consume()
-                                    dragDropState.updateDragPosition(
-                                        dragDropState.dragOffset + dragAmount
-                                    )
-                                },
-                                onDragEnd = {
-                                    dragDropState.endDrag()
-                                },
-                                onDragCancel = {
-                                    dragDropState.endDrag()
-                                }
-                            )
-                        }
-                    } else {
-                        Modifier
-                    }
-                )
                 // Click gesture support with shift-key detection
                 .pointerInput(cardInstance.instanceId) {
                     awaitPointerEventScope {
@@ -1680,9 +1579,6 @@ fun HandCardDisplay(
                         }
                     }
                 }
-                .then(
-                    if (isDragging) Modifier.alpha(0.5f) else Modifier
-                )
                 .then(
                     if (isSelected) Modifier.border(3.dp, Color(0xFF00FF00), RoundedCornerShape(8.dp)) else Modifier
                 ),
