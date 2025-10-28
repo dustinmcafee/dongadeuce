@@ -73,13 +73,18 @@ cd commander-mtg
 ✅ Cockatrice deck format parser
 ✅ Complete UI flow (menu, lobby, game screen)
 ✅ Deck loading with file chooser
+✅ **Scryfall API integration** - Full card data (mana cost, type, text)
+✅ **Starting hand draw** - Automatic 7-card opening hands
+✅ **Draw cards** - Draw button with working functionality
+✅ **Hand view** - Dialog showing your cards with Play button
+✅ **Play cards** - Move cards from hand to battlefield
 ✅ Game zones with dynamic card counts
 ✅ Life tracking with +/- buttons
 ⏳ P2P networking (Ktor WebSockets)
-⏳ Card data fetching from Scryfall API
-⏳ Card rendering with images
+⏳ Card image rendering
 ⏳ Drag-and-drop for card movement
-⏳ Full game actions (draw, play, tap, etc.)
+⏳ Tap/untap cards on battlefield
+⏳ Full multiplayer support
 
 ## Tech Stack
 
