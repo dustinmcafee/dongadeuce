@@ -3,8 +3,8 @@ package com.commandermtg.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -17,6 +17,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.isShiftPressed
+import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.unit.dp
 import com.commandermtg.models.Player
 import com.commandermtg.models.Zone
@@ -24,7 +26,6 @@ import com.commandermtg.models.CardInstance
 import com.commandermtg.viewmodel.GameViewModel
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.material3.ExperimentalMaterial3Api
 import kotlinx.coroutines.launch
 
@@ -1593,7 +1594,6 @@ fun HandDialog(
     )
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun HandCardDisplay(
     cardInstance: CardInstance,
@@ -1603,6 +1603,7 @@ fun HandCardDisplay(
     dragDropState: DragDropState? = null,
     selectionState: SelectionState? = null
 ) {
+    var lastClickTime by remember { mutableStateOf(0L) }
     val isDragging = dragDropState?.isDragging == true && dragDropState.draggedCard?.instanceId == cardInstance.instanceId
     val isSelected = selectionState?.isSelected(cardInstance.instanceId) == true
 
@@ -1640,22 +1641,45 @@ fun HandCardDisplay(
                         Modifier
                     }
                 )
-                // Click gesture support with proper double-click handling
-                .combinedClickable(
-                    onClick = {
-                        // Single click - toggle selection if selectionState exists
-                        if (selectionState != null) {
-                            selectionState.toggleSelection(cardInstance.instanceId)
-                        } else {
-                            onCardClick(cardInstance)
+                // Click gesture support with shift-key detection
+                .pointerInput(cardInstance.instanceId) {
+                    awaitPointerEventScope {
+                        while (true) {
+                            val event = awaitPointerEvent()
+
+                            if (event.type == PointerEventType.Press) {
+                                val isShiftPressed = event.keyboardModifiers.isShiftPressed
+
+                                // Wait for release
+                                val releaseEvent = awaitPointerEvent()
+
+                                if (releaseEvent.type == PointerEventType.Release) {
+                                    // Check for double-click by tracking time
+                                    val clickTime = System.currentTimeMillis()
+                                    val timeSinceLastClick = clickTime - lastClickTime
+                                    lastClickTime = clickTime
+
+                                    if (timeSinceLastClick < 300) {
+                                        // Double-click - clear selection and play card
+                                        selectionState?.clearSelection()
+                                        onDoubleClick()
+                                    } else if (isShiftPressed && selectionState != null) {
+                                        // Shift+click - toggle selection
+                                        selectionState.toggleSelection(cardInstance.instanceId)
+                                    } else {
+                                        // Regular click - clear selection and select this card
+                                        if (selectionState != null) {
+                                            selectionState.clearSelection()
+                                            selectionState.select(cardInstance.instanceId)
+                                        } else {
+                                            onCardClick(cardInstance)
+                                        }
+                                    }
+                                }
+                            }
                         }
-                    },
-                    onDoubleClick = {
-                        // Double-click - clear selection and play card
-                        selectionState?.clearSelection()
-                        onDoubleClick()
                     }
-                )
+                }
                 .then(
                     if (isDragging) Modifier.alpha(0.5f) else Modifier
                 )
