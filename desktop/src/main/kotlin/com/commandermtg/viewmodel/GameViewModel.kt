@@ -33,15 +33,13 @@ class GameViewModel {
         val localPlayerId = UUID.randomUUID().toString()
         val localPlayer = Player(
             id = localPlayerId,
-            name = localPlayerName,
-            life = 40
+            name = localPlayerName
         )
 
         val opponents = opponentNames.map { name ->
             Player(
                 id = UUID.randomUUID().toString(),
-                name = name,
-                life = 40
+                name = name
             )
         }
 
@@ -109,9 +107,9 @@ class GameViewModel {
     }
 
     /**
-     * Draw starting hand (7 cards)
+     * Draw starting hand (7 cards by default)
      */
-    fun drawStartingHand(playerId: String, cardCount: Int = 7) {
+    fun drawStartingHand(playerId: String, cardCount: Int = GameConstants.STARTING_HAND_SIZE) {
         repeat(cardCount) {
             drawCard(playerId)
         }
@@ -548,8 +546,8 @@ class GameViewModel {
         // Shuffle library
         shuffleLibrary(playerId)
 
-        // Draw 7 cards
-        drawStartingHand(playerId, 7)
+        // Draw 7 cards (using default starting hand size)
+        drawStartingHand(playerId, GameConstants.STARTING_HAND_SIZE)
     }
 
     /**

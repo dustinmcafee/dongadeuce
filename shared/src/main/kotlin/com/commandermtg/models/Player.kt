@@ -6,7 +6,7 @@ import kotlinx.serialization.Serializable
 data class Player(
     val id: String,
     val name: String,
-    val life: Int = 40,
+    val life: Int = GameConstants.STARTING_LIFE,
     val commanderDamage: Map<String, Int> = emptyMap(), // commanderId -> damage
     val hasLost: Boolean = false
 ) {
@@ -23,7 +23,7 @@ data class Player(
         val newDamage = current + amount
         return copy(
             commanderDamage = commanderDamage + (commanderId to newDamage),
-            hasLost = hasLost || newDamage >= 21
+            hasLost = hasLost || newDamage >= GameConstants.COMMANDER_DAMAGE_THRESHOLD
         )
     }
 

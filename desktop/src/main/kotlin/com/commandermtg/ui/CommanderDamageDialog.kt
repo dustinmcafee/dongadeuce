@@ -13,6 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.commandermtg.models.CardInstance
+import com.commandermtg.models.GameConstants
 import com.commandermtg.models.Player
 
 @Composable
@@ -116,7 +117,7 @@ private fun CommanderDamageSection(
             // Damage to each player
             players.forEach { player ->
                 val damage = player.commanderDamage[commander.instanceId] ?: 0
-                val isLethal = damage >= 21
+                val isLethal = damage >= GameConstants.COMMANDER_DAMAGE_THRESHOLD
 
                 DamageCounter(
                     playerName = player.name,

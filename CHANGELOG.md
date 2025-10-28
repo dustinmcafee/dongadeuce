@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.2.0] - 2025-10-27
+
+### Added
+- **Game Constants** centralized MTG rules values
+  - GameConstants.STARTING_LIFE (40)
+  - GameConstants.STARTING_HAND_SIZE (7)
+  - GameConstants.COMMANDER_DAMAGE_THRESHOLD (21)
+  - GameConstants.DECK_SIZE (99)
+  - GameConstants.TOTAL_DECK_SIZE (100)
+
+### Changed
+- Replaced magic numbers with named constants throughout codebase
+  - Player model uses GameConstants for life and commander damage
+  - Deck model uses GameConstants for deck size validation
+  - GameViewModel uses GameConstants for starting hand size
+  - CommanderDamageDialog uses GameConstants for lethal damage threshold
+  - DeckParser uses GameConstants for deck size validation
+- Enhanced basic land recognition
+  - Now recognizes snow-covered basic lands
+  - Supports: Snow-Covered Plains, Island, Swamp, Mountain, Forest
+  - Maintains support for Wastes and regular basics
+
+### Technical Details
+- Constants defined in shared/src/main/kotlin/com/commandermtg/models/GameConstants.kt
+- Improves code maintainability and reduces errors from typos
+- Makes MTG rules changes easier to implement in future
+
 ## [2.1.0] - 2025-10-27
 
 ### Added

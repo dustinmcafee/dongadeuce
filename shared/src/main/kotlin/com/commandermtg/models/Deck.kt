@@ -9,10 +9,12 @@ data class Deck(
     val cards: List<Card> // Should be exactly 99 cards for Commander
 ) {
     init {
-        require(cards.size == 99) { "Commander deck must have exactly 99 cards (excluding commander)" }
+        require(cards.size == GameConstants.DECK_SIZE) {
+            "Commander deck must have exactly ${GameConstants.DECK_SIZE} cards (excluding commander)"
+        }
     }
 
-    val totalCards: Int = cards.size + 1
+    val totalCards: Int = GameConstants.TOTAL_DECK_SIZE
 
     /**
      * Validates the deck follows Commander rules:
@@ -32,6 +34,11 @@ data class Deck(
     }
 
     private fun isBasicLand(cardName: String): Boolean {
-        return cardName in listOf("Plains", "Island", "Swamp", "Mountain", "Forest", "Wastes")
+        val basicLandNames = setOf(
+            "Plains", "Island", "Swamp", "Mountain", "Forest", "Wastes",
+            "Snow-Covered Plains", "Snow-Covered Island", "Snow-Covered Swamp",
+            "Snow-Covered Mountain", "Snow-Covered Forest"
+        )
+        return cardName in basicLandNames
     }
 }

@@ -2,6 +2,7 @@ package com.commandermtg.game
 
 import com.commandermtg.models.Card
 import com.commandermtg.models.Deck
+import com.commandermtg.models.GameConstants
 import java.io.File
 
 /**
@@ -51,7 +52,9 @@ object DeckParser {
         }
 
         requireNotNull(commander) { "No commander found in deck" }
-        require(cards.size == 99) { "Deck must have exactly 99 cards, found ${cards.size}" }
+        require(cards.size == GameConstants.DECK_SIZE) {
+            "Deck must have exactly ${GameConstants.DECK_SIZE} cards, found ${cards.size}"
+        }
 
         return Deck(
             name = "Imported Deck",
