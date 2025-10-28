@@ -13,7 +13,14 @@ import java.security.MessageDigest
  * Manages caching of card images downloaded from Scryfall
  */
 object ImageCache {
-    private val client = HttpClient()
+    private var client: HttpClient? = null
+
+    private fun getClient(): HttpClient {
+        if (client == null) {
+            client = HttpClient()
+        }
+        return client!!
+    }
 
     // Cache directory in user's home directory
     private val cacheDir: File by lazy {
@@ -45,7 +52,7 @@ object ImageCache {
                 }
 
                 // Download image
-                val response = client.get(imageUrl)
+                val response = getClient().get(imageUrl)
                 if (response.status == HttpStatusCode.OK) {
                     val imageBytes = response.readBytes()
                     cachedFile.writeBytes(imageBytes)
@@ -64,7 +71,7 @@ object ImageCache {
      * Generate a unique filename for a given URL
      */
     private fun generateFilename(url: String): String {
-        val hash = MessageDigest.getInstance("MD5")
+        val hash = MessageDigest.getInstance("SHA-256")
             .digest(url.toByteArray())
             .joinToString("") { "%02x".format(it) }
 
@@ -92,5 +99,14 @@ object ImageCache {
      */
     fun getCacheSize(): Long {
         return cacheDir.listFiles()?.sumOf { it.length() } ?: 0L
+    }
+
+    /**
+     * Close the HTTP client and release resources
+     * Should be called when the application shuts down
+     */
+    fun close() {
+        client?.close()
+        client = null
     }
 }

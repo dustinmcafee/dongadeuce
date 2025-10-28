@@ -252,7 +252,7 @@ fun OpponentArea(
             ZoneCard("Library", Zone.LIBRARY, libraryCount, Modifier.weight(1f))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 ZoneCard(
-                    "GY",
+                    "Graveyard",
                     Zone.GRAVEYARD,
                     graveyardCount,
                     Modifier.weight(1f),
@@ -350,16 +350,12 @@ fun BattlefieldArea(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     battlefieldCards.forEach { cardInstance ->
-                        val controller = allPlayers.find { it.id == cardInstance.controllerId }
-                        if (controller != null) {
-                            BattlefieldCard(
-                                cardInstance = cardInstance,
-                                controller = controller,
-                                isLocalPlayer = cardInstance.controllerId == localPlayerId,
-                                onCardClick = { viewModel.toggleTap(it.instanceId) },
-                                onContextAction = { action -> handleCardAction(action, viewModel) }
-                            )
-                        }
+                        BattlefieldCard(
+                            cardInstance = cardInstance,
+                            isLocalPlayer = cardInstance.controllerId == localPlayerId,
+                            onCardClick = { viewModel.toggleTap(it.instanceId) },
+                            onContextAction = { action -> handleCardAction(action, viewModel) }
+                        )
                     }
                 }
             }

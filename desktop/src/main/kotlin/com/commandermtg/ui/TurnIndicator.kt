@@ -109,7 +109,6 @@ fun PhaseIndicator(
 
         // Main Phase 1
         PhaseChip(
-            phase = GamePhase.MAIN_1,
             label = "Main Phase 1",
             isActive = currentPhase == GamePhase.MAIN_1
         )
@@ -119,7 +118,6 @@ fun PhaseIndicator(
 
         // Main Phase 2
         PhaseChip(
-            phase = GamePhase.MAIN_2,
             label = "Main Phase 2",
             isActive = currentPhase == GamePhase.MAIN_2
         )
@@ -143,7 +141,6 @@ fun PhaseGroup(
         )
         phases.forEach { (phase, label) ->
             PhaseChip(
-                phase = phase,
                 label = label,
                 isActive = currentPhase == phase,
                 modifier = Modifier.padding(start = 8.dp)
@@ -154,7 +151,6 @@ fun PhaseGroup(
 
 @Composable
 fun PhaseChip(
-    phase: GamePhase,
     label: String,
     isActive: Boolean,
     modifier: Modifier = Modifier

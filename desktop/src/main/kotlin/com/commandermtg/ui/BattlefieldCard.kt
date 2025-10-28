@@ -14,12 +14,10 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.commandermtg.models.CardInstance
-import com.commandermtg.models.Player
 
 @Composable
 fun BattlefieldCard(
     cardInstance: CardInstance,
-    controller: Player,
     isLocalPlayer: Boolean,
     onCardClick: (CardInstance) -> Unit,
     onContextAction: (CardAction) -> Unit = {},

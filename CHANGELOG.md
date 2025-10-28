@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.4.0] - 2025-10-27
+
+### Changed
+- **Code Quality Improvements**
+  - Fixed inconsistent zone naming (changed "GY" to "Graveyard" in UI for consistency)
+  - Removed unused parameters from composable functions:
+    - PhaseChip: removed unused `phase` parameter
+    - BattlefieldCard: removed unused `controller` parameter
+  - Improved resource management in ImageCache:
+    - Added `close()` method to properly close HttpClient
+    - Changed to lazy HttpClient initialization for better resource control
+    - Close method should be called on application shutdown
+  - Enhanced security in ImageCache:
+    - Replaced MD5 with SHA-256 for cache filename generation
+    - Improves security and collision resistance
+
+### Technical Details
+- HttpClient now uses nullable lazy initialization pattern
+- Added `getClient()` private method for lazy instantiation
+- `close()` method properly disposes HttpClient resources
+- SHA-256 provides better security for cache key generation
+- All function signatures updated to remove unused parameters
+- All call sites updated to match new signatures
+
 ## [2.3.0] - 2025-10-27
 
 ### Added
