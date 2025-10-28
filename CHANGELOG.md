@@ -7,6 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.6.0] - 2025-10-28
+
+### Changed
+- **Separated Battlefields (Cockatrice-Style Layout)** - Each player now has their own battlefield area
+  - Removed shared battlefield where all players' cards were mixed together
+  - Each player's battlefield is now integrated with their player area
+  - Opponent battlefields appear below their zones (library/hand/etc.)
+  - Player battlefield appears above your zones
+  - Matches Cockatrice and other digital MTG clients' layout
+  - Each battlefield is 180dp tall with scrollable card grid
+  - Cards are clearly separated by controller
+  - OpponentArea and PlayerArea weight adjusted for better space distribution
+
+### Added
+- **Commander Zone Dialog** - Clicking the Commander zone now opens a dialog
+  - Shows all cards in the command zone (usually your commander)
+  - "Cast" button to move commander to battlefield
+  - "To Hand" button for alternative plays
+  - Full card information display similar to other zone dialogs
+  - CommandZoneDialog and CommandZoneCard components in ZoneViewers.kt
+  - Available for both local player and opponents
+
+### Technical Details
+- OpponentArea: Added battlefield section below zones
+- PlayerArea: Added battlefield section above zones
+- BattlefieldArea: Function removed from GameScreen (no longer needed)
+- OpponentsArea: Now passes onCardAction callback to OpponentArea
+- GameScreen: Updated weight distribution (opponents 0.4, player 0.6)
+- Each battlefield uses FlowRow with vertical scroll for card layout
+- Commander zone ZoneCard now has onClick handler
+- All 44 tests passing, build successful
+
 ## [2.5.1] - 2025-10-28
 
 ### Fixed

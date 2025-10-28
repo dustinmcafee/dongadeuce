@@ -120,20 +120,6 @@ fun GameScreen(
                 OpponentsArea(
                     opponents = opponents,
                     viewModel = viewModel,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(0.3f)
-                )
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Shared battlefield (middle)
-            if (localPlayer != null) {
-                BattlefieldArea(
-                    viewModel = viewModel,
-                    allPlayers = uiState.allPlayers,
-                    localPlayerId = localPlayer.id,
                     onCardAction = handleAction,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -152,7 +138,7 @@ fun GameScreen(
                     onCardAction = handleAction,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .weight(0.3f)
+                        .weight(0.6f)
                 )
             }
         }
@@ -187,6 +173,7 @@ fun GameScreen(
 fun OpponentsArea(
     opponents: List<Player>,
     viewModel: GameViewModel,
+    onCardAction: (CardAction) -> Unit,
     modifier: Modifier = Modifier
 ) {
     when (opponents.size) {
@@ -195,6 +182,7 @@ fun OpponentsArea(
             OpponentArea(
                 player = opponents[0],
                 viewModel = viewModel,
+                onCardAction = onCardAction,
                 modifier = modifier
             )
         }
@@ -207,11 +195,13 @@ fun OpponentsArea(
                 OpponentArea(
                     player = opponents[0],
                     viewModel = viewModel,
+                    onCardAction = onCardAction,
                     modifier = Modifier.weight(1f)
                 )
                 OpponentArea(
                     player = opponents[1],
                     viewModel = viewModel,
+                    onCardAction = onCardAction,
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -226,6 +216,7 @@ fun OpponentsArea(
                     OpponentArea(
                         player = opponent,
                         viewModel = viewModel,
+                        onCardAction = onCardAction,
                         modifier = Modifier.weight(1f)
                     )
                 }
@@ -242,6 +233,7 @@ fun OpponentsArea(
                     OpponentArea(
                         player = opponent,
                         viewModel = viewModel,
+                        onCardAction = onCardAction,
                         modifier = Modifier.weight(1f)
                     )
                 }
@@ -250,10 +242,12 @@ fun OpponentsArea(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun OpponentArea(
     player: Player,
     viewModel: GameViewModel,
+    onCardAction: (CardAction) -> Unit,
     modifier: Modifier = Modifier
 ) {
     var showGraveyardDialog by remember { mutableStateOf(false) }
@@ -264,6 +258,7 @@ fun OpponentArea(
     val graveyardCount = viewModel.getCardCount(player.id, Zone.GRAVEYARD)
     val exileCount = viewModel.getCardCount(player.id, Zone.EXILE)
     val commanderCount = viewModel.getCardCount(player.id, Zone.COMMAND_ZONE)
+    val battlefieldCards = viewModel.getCards(player.id, Zone.BATTLEFIELD)
 
     // Show graveyard dialog if requested
     if (showGraveyardDialog) {
@@ -295,71 +290,112 @@ fun OpponentArea(
         )
     }
 
-    Row(modifier = modifier) {
-        // Opponent's library, graveyard, exile
-        Column(
-            modifier = Modifier.width(200.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            ZoneCard("Library", Zone.LIBRARY, libraryCount, Modifier.weight(1f))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                ZoneCard(
-                    "Graveyard",
-                    Zone.GRAVEYARD,
-                    graveyardCount,
-                    Modifier.weight(1f),
-                    onClick = { showGraveyardDialog = true }
-                )
-                ZoneCard(
-                    "Exile",
-                    Zone.EXILE,
-                    exileCount,
-                    Modifier.weight(1f),
-                    onClick = { showExileDialog = true }
-                )
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        // Opponent zones row
+        Row {
+            // Opponent's library, graveyard, exile
+            Column(
+                modifier = Modifier.width(200.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                ZoneCard("Library", Zone.LIBRARY, libraryCount, Modifier.weight(1f))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    ZoneCard(
+                        "Graveyard",
+                        Zone.GRAVEYARD,
+                        graveyardCount,
+                        Modifier.weight(1f),
+                        onClick = { showGraveyardDialog = true }
+                    )
+                    ZoneCard(
+                        "Exile",
+                        Zone.EXILE,
+                        exileCount,
+                        Modifier.weight(1f),
+                        onClick = { showExileDialog = true }
+                    )
+                }
             }
+
+            Spacer(modifier = Modifier.width(16.dp))
+
+            // Opponent's hand and info
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                ZoneCard("Hand", Zone.HAND, handCount, Modifier.height(100.dp))
+
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (player.hasLost) {
+                            MaterialTheme.colorScheme.errorContainer
+                        } else {
+                            MaterialTheme.colorScheme.surfaceVariant
+                        }
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(player.name, style = MaterialTheme.typography.titleMedium)
+                        Text("Life: ${player.life}", style = MaterialTheme.typography.headlineMedium)
+                        if (player.hasLost) {
+                            Text(
+                                "DEFEATED",
+                                style = MaterialTheme.typography.labelLarge,
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.width(16.dp))
+
+            // Commander zone
+            ZoneCard("Commander", Zone.COMMAND_ZONE, commanderCount, Modifier.width(120.dp))
         }
 
-        Spacer(modifier = Modifier.width(16.dp))
-
-        // Opponent's hand and info
-        Column(
-            modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+        // Opponent's battlefield
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(180.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF1B5E20))
         ) {
-            ZoneCard("Hand", Zone.HAND, handCount, Modifier.height(100.dp))
-
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = if (player.hasLost) {
-                        MaterialTheme.colorScheme.errorContainer
-                    } else {
-                        MaterialTheme.colorScheme.surfaceVariant
-                    }
-                )
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(8.dp)
             ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(player.name, style = MaterialTheme.typography.titleMedium)
-                    Text("Life: ${player.life}", style = MaterialTheme.typography.headlineMedium)
-                    if (player.hasLost) {
-                        Text(
-                            "DEFEATED",
-                            style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.error
-                        )
+                if (battlefieldCards.isEmpty()) {
+                    Text(
+                        text = "Battlefield",
+                        modifier = Modifier.align(Alignment.Center),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = Color.White.copy(alpha = 0.5f)
+                    )
+                } else {
+                    FlowRow(
+                        modifier = Modifier.verticalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        battlefieldCards.forEach { cardInstance ->
+                            BattlefieldCard(
+                                cardInstance = cardInstance,
+                                isLocalPlayer = false,
+                                onCardClick = { viewModel.toggleTap(it.instanceId) },
+                                onContextAction = onCardAction
+                            )
+                        }
                     }
                 }
             }
         }
-
-        Spacer(modifier = Modifier.width(16.dp))
-
-        // Commander zone
-        ZoneCard("Commander", Zone.COMMAND_ZONE, commanderCount, Modifier.width(120.dp))
     }
 }
 
@@ -416,6 +452,7 @@ fun BattlefieldArea(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun PlayerArea(
     player: Player,
@@ -429,12 +466,14 @@ fun PlayerArea(
     var showExileDialog by remember { mutableStateOf(false) }
     var showCommanderDamageDialog by remember { mutableStateOf(false) }
     var showLibrarySearchDialog by remember { mutableStateOf(false) }
+    var showCommandZoneDialog by remember { mutableStateOf(false) }
 
     val libraryCount = viewModel.getCardCount(player.id, Zone.LIBRARY)
     val handCount = viewModel.getCardCount(player.id, Zone.HAND)
     val graveyardCount = viewModel.getCardCount(player.id, Zone.GRAVEYARD)
     val exileCount = viewModel.getCardCount(player.id, Zone.EXILE)
     val commanderCount = viewModel.getCardCount(player.id, Zone.COMMAND_ZONE)
+    val battlefieldCards = viewModel.getCards(player.id, Zone.BATTLEFIELD)
 
     // Show hand dialog if requested
     if (showHandDialog) {
@@ -527,11 +566,74 @@ fun PlayerArea(
         )
     }
 
-    Row(modifier = modifier) {
-        // Commander zone
-        ZoneCard("Commander", Zone.COMMAND_ZONE, commanderCount, Modifier.width(120.dp))
+    // Show command zone dialog if requested
+    if (showCommandZoneDialog) {
+        CommandZoneDialog(
+            cards = viewModel.getCards(player.id, Zone.COMMAND_ZONE),
+            playerName = player.name,
+            onDismiss = { showCommandZoneDialog = false },
+            onCastToBattlefield = { cardInstance ->
+                viewModel.moveCard(cardInstance.instanceId, Zone.BATTLEFIELD)
+                showCommandZoneDialog = false
+            },
+            onToHand = { cardInstance ->
+                viewModel.moveCard(cardInstance.instanceId, Zone.HAND)
+                showCommandZoneDialog = false
+            }
+        )
+    }
 
-        Spacer(modifier = Modifier.width(16.dp))
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        // Player's battlefield
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(180.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF1B5E20))
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(8.dp)
+            ) {
+                if (battlefieldCards.isEmpty()) {
+                    Text(
+                        text = "Battlefield",
+                        modifier = Modifier.align(Alignment.Center),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = Color.White.copy(alpha = 0.5f)
+                    )
+                } else {
+                    FlowRow(
+                        modifier = Modifier.verticalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        battlefieldCards.forEach { cardInstance ->
+                            BattlefieldCard(
+                                cardInstance = cardInstance,
+                                isLocalPlayer = true,
+                                onCardClick = { viewModel.toggleTap(it.instanceId) },
+                                onContextAction = onCardAction
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        // Player zones row
+        Row {
+            // Commander zone
+            ZoneCard(
+                "Commander",
+                Zone.COMMAND_ZONE,
+                commanderCount,
+                Modifier.width(120.dp),
+                onClick = { showCommandZoneDialog = true }
+            )
+
+            Spacer(modifier = Modifier.width(16.dp))
 
         // Your hand and info
         Column(
@@ -637,6 +739,7 @@ fun PlayerArea(
                     onClick = { showExileDialog = true }
                 )
             }
+        }
         }
     }
 }
