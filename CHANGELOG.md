@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.9.5] - 2025-10-28
+
+### Fixed
+- **Player Zones Row Minimum Height** - Added minimum height to prevent zones from collapsing
+  - Player zones row now has heightIn(min = 120.dp) in addition to weight(0.3f)
+  - Prevents zones from becoming invisible when window is small
+  - Ensures graveyard, exile, library, commander, and buttons always visible
+
+### Technical Details
+- Player zones Row: weight(0.3f).heightIn(min = 120.dp)
+- Guarantees minimum space for all zone controls regardless of window size
+
 ## [2.9.4] - 2025-10-28
 
 ### Fixed

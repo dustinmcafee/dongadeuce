@@ -851,7 +851,7 @@ fun PlayerArea(
 
         // Player zones row
         Row(
-            modifier = Modifier.fillMaxWidth().weight(0.3f),
+            modifier = Modifier.fillMaxWidth().weight(0.3f).heightIn(min = 120.dp),
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // Commander zone
