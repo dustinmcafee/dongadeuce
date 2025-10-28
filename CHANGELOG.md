@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.5.1] - 2025-10-28
+
+### Fixed
+- **Hotseat Mode Turn Passing** - Active player now switches correctly when passing turns
+  - In hotseat mode, passing turn now rotates the local player to match the active player
+  - The player whose turn it is becomes the "local player" with full control
+  - All other players become "opponents" in the UI
+  - GameViewModel.passTurn() now updates localPlayer and opponents lists in hotseat mode
+  - GameUiState extended with `isHotseatMode` flag to track mode
+  - GameViewModel.initializeGame() now accepts `isHotseatMode` parameter
+
+### Added
+- **Card Details View Dialog** - Right-clicking a card and selecting "View Details" now works
+  - Created CardDetailsDialog component showing full card information
+  - Displays card image, mana cost, type, oracle text, power/toughness
+  - Shows current card state: zone, tapped status, flipped status, counters
+  - Scrollable dialog for cards with lots of text
+  - Available from context menu on all cards in all zones
+  - BattlefieldArea and PlayerArea now accept onCardAction callback
+  - Card actions properly routed through handleAction wrapper in GameScreen
+
+### Technical Details
+- GameScreen creates handleAction wrapper to intercept ViewDetails actions
+- handleAction shows CardDetailsDialog for ViewDetails, delegates others to handleCardAction
+- CardDetailsDialog uses Card.imageUri property (not imageUrl)
+- Fixed smart cast issues with nullable Card properties using .let {} blocks
+- All 44 tests passing, build successful
+
 ## [2.5.0] - 2025-10-28
 
 ### Added

@@ -16,7 +16,8 @@ data class GameUiState(
     val gameState: GameState? = null,
     val selectedCardId: String? = null,
     val isLoading: Boolean = false,
-    val error: String? = null
+    val error: String? = null,
+    val isHotseatMode: Boolean = false
 ) {
     val allPlayers: List<Player>
         get() = listOfNotNull(localPlayer) + opponents
@@ -29,7 +30,7 @@ class GameViewModel {
     /**
      * Initialize a new game with players
      */
-    fun initializeGame(localPlayerName: String, opponentNames: List<String>) {
+    fun initializeGame(localPlayerName: String, opponentNames: List<String>, isHotseatMode: Boolean = false) {
         val localPlayerId = UUID.randomUUID().toString()
         val localPlayer = Player(
             id = localPlayerId,
@@ -55,7 +56,8 @@ class GameViewModel {
             it.copy(
                 localPlayer = localPlayer,
                 opponents = opponents,
-                gameState = gameState
+                gameState = gameState,
+                isHotseatMode = isHotseatMode
             )
         }
     }
@@ -356,10 +358,28 @@ class GameViewModel {
             }
         }
 
-        _uiState.update {
-            it.copy(
-                gameState = updatedState.copy(cardInstances = untappedCards)
-            )
+        val finalGameState = updatedState.copy(cardInstances = untappedCards)
+
+        // In hotseat mode, rotate the local player to match the active player
+        if (currentState.isHotseatMode) {
+            val allPlayers = finalGameState.players
+            val activePlayerIndex = finalGameState.activePlayerIndex
+            val newLocalPlayer = allPlayers[activePlayerIndex]
+            val newOpponents = allPlayers.filterIndexed { index, _ -> index != activePlayerIndex }
+
+            _uiState.update {
+                it.copy(
+                    gameState = finalGameState,
+                    localPlayer = newLocalPlayer,
+                    opponents = newOpponents
+                )
+            }
+        } else {
+            _uiState.update {
+                it.copy(
+                    gameState = finalGameState
+                )
+            }
         }
     }
 

@@ -28,6 +28,17 @@ fun GameScreen(
     viewModel: GameViewModel = remember { GameViewModel() }
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    var cardDetailsToShow by remember { mutableStateOf<com.commandermtg.models.CardInstance?>(null) }
+
+    // Handler for card actions that shows details dialog when needed
+    val handleAction: (CardAction) -> Unit = { action ->
+        when (action) {
+            is CardAction.ViewDetails -> {
+                cardDetailsToShow = action.cardInstance
+            }
+            else -> handleCardAction(action, viewModel)
+        }
+    }
 
     // Initialize game and load deck when entering the screen
     LaunchedEffect(Unit) {
@@ -46,7 +57,8 @@ fun GameScreen(
 
             viewModel.initializeGame(
                 localPlayerName = playerNames[0],
-                opponentNames = playerNames.drop(1)
+                opponentNames = playerNames.drop(1),
+                isHotseatMode = isHotseatMode
             )
         }
     }
@@ -122,6 +134,7 @@ fun GameScreen(
                     viewModel = viewModel,
                     allPlayers = uiState.allPlayers,
                     localPlayerId = localPlayer.id,
+                    onCardAction = handleAction,
                     modifier = Modifier
                         .fillMaxWidth()
                         .weight(0.4f)
@@ -136,6 +149,7 @@ fun GameScreen(
                     player = localPlayer,
                     viewModel = viewModel,
                     allPlayers = uiState.allPlayers,
+                    onCardAction = handleAction,
                     modifier = Modifier
                         .fillMaxWidth()
                         .weight(0.3f)
@@ -155,6 +169,14 @@ fun GameScreen(
                 modifier = Modifier.width(250.dp)
             )
         }
+    }
+
+    // Card details dialog
+    cardDetailsToShow?.let { cardInstance ->
+        CardDetailsDialog(
+            cardInstance = cardInstance,
+            onDismiss = { cardDetailsToShow = null }
+        )
     }
 }
 
@@ -347,6 +369,7 @@ fun BattlefieldArea(
     viewModel: GameViewModel,
     allPlayers: List<Player>,
     localPlayerId: String,
+    onCardAction: (CardAction) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -384,7 +407,7 @@ fun BattlefieldArea(
                             cardInstance = cardInstance,
                             isLocalPlayer = cardInstance.controllerId == localPlayerId,
                             onCardClick = { viewModel.toggleTap(it.instanceId) },
-                            onContextAction = { action -> handleCardAction(action, viewModel) }
+                            onContextAction = onCardAction
                         )
                     }
                 }
@@ -398,6 +421,7 @@ fun PlayerArea(
     player: Player,
     viewModel: GameViewModel,
     allPlayers: List<Player>,
+    onCardAction: (CardAction) -> Unit,
     modifier: Modifier = Modifier
 ) {
     var showHandDialog by remember { mutableStateOf(false) }
@@ -433,7 +457,7 @@ fun PlayerArea(
                 viewModel.moveCard(cardInstance.instanceId, Zone.LIBRARY)
                 showHandDialog = false
             },
-            onContextAction = { action -> handleCardAction(action, viewModel) }
+            onContextAction = onCardAction
         )
     }
 
