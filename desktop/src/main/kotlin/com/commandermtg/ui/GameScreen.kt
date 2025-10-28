@@ -3,6 +3,7 @@ package com.commandermtg.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -12,7 +13,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import com.commandermtg.models.Player
 import com.commandermtg.models.Zone
@@ -29,8 +32,20 @@ fun GameScreen(
     isHotseatMode: Boolean = false,
     viewModel: GameViewModel = remember { GameViewModel() }
 ) {
+    val dragDropState = rememberDragDropState()
+    var showDropZoneDialog by remember { mutableStateOf(false) }
+    var cardToDrop by remember { mutableStateOf<CardInstance?>(null) }
+
     val uiState by viewModel.uiState.collectAsState()
     var cardDetailsToShow by remember { mutableStateOf<com.commandermtg.models.CardInstance?>(null) }
+
+    // Handle drag end - show drop zone selection dialog
+    LaunchedEffect(dragDropState.isDragging) {
+        if (!dragDropState.isDragging && dragDropState.draggedCard != null) {
+            cardToDrop = dragDropState.draggedCard
+            showDropZoneDialog = true
+        }
+    }
 
     // Handler for card actions that shows details dialog when needed
     // and enforces ownership restrictions
@@ -181,6 +196,7 @@ fun GameScreen(
                                 viewModel = viewModel,
                                 isActivePlayer = false,
                                 onCardAction = handleAction,
+                                dragDropState = dragDropState,
                                 modifier = Modifier.fillMaxWidth().weight(1f)
                             )
                             HotseatPlayerSection(
@@ -188,6 +204,7 @@ fun GameScreen(
                                 viewModel = viewModel,
                                 isActivePlayer = true,
                                 onCardAction = handleAction,
+                                dragDropState = dragDropState,
                                 modifier = Modifier.fillMaxWidth().weight(1f),
                                 inverted = true
                             )
@@ -200,6 +217,7 @@ fun GameScreen(
                                     viewModel = viewModel,
                                     isActivePlayer = false,
                                     onCardAction = handleAction,
+                                    dragDropState = dragDropState,
                                     modifier = Modifier.weight(1f)
                                 )
                                 HotseatPlayerSection(
@@ -207,6 +225,7 @@ fun GameScreen(
                                     viewModel = viewModel,
                                     isActivePlayer = false,
                                     onCardAction = handleAction,
+                                    dragDropState = dragDropState,
                                     modifier = Modifier.weight(1f)
                                 )
                             }
@@ -216,6 +235,7 @@ fun GameScreen(
                                     viewModel = viewModel,
                                     isActivePlayer = true,
                                     onCardAction = handleAction,
+                                    dragDropState = dragDropState,
                                     modifier = Modifier.weight(1f),
                                     inverted = true
                                 )
@@ -231,6 +251,7 @@ fun GameScreen(
                                     viewModel = viewModel,
                                     isActivePlayer = false,
                                     onCardAction = handleAction,
+                                    dragDropState = dragDropState,
                                     modifier = Modifier.weight(1f)
                                 )
                                 HotseatPlayerSection(
@@ -238,6 +259,7 @@ fun GameScreen(
                                     viewModel = viewModel,
                                     isActivePlayer = false,
                                     onCardAction = handleAction,
+                                    dragDropState = dragDropState,
                                     modifier = Modifier.weight(1f)
                                 )
                             }
@@ -247,6 +269,7 @@ fun GameScreen(
                                     viewModel = viewModel,
                                     isActivePlayer = true,
                                     onCardAction = handleAction,
+                                    dragDropState = dragDropState,
                                     modifier = Modifier.weight(1f),
                                     inverted = true
                                 )
@@ -255,6 +278,7 @@ fun GameScreen(
                                     viewModel = viewModel,
                                     isActivePlayer = false,
                                     onCardAction = handleAction,
+                                    dragDropState = dragDropState,
                                     modifier = Modifier.weight(1f),
                                     inverted = true
                                 )
@@ -319,6 +343,71 @@ fun GameScreen(
             onDismiss = { cardDetailsToShow = null }
         )
     }
+
+    // Drop zone selection dialog
+    if (showDropZoneDialog && cardToDrop != null) {
+        AlertDialog(
+            onDismissRequest = {
+                showDropZoneDialog = false
+                cardToDrop = null
+            },
+            title = { Text("Move ${cardToDrop?.card?.name} to:") },
+            text = {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Button(
+                        onClick = {
+                            cardToDrop?.let { viewModel.moveCard(it.instanceId, Zone.BATTLEFIELD) }
+                            showDropZoneDialog = false
+                            cardToDrop = null
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Battlefield")
+                    }
+                    Button(
+                        onClick = {
+                            cardToDrop?.let { viewModel.moveCard(it.instanceId, Zone.GRAVEYARD) }
+                            showDropZoneDialog = false
+                            cardToDrop = null
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Graveyard")
+                    }
+                    Button(
+                        onClick = {
+                            cardToDrop?.let { viewModel.moveCard(it.instanceId, Zone.EXILE) }
+                            showDropZoneDialog = false
+                            cardToDrop = null
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Exile")
+                    }
+                    Button(
+                        onClick = {
+                            cardToDrop?.let { viewModel.moveCard(it.instanceId, Zone.LIBRARY) }
+                            showDropZoneDialog = false
+                            cardToDrop = null
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Top of Library")
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    showDropZoneDialog = false
+                    cardToDrop = null
+                }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
 }
 
 /**
@@ -332,6 +421,7 @@ fun HotseatPlayerSection(
     viewModel: GameViewModel,
     isActivePlayer: Boolean,
     onCardAction: (CardAction) -> Unit,
+    dragDropState: DragDropState? = null,
     modifier: Modifier = Modifier,
     inverted: Boolean = false // If true, hand at bottom; if false, hand at top
 ) {
@@ -363,6 +453,7 @@ fun HotseatPlayerSection(
                 handCount = handCount,
                 showCards = isActivePlayer,
                 onCardAction = onCardAction,
+                dragDropState = dragDropState,
                 modifier = Modifier.fillMaxWidth().height(100.dp)
             )
         }
@@ -466,6 +557,7 @@ fun HotseatPlayerSection(
                 handCount = handCount,
                 showCards = isActivePlayer,
                 onCardAction = onCardAction,
+                dragDropState = dragDropState,
                 modifier = Modifier.fillMaxWidth().height(100.dp)
             )
         }
@@ -546,6 +638,7 @@ fun CompactHandStrip(
     handCount: Int,
     showCards: Boolean,
     onCardAction: (CardAction) -> Unit,
+    dragDropState: DragDropState? = null,
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -590,7 +683,8 @@ fun CompactHandStrip(
                                 // Double-click plays card to battlefield
                                 onCardAction(CardAction.ToBattlefield(cardInstance))
                             },
-                            onContextAction = onCardAction
+                            onContextAction = onCardAction,
+                            dragDropState = dragDropState
                         )
                     }
                 }
@@ -821,6 +915,7 @@ fun PlayerArea(
     viewModel: GameViewModel,
     allPlayers: List<Player>,
     onCardAction: (CardAction) -> Unit,
+    dragDropState: DragDropState? = null,
     modifier: Modifier = Modifier
 ) {
     var showHandDialog by remember { mutableStateOf(false) }
@@ -1134,7 +1229,8 @@ fun PlayerArea(
                                     // Double-click plays card to battlefield
                                     viewModel.moveCard(cardInstance.instanceId, Zone.BATTLEFIELD)
                                 },
-                                onContextAction = onCardAction
+                                onContextAction = onCardAction,
+                                dragDropState = dragDropState
                             )
                         }
                     }
@@ -1311,9 +1407,11 @@ fun HandCardDisplay(
     cardInstance: CardInstance,
     onCardClick: (CardInstance) -> Unit,
     onDoubleClick: () -> Unit = {},
-    onContextAction: (CardAction) -> Unit
+    onContextAction: (CardAction) -> Unit,
+    dragDropState: DragDropState? = null
 ) {
     var lastClickTime by remember { mutableStateOf(0L) }
+    val isDragging = dragDropState?.isDragging == true && dragDropState.draggedCard?.instanceId == cardInstance.instanceId
 
     CardWithContextMenu(
         cardInstance = cardInstance,
@@ -1323,18 +1421,45 @@ fun HandCardDisplay(
             modifier = Modifier
                 .width(60.dp)
                 .height(84.dp)
-                .clickable {
-                    val currentTime = System.currentTimeMillis()
-                    if (currentTime - lastClickTime < 300) {
-                        // Double-click detected
-                        onDoubleClick()
-                        lastClickTime = 0L
+                .then(
+                    if (dragDropState != null) {
+                        Modifier.pointerInput(cardInstance.instanceId) {
+                            detectDragGestures(
+                                onDragStart = { offset ->
+                                    dragDropState.startDrag(cardInstance, offset)
+                                },
+                                onDrag = { change, dragAmount ->
+                                    change.consume()
+                                    dragDropState.updateDragPosition(
+                                        dragDropState.dragOffset + dragAmount
+                                    )
+                                },
+                                onDragEnd = {
+                                    dragDropState.endDrag()
+                                },
+                                onDragCancel = {
+                                    dragDropState.endDrag()
+                                }
+                            )
+                        }
                     } else {
-                        // Single click
-                        lastClickTime = currentTime
-                        onCardClick(cardInstance)
+                        Modifier.clickable {
+                            val currentTime = System.currentTimeMillis()
+                            if (currentTime - lastClickTime < 300) {
+                                // Double-click detected
+                                onDoubleClick()
+                                lastClickTime = 0L
+                            } else {
+                                // Single click
+                                lastClickTime = currentTime
+                                onCardClick(cardInstance)
+                            }
+                        }
                     }
-                },
+                )
+                .then(
+                    if (isDragging) Modifier.alpha(0.5f) else Modifier
+                ),
             colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.secondaryContainer
             )
