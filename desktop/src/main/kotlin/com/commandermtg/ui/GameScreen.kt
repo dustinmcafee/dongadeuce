@@ -16,17 +16,30 @@ import com.commandermtg.viewmodel.GameViewModel
 
 @Composable
 fun GameScreen(
+    loadedDeck: com.commandermtg.models.Deck? = null,
     viewModel: GameViewModel = remember { GameViewModel() }
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
-    // For demo purposes, initialize with some players if not yet initialized
-    LaunchedEffect(Unit) {
+    // Initialize game and load deck when entering the screen
+    LaunchedEffect(loadedDeck) {
         if (uiState.localPlayer == null) {
             viewModel.initializeGame(
                 localPlayerName = "You",
                 opponentNames = listOf("Opponent")
             )
+        }
+
+        // Load the deck if provided and draw starting hands
+        if (loadedDeck != null && uiState.gameState != null) {
+            val currentHandCount = viewModel.getCardCount(uiState.localPlayer?.id ?: "", Zone.HAND)
+            if (currentHandCount == 0) {
+                viewModel.loadDeck(loadedDeck)
+                // Wait a moment for the deck to load, then draw starting hands
+                kotlinx.coroutines.delay(100)
+                uiState.localPlayer?.let { viewModel.drawStartingHand(it.id, 7) }
+                uiState.opponents.firstOrNull()?.let { viewModel.drawStartingHand(it.id, 7) }
+            }
         }
     }
 
@@ -156,11 +169,25 @@ fun PlayerArea(
     viewModel: GameViewModel,
     modifier: Modifier = Modifier
 ) {
+    var showHandDialog by remember { mutableStateOf(false) }
+
     val libraryCount = viewModel.getCardCount(player.id, Zone.LIBRARY)
     val handCount = viewModel.getCardCount(player.id, Zone.HAND)
     val graveyardCount = viewModel.getCardCount(player.id, Zone.GRAVEYARD)
     val exileCount = viewModel.getCardCount(player.id, Zone.EXILE)
     val commanderCount = viewModel.getCardCount(player.id, Zone.COMMAND_ZONE)
+
+    // Show hand dialog if requested
+    if (showHandDialog) {
+        HandDialog(
+            cards = viewModel.getCards(player.id, Zone.HAND),
+            onDismiss = { showHandDialog = false },
+            onPlayCard = { cardInstance ->
+                viewModel.moveCard(cardInstance.instanceId, Zone.BATTLEFIELD)
+                showHandDialog = false
+            }
+        )
+    }
 
     Row(modifier = modifier) {
         // Commander zone
@@ -197,7 +224,24 @@ fun PlayerArea(
                 }
             }
 
-            ZoneCard("Hand", Zone.HAND, handCount, Modifier.height(100.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Button(
+                    onClick = { viewModel.drawCard(player.id) },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text("Draw")
+                }
+
+                OutlinedButton(
+                    onClick = { showHandDialog = true },
+                    modifier = Modifier.weight(2f)
+                ) {
+                    Text("Hand ($handCount)")
+                }
+            }
         }
 
         Spacer(modifier = Modifier.width(16.dp))
@@ -242,4 +286,77 @@ fun ZoneCard(
             }
         }
     }
+}
+
+@Composable
+fun HandDialog(
+    cards: List<com.commandermtg.models.CardInstance>,
+    onDismiss: () -> Unit,
+    onPlayCard: (com.commandermtg.models.CardInstance) -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Your Hand (${cards.size} cards)") },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                if (cards.isEmpty()) {
+                    Text("No cards in hand", style = MaterialTheme.typography.bodyMedium)
+                } else {
+                    cards.forEach { cardInstance ->
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.secondaryContainer
+                            )
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(12.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = cardInstance.card.name,
+                                        style = MaterialTheme.typography.titleSmall
+                                    )
+                                    val manaCost = cardInstance.card.manaCost
+                                    if (manaCost != null) {
+                                        Text(
+                                            text = manaCost,
+                                            style = MaterialTheme.typography.bodySmall
+                                        )
+                                    }
+                                    val cardType = cardInstance.card.type
+                                    if (cardType != null) {
+                                        Text(
+                                            text = cardType,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
+                                        )
+                                    }
+                                }
+
+                                Button(
+                                    onClick = { onPlayCard(cardInstance) },
+                                    modifier = Modifier.padding(start = 8.dp)
+                                ) {
+                                    Text("Play")
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Close")
+            }
+        }
+    )
 }
