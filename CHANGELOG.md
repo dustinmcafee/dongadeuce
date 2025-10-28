@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.9.0] - 2025-10-28
+
+### Added
+- **Draggable Battlefield Grid** - Cards can be rearranged on the battlefield
+  - Drag and drop cards to organize battlefield layout
+  - Grid-based positioning system with automatic spacing
+  - Position tracking persists for each card (gridX, gridY coordinates)
+  - Cards without positions auto-arrange into available grid spaces
+  - Smooth drag gestures with visual feedback
+  - Works in both hotseat and network modes
+  - All battlefields (player, opponent, hotseat) support drag-and-drop
+
+### Fixed
+- **Tapped Card Overlap** - Tapped cards properly reserve space in grid layout
+  - Grid system automatically accounts for rotated card dimensions
+  - No more overlapping cards when tapped
+
+### Technical Details
+- Added `gridX` and `gridY` nullable fields to CardInstance model
+- Created DraggableBattlefieldGrid composable with pointer input gestures
+- Implemented `updateCardGridPosition()` method in GameViewModel
+- Replaced all FlowRow battlefield layouts with DraggableBattlefieldGrid
+- Dynamic grid column calculation based on container width
+- Card position snapping to nearest grid cell on drag release
+
 ## [2.8.1] - 2025-10-28
 
 ### Fixed

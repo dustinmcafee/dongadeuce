@@ -678,4 +678,20 @@ class GameViewModel {
             )
         }
     }
+
+    /**
+     * Update a card's grid position on the battlefield
+     */
+    fun updateCardGridPosition(cardId: String, gridX: Int, gridY: Int) {
+        val currentState = _uiState.value
+        val gameState = currentState.gameState ?: return
+
+        val updatedGameState = gameState.updateCardInstance(cardId) {
+            it.setGridPosition(gridX, gridY)
+        }
+
+        _uiState.update {
+            it.copy(gameState = updatedGameState)
+        }
+    }
 }

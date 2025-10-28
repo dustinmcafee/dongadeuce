@@ -388,29 +388,16 @@ fun HotseatPlayerSection(
 
                 // Battlefield cards
                 Box(modifier = Modifier.weight(1f).fillMaxHeight().padding(4.dp)) {
-                    if (battlefieldCards.isEmpty()) {
-                        Text(
-                            "Battlefield",
-                            modifier = Modifier.align(Alignment.Center),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = Color.White.copy(alpha = 0.5f)
-                        )
-                    } else {
-                        FlowRow(
-                            modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
-                            horizontalArrangement = Arrangement.spacedBy(4.dp),
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            battlefieldCards.forEach { cardInstance ->
-                                BattlefieldCard(
-                                    cardInstance = cardInstance,
-                                    isLocalPlayer = isActivePlayer,
-                                    onCardClick = { viewModel.toggleTap(it.instanceId) },
-                                    onContextAction = onCardAction
-                                )
-                            }
-                        }
-                    }
+                    DraggableBattlefieldGrid(
+                        cards = battlefieldCards,
+                        isLocalPlayer = isActivePlayer,
+                        onCardClick = { viewModel.toggleTap(it.instanceId) },
+                        onContextAction = onCardAction,
+                        onCardPositionChanged = { cardId, gridX, gridY ->
+                            viewModel.updateCardGridPosition(cardId, gridX, gridY)
+                        },
+                        modifier = Modifier.fillMaxSize()
+                    )
                 }
             }
         }
@@ -698,29 +685,16 @@ fun OpponentArea(
                     .fillMaxSize()
                     .padding(8.dp)
             ) {
-                if (battlefieldCards.isEmpty()) {
-                    Text(
-                        text = "Battlefield",
-                        modifier = Modifier.align(Alignment.Center),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = Color.White.copy(alpha = 0.5f)
-                    )
-                } else {
-                    FlowRow(
-                        modifier = Modifier.verticalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        battlefieldCards.forEach { cardInstance ->
-                            BattlefieldCard(
-                                cardInstance = cardInstance,
-                                isLocalPlayer = false,
-                                onCardClick = { viewModel.toggleTap(it.instanceId) },
-                                onContextAction = onCardAction
-                            )
-                        }
-                    }
-                }
+                DraggableBattlefieldGrid(
+                    cards = battlefieldCards,
+                    isLocalPlayer = false,
+                    onCardClick = { viewModel.toggleTap(it.instanceId) },
+                    onContextAction = onCardAction,
+                    onCardPositionChanged = { cardId, gridX, gridY ->
+                        viewModel.updateCardGridPosition(cardId, gridX, gridY)
+                    },
+                    modifier = Modifier.fillMaxSize()
+                )
             }
         }
     }
@@ -871,29 +845,16 @@ fun PlayerArea(
                     .fillMaxSize()
                     .padding(8.dp)
             ) {
-                if (battlefieldCards.isEmpty()) {
-                    Text(
-                        text = "Battlefield",
-                        modifier = Modifier.align(Alignment.Center),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = Color.White.copy(alpha = 0.5f)
-                    )
-                } else {
-                    FlowRow(
-                        modifier = Modifier.verticalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        battlefieldCards.forEach { cardInstance ->
-                            BattlefieldCard(
-                                cardInstance = cardInstance,
-                                isLocalPlayer = true,
-                                onCardClick = { viewModel.toggleTap(it.instanceId) },
-                                onContextAction = onCardAction
-                            )
-                        }
-                    }
-                }
+                DraggableBattlefieldGrid(
+                    cards = battlefieldCards,
+                    isLocalPlayer = true,
+                    onCardClick = { viewModel.toggleTap(it.instanceId) },
+                    onContextAction = onCardAction,
+                    onCardPositionChanged = { cardId, gridX, gridY ->
+                        viewModel.updateCardGridPosition(cardId, gridX, gridY)
+                    },
+                    modifier = Modifier.fillMaxSize()
+                )
             }
         }
 
