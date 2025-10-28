@@ -33,6 +33,7 @@ fun GameScreen(
     viewModel: GameViewModel = remember { GameViewModel() }
 ) {
     val dragDropState = rememberDragDropState()
+    val selectionState = rememberSelectionState()
     var showDropZoneDialog by remember { mutableStateOf(false) }
     var cardToDrop by remember { mutableStateOf<CardInstance?>(null) }
 
@@ -197,6 +198,7 @@ fun GameScreen(
                                 isActivePlayer = false,
                                 onCardAction = handleAction,
                                 dragDropState = dragDropState,
+                                selectionState = selectionState,
                                 modifier = Modifier.fillMaxWidth().weight(1f)
                             )
                             HotseatPlayerSection(
@@ -205,6 +207,7 @@ fun GameScreen(
                                 isActivePlayer = true,
                                 onCardAction = handleAction,
                                 dragDropState = dragDropState,
+                                selectionState = selectionState,
                                 modifier = Modifier.fillMaxWidth().weight(1f),
                                 inverted = true
                             )
@@ -218,6 +221,7 @@ fun GameScreen(
                                     isActivePlayer = false,
                                     onCardAction = handleAction,
                                     dragDropState = dragDropState,
+                                    selectionState = selectionState,
                                     modifier = Modifier.weight(1f)
                                 )
                                 HotseatPlayerSection(
@@ -226,6 +230,7 @@ fun GameScreen(
                                     isActivePlayer = false,
                                     onCardAction = handleAction,
                                     dragDropState = dragDropState,
+                                    selectionState = selectionState,
                                     modifier = Modifier.weight(1f)
                                 )
                             }
@@ -236,6 +241,7 @@ fun GameScreen(
                                     isActivePlayer = true,
                                     onCardAction = handleAction,
                                     dragDropState = dragDropState,
+                                    selectionState = selectionState,
                                     modifier = Modifier.weight(1f),
                                     inverted = true
                                 )
@@ -252,6 +258,7 @@ fun GameScreen(
                                     isActivePlayer = false,
                                     onCardAction = handleAction,
                                     dragDropState = dragDropState,
+                                    selectionState = selectionState,
                                     modifier = Modifier.weight(1f)
                                 )
                                 HotseatPlayerSection(
@@ -260,6 +267,7 @@ fun GameScreen(
                                     isActivePlayer = false,
                                     onCardAction = handleAction,
                                     dragDropState = dragDropState,
+                                    selectionState = selectionState,
                                     modifier = Modifier.weight(1f)
                                 )
                             }
@@ -270,6 +278,7 @@ fun GameScreen(
                                     isActivePlayer = true,
                                     onCardAction = handleAction,
                                     dragDropState = dragDropState,
+                                    selectionState = selectionState,
                                     modifier = Modifier.weight(1f),
                                     inverted = true
                                 )
@@ -279,6 +288,7 @@ fun GameScreen(
                                     isActivePlayer = false,
                                     onCardAction = handleAction,
                                     dragDropState = dragDropState,
+                                    selectionState = selectionState,
                                     modifier = Modifier.weight(1f),
                                     inverted = true
                                 )
@@ -313,6 +323,8 @@ fun GameScreen(
                         viewModel = viewModel,
                         allPlayers = uiState.allPlayers,
                         onCardAction = handleAction,
+                        dragDropState = dragDropState,
+                        selectionState = selectionState,
                         modifier = Modifier
                             .fillMaxWidth()
                             .weight(0.6f)
@@ -422,6 +434,7 @@ fun HotseatPlayerSection(
     isActivePlayer: Boolean,
     onCardAction: (CardAction) -> Unit,
     dragDropState: DragDropState? = null,
+    selectionState: SelectionState? = null,
     modifier: Modifier = Modifier,
     inverted: Boolean = false // If true, hand at bottom; if false, hand at top
 ) {
@@ -454,6 +467,7 @@ fun HotseatPlayerSection(
                 showCards = isActivePlayer,
                 onCardAction = onCardAction,
                 dragDropState = dragDropState,
+                selectionState = if (isActivePlayer) selectionState else null,
                 modifier = Modifier.fillMaxWidth().height(100.dp)
             )
         }
@@ -558,6 +572,7 @@ fun HotseatPlayerSection(
                 showCards = isActivePlayer,
                 onCardAction = onCardAction,
                 dragDropState = dragDropState,
+                selectionState = if (isActivePlayer) selectionState else null,
                 modifier = Modifier.fillMaxWidth().height(100.dp)
             )
         }
@@ -639,53 +654,120 @@ fun CompactHandStrip(
     showCards: Boolean,
     onCardAction: (CardAction) -> Unit,
     dragDropState: DragDropState? = null,
+    selectionState: SelectionState? = null,
     modifier: Modifier = Modifier
 ) {
     Card(
         modifier = modifier,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
-        Row(
-            modifier = Modifier.fillMaxSize().padding(4.dp),
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                "${player.name}'s Hand ($handCount)",
-                style = MaterialTheme.typography.labelSmall,
-                modifier = Modifier.width(120.dp)
-            )
+        Column(modifier = Modifier.fillMaxSize()) {
+            Row(
+                modifier = Modifier.fillMaxWidth().weight(1f).padding(4.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    "${player.name}'s Hand ($handCount)",
+                    style = MaterialTheme.typography.labelSmall,
+                    modifier = Modifier.width(120.dp)
+                )
 
-            if (!showCards) {
-                // For non-active players, just show card count, not actual cards
-                Text(
-                    "Hidden",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                )
-            } else if (handCards.isEmpty()) {
-                Text(
-                    "No cards",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                )
-            } else {
-                FlowRow(
-                    modifier = Modifier.weight(1f).horizontalScroll(rememberScrollState()),
+                if (!showCards) {
+                    // For non-active players, just show card count, not actual cards
+                    Text(
+                        "Hidden",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                    )
+                } else if (handCards.isEmpty()) {
+                    Text(
+                        "No cards",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                    )
+                } else {
+                    FlowRow(
+                        modifier = Modifier.weight(1f).horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        handCards.forEach { cardInstance ->
+                            HandCardDisplay(
+                                cardInstance = cardInstance,
+                                onCardClick = { /* Single click - could open dialog */ },
+                                onDoubleClick = {
+                                    // Double-click plays card to battlefield
+                                    onCardAction(CardAction.ToBattlefield(cardInstance))
+                                },
+                                onContextAction = onCardAction,
+                                dragDropState = dragDropState,
+                                selectionState = selectionState
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Batch actions row (only show when cards are selected)
+            if (selectionState?.hasSelection == true) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(MaterialTheme.colorScheme.primaryContainer)
+                        .padding(4.dp),
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    handCards.forEach { cardInstance ->
-                        HandCardDisplay(
-                            cardInstance = cardInstance,
-                            onCardClick = { /* Single click - could open dialog */ },
-                            onDoubleClick = {
-                                // Double-click plays card to battlefield
-                                onCardAction(CardAction.ToBattlefield(cardInstance))
-                            },
-                            onContextAction = onCardAction,
-                            dragDropState = dragDropState
-                        )
+                    Text(
+                        "${selectionState.selectionCount} selected",
+                        style = MaterialTheme.typography.labelSmall,
+                        modifier = Modifier.width(120.dp)
+                    )
+                    Button(
+                        onClick = {
+                            selectionState.selectedCards.forEach { cardId ->
+                                handCards.find { it.instanceId == cardId }?.let {
+                                    onCardAction(CardAction.ToBattlefield(it))
+                                }
+                            }
+                            selectionState.clearSelection()
+                        },
+                        modifier = Modifier.weight(1f).height(32.dp)
+                    ) {
+                        Text("To Battlefield", style = MaterialTheme.typography.labelSmall)
+                    }
+                    Button(
+                        onClick = {
+                            selectionState.selectedCards.forEach { cardId ->
+                                handCards.find { it.instanceId == cardId }?.let {
+                                    onCardAction(CardAction.ToGraveyard(it))
+                                }
+                            }
+                            selectionState.clearSelection()
+                        },
+                        modifier = Modifier.weight(1f).height(32.dp)
+                    ) {
+                        Text("To Graveyard", style = MaterialTheme.typography.labelSmall)
+                    }
+                    Button(
+                        onClick = {
+                            selectionState.selectedCards.forEach { cardId ->
+                                handCards.find { it.instanceId == cardId }?.let {
+                                    onCardAction(CardAction.ToExile(it))
+                                }
+                            }
+                            selectionState.clearSelection()
+                        },
+                        modifier = Modifier.weight(1f).height(32.dp)
+                    ) {
+                        Text("To Exile", style = MaterialTheme.typography.labelSmall)
+                    }
+                    OutlinedButton(
+                        onClick = { selectionState.clearSelection() },
+                        modifier = Modifier.width(80.dp).height(32.dp)
+                    ) {
+                        Text("Clear", style = MaterialTheme.typography.labelSmall)
                     }
                 }
             }
@@ -916,6 +998,7 @@ fun PlayerArea(
     allPlayers: List<Player>,
     onCardAction: (CardAction) -> Unit,
     dragDropState: DragDropState? = null,
+    selectionState: SelectionState? = null,
     modifier: Modifier = Modifier
 ) {
     var showHandDialog by remember { mutableStateOf(false) }
@@ -1180,58 +1263,119 @@ fun PlayerArea(
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
         ) {
             Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(8.dp)
+                modifier = Modifier.fillMaxSize()
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                        .padding(8.dp)
                 ) {
-                    Text(
-                        "Hand ($handCount)",
-                        style = MaterialTheme.typography.titleSmall
-                    )
-                    OutlinedButton(
-                        onClick = { showHandDialog = true }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("Expand")
+                        Text(
+                            "Hand ($handCount)",
+                            style = MaterialTheme.typography.titleSmall
+                        )
+                        OutlinedButton(
+                            onClick = { showHandDialog = true }
+                        ) {
+                            Text("Expand")
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    if (handCards.isEmpty()) {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                "No cards in hand",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                            )
+                        }
+                    } else {
+                        FlowRow(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .verticalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            handCards.forEach { cardInstance ->
+                                HandCardDisplay(
+                                    cardInstance = cardInstance,
+                                    onCardClick = { showHandDialog = true },
+                                    onDoubleClick = {
+                                        // Double-click plays card to battlefield
+                                        viewModel.moveCard(cardInstance.instanceId, Zone.BATTLEFIELD)
+                                    },
+                                    onContextAction = onCardAction,
+                                    dragDropState = dragDropState,
+                                    selectionState = selectionState
+                                )
+                            }
+                        }
                     }
                 }
 
-                Spacer(modifier = Modifier.height(4.dp))
-
-                if (handCards.isEmpty()) {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
+                // Batch actions row (only show when cards are selected)
+                if (selectionState?.hasSelection == true) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(MaterialTheme.colorScheme.primaryContainer)
+                            .padding(8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            "No cards in hand",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                            "${selectionState.selectionCount} card${if (selectionState.selectionCount > 1) "s" else ""} selected",
+                            style = MaterialTheme.typography.titleSmall
                         )
-                    }
-                } else {
-                    FlowRow(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .verticalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        handCards.forEach { cardInstance ->
-                            HandCardDisplay(
-                                cardInstance = cardInstance,
-                                onCardClick = { showHandDialog = true },
-                                onDoubleClick = {
-                                    // Double-click plays card to battlefield
-                                    viewModel.moveCard(cardInstance.instanceId, Zone.BATTLEFIELD)
-                                },
-                                onContextAction = onCardAction,
-                                dragDropState = dragDropState
-                            )
+                        Button(
+                            onClick = {
+                                selectionState.selectedCards.forEach { cardId ->
+                                    viewModel.moveCard(cardId, Zone.BATTLEFIELD)
+                                }
+                                selectionState.clearSelection()
+                            },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("To Battlefield")
+                        }
+                        Button(
+                            onClick = {
+                                selectionState.selectedCards.forEach { cardId ->
+                                    viewModel.moveCard(cardId, Zone.GRAVEYARD)
+                                }
+                                selectionState.clearSelection()
+                            },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("To Graveyard")
+                        }
+                        Button(
+                            onClick = {
+                                selectionState.selectedCards.forEach { cardId ->
+                                    viewModel.moveCard(cardId, Zone.EXILE)
+                                }
+                                selectionState.clearSelection()
+                            },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("To Exile")
+                        }
+                        OutlinedButton(
+                            onClick = { selectionState.clearSelection() }
+                        ) {
+                            Text("Clear")
                         }
                     }
                 }
@@ -1408,10 +1552,12 @@ fun HandCardDisplay(
     onCardClick: (CardInstance) -> Unit,
     onDoubleClick: () -> Unit = {},
     onContextAction: (CardAction) -> Unit,
-    dragDropState: DragDropState? = null
+    dragDropState: DragDropState? = null,
+    selectionState: SelectionState? = null
 ) {
     var lastClickTime by remember { mutableStateOf(0L) }
     val isDragging = dragDropState?.isDragging == true && dragDropState.draggedCard?.instanceId == cardInstance.instanceId
+    val isSelected = selectionState?.isSelected(cardInstance.instanceId) == true
 
     CardWithContextMenu(
         cardInstance = cardInstance,
@@ -1447,21 +1593,30 @@ fun HandCardDisplay(
                             val currentTime = System.currentTimeMillis()
                             if (currentTime - lastClickTime < 300) {
                                 // Double-click detected
+                                selectionState?.clearSelection() // Clear selection on double-click
                                 onDoubleClick()
                                 lastClickTime = 0L
                             } else {
-                                // Single click
+                                // Single click - toggle selection if selectionState exists
                                 lastClickTime = currentTime
-                                onCardClick(cardInstance)
+                                if (selectionState != null) {
+                                    selectionState.toggleSelection(cardInstance.instanceId)
+                                } else {
+                                    onCardClick(cardInstance)
+                                }
                             }
                         }
                     }
                 )
                 .then(
                     if (isDragging) Modifier.alpha(0.5f) else Modifier
+                )
+                .then(
+                    if (isSelected) Modifier.border(3.dp, Color(0xFF00FF00), RoundedCornerShape(8.dp)) else Modifier
                 ),
             colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.secondaryContainer
+                containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer
+                                else MaterialTheme.colorScheme.secondaryContainer
             )
         ) {
             Box(
