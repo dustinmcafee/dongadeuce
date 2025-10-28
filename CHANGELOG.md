@@ -419,12 +419,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [2.6.0] - 2025-10-28
 
 ### Changed
-- **Separated Battlefields (Cockatrice-Style Layout)** - Each player now has their own battlefield area
+- **Separated Battlefields** - Each player now has their own battlefield area
   - Removed shared battlefield where all players' cards were mixed together
   - Each player's battlefield is now integrated with their player area
   - Opponent battlefields appear below their zones (library/hand/etc.)
   - Player battlefield appears above your zones
-  - Matches Cockatrice and other digital MTG clients' layout
+  - Matches standard digital MTG client layout
   - Each battlefield is 180dp tall with scrollable card grid
   - Cards are clearly separated by controller
   - OpponentArea and PlayerArea weight adjusted for better space distribution
@@ -722,13 +722,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - BattlefieldCard now accepts onContextAction callback
 - HandDialog now accepts onContextAction callback
 - Renamed DeckParser functions for clarity:
-  - parseCockatriceFormat() → parseTextFormat()
-  - parseCockatriceFile() → parseTextFile()
-- Removed external project name references from:
-  - README.md (project description, deck format)
-  - CHANGELOG.md (completion description, deck parser)
-  - DeckParser.kt (function names and comments)
-  - MenuViewModel.kt (function call)
+  - Functions renamed to use generic "text format" terminology
+- Removed external project references from documentation
 
 ### Technical Details
 - Created CardContextMenu.kt with CardWithContextMenu composable

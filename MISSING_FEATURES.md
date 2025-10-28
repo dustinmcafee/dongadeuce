@@ -1,640 +1,301 @@
-# Exact Missing Features for 2+ Player Cockatrice-Style Commander
+# Missing Features for Commander MTG
 
-## 1. NETWORKING (Complete Category Missing)
+**Last Updated:** 2025-10-28 (v2.10.6)
 
-### Server Implementation
-**Location:** `shared/src/main/kotlin/com/commandermtg/network/GameServer.kt` (doesn't exist)
-**What's needed:**
-```kotlin
-class GameServer {
-    // Ktor WebSocket server on port 8080
-    // Accept incoming player connections
-    // Maintain list of connected clients
-    // Broadcast game state updates to all clients
-    // Receive and relay player actions
-    // Handle player disconnects/reconnects
-}
-```
-
-### Client Implementation
-**Location:** `shared/src/main/kotlin/com/commandermtg/network/GameClient.kt` (doesn't exist)
-**What's needed:**
-```kotlin
-class GameClient {
-    // Connect to host via WebSocket
-    // Send local player actions to host
-    // Receive game state updates
-    // Handle connection loss
-    // Reconnection logic
-}
-```
-
-### Network Protocol
-**Location:** `shared/src/main/kotlin/com/commandermtg/network/GameMessage.kt` (doesn't exist)
-**What's needed:**
-```kotlin
-sealed class GameMessage {
-    // PlayerJoined(playerId, playerName, deckInfo)
-    // PlayerLeft(playerId)
-    // GameStarted(playerOrder, initialState)
-    // CardDrawn(playerId, cardInstanceId)
-    // CardPlayed(playerId, cardInstanceId, targetZone)
-    // CardMoved(cardInstanceId, fromZone, toZone)
-    // CardTapped(cardInstanceId, isTapped)
-    // LifeChanged(playerId, newLife)
-    // PhaseChanged(newPhase)
-    // TurnAdvanced(newActivePlayer, turnNumber)
-    // ChatMessage(playerId, message)
-    // etc.
-}
-```
-
-### Network Integration in ViewModels
-**Location:** `desktop/src/main/kotlin/com/commandermtg/viewmodel/GameViewModel.kt`
-**Missing:**
-- Network client instance
-- Methods to send actions over network
-- Listener for incoming network messages
-- State update from network events
-
-**Location:** `desktop/src/main/kotlin/com/commandermtg/viewmodel/MenuViewModel.kt`
-**Missing in `startHosting()`:**
-```kotlin
-// Start GameServer instance
-// Listen for player connections
-// Add connected players to lobby list
-```
-
-**Missing in `connectToGame()`:**
-```kotlin
-// Connect GameClient to host IP
-// Send local player info and deck
-// Wait for game start
-```
+This document tracks missing features needed for a complete Commander multiplayer experience. See [TODO.md](TODO.md) for detailed implementation tasks.
 
 ---
 
-## 2. MULTIPLAYER GAME INITIALIZATION
+## 🔴 CRITICAL Features (Blocks Playability)
 
-### Pass Players from Lobby to Game
-**Location:** `desktop/src/main/kotlin/com/commandermtg/ui/MainScreen.kt:27`
-**Current:**
-```kotlin
-Screen.Game -> GameScreen(loadedDeck = uiState.loadedDeck)
-```
-**Needs:**
-```kotlin
-Screen.Game -> GameScreen(
-    loadedDeck = uiState.loadedDeck,
-    allPlayers = uiState.allPlayerInfo,  // MISSING
-    localPlayerId = uiState.playerName,   // MISSING
-    isHost = uiState.isHosting
-)
-```
+### Turn/Phase System
+**Status:** ❌ Not Implemented (data structure exists, no UI)
 
-### GameViewModel Player Initialization
-**Location:** `desktop/src/main/kotlin/com/commandermtg/viewmodel/GameViewModel.kt:26`
-**Current:** Hardcoded single opponent
-```kotlin
-viewModel.initializeGame(
-    localPlayerName = "You",
-    opponentNames = listOf("Opponent")
-)
-```
-**Needs:**
-```kotlin
-viewModel.initializeGame(
-    localPlayerName = actualPlayerName,
-    localPlayerId = actualPlayerId,
-    allPlayers = listFromLobby  // List of ALL players with IDs
-)
-```
+**Description:** Visual indicator and controls for MTG phases and turn advancement.
 
-### Deck Loading for All Players
-**Location:** `desktop/src/main/kotlin/com/commandermtg/ui/GameScreen.kt:44`
-**Current:** Only local player
-```kotlin
-viewModel.loadDeck(loadedDeck)
-```
-**Needs:**
-- Each player loads their own deck
-- Over network: Send deck info to all players
-- Store all players' decks in GameState
-- Function: `viewModel.loadDeckForPlayer(playerId, deck)`
+**Needed:**
+- Phase toolbar showing all MTG phases (Untap, Upkeep, Draw, Main, Combat, End)
+- Current phase highlighting
+- Active player indicator
+- "Next Phase" button
+- "Pass Turn" button
+- Automatic untap on new turn
+
+**Impact:** Games cannot progress properly without turn management.
 
 ---
 
-## 3. UI COMPONENTS MISSING
+### Commander Damage Tracking UI
+**Status:** ⚠️ Partially Implemented (data model exists, no UI)
 
-### Multi-Player Layout
-**Location:** `desktop/src/main/kotlin/com/commandermtg/ui/GameScreen.kt:51-93`
-**Current:** Fixed 2-player vertical layout
-```
-[Opponent Area]     ← Only shows 1 opponent
-[Battlefield]
-[Your Area]
-```
+**Description:** Track combat damage from each commander to each opponent. 21+ damage from single commander = loss.
 
-**Needs:** Dynamic layout for 2-4 players
-```
-For 2 players:          For 3 players:          For 4 players:
-[Opponent]              [Opponent 1]            [Opp 2][Opp 3]
-[Battlefield]           [Opp 2][Battlefield]    [Battlefield]
-[You]                   [You]                   [Opp 1][You]
-```
+**Needed:**
+- Commander damage dialog/overlay
+- Matrix showing damage from each commander
+- +/- buttons for damage adjustment
+- Visual indicator at 21+ damage
+- Button to access damage tracker from player area
 
-**Exact code needed:**
-```kotlin
-// In GameScreen.kt
-when (uiState.opponents.size) {
-    1 -> TwoPlayerLayout(...)
-    2 -> ThreePlayerLayout(...)
-    3 -> FourPlayerLayout(...)
-    else -> error("Unsupported player count")
-}
-```
-
-### Battlefield Card Display
-**Location:** `desktop/src/main/kotlin/com/commandermtg/ui/GameScreen.kt:73-80`
-**Current:**
-```kotlin
-@Composable
-fun BattlefieldArea(modifier: Modifier) {
-    Card(/* empty green box */)
-}
-```
-
-**Needs:**
-```kotlin
-@Composable
-fun BattlefieldArea(
-    allCards: List<CardInstance>,  // All permanents on battlefield
-    viewModel: GameViewModel,
-    modifier: Modifier
-) {
-    LazyVerticalGrid(columns = GridCells.Adaptive(100.dp)) {
-        items(allCards) { cardInstance ->
-            BattlefieldCard(
-                cardInstance = cardInstance,
-                onTap = { viewModel.toggleTap(it.instanceId) },
-                onRightClick = { /* show context menu */ }
-            )
-        }
-    }
-}
-
-@Composable
-fun BattlefieldCard(
-    cardInstance: CardInstance,
-    onTap: (CardInstance) -> Unit,
-    onRightClick: (CardInstance) -> Unit
-) {
-    // Card image or placeholder
-    // Show tapped rotation
-    // Show counters
-    // Show attached cards (auras/equipment)
-    // Show controller color border
-}
-```
-
-### Zone Viewer Dialogs
-**Location:** `desktop/src/main/kotlin/com/commandermtg/ui/ZoneViewer.kt` (doesn't exist)
-**Needs:**
-```kotlin
-@Composable
-fun GraveyardDialog(
-    cards: List<CardInstance>,
-    playerName: String,
-    onDismiss: () -> Unit,
-    onCardAction: (CardInstance, Action) -> Unit
-)
-
-@Composable
-fun ExileDialog(/* similar */)
-
-@Composable
-fun LibrarySearchDialog(/* for searching library */)
-```
-
-### Turn/Phase Indicator
-**Location:** `desktop/src/main/kotlin/com/commandermtg/ui/TurnIndicator.kt` (doesn't exist)
-**Needs:**
-```kotlin
-@Composable
-fun TurnIndicator(
-    activePlayer: Player,
-    currentPhase: GamePhase,
-    turnNumber: Int,
-    onPassTurn: () -> Unit,
-    onNextPhase: () -> Unit
-) {
-    // Show "Turn 5 - Alice's Main Phase 1"
-    // Highlight active player
-    // "Next Phase" button
-    // "Pass Turn" button
-    // Phase list showing current phase
-}
-```
-
-### Commander Damage Tracker
-**Location:** `desktop/src/main/kotlin/com/commandermtg/ui/CommanderDamageDialog.kt` (doesn't exist)
-**Needs:**
-```kotlin
-@Composable
-fun CommanderDamageDialog(
-    player: Player,
-    allCommanders: List<CardInstance>,  // All commanders in game
-    onDamageChange: (commanderId: String, amount: Int) -> Unit,
-    onDismiss: () -> Unit
-) {
-    // Matrix showing damage from each commander
-    // Click to add/subtract damage
-    // Highlight if 21+ damage from any commander
-}
-```
-
-### Card Context Menu
-**Location:** `desktop/src/main/kotlin/com/commandermtg/ui/CardContextMenu.kt` (doesn't exist)
-**Needs:**
-```kotlin
-@Composable
-fun CardContextMenu(
-    cardInstance: CardInstance,
-    availableActions: List<CardAction>,
-    onActionSelected: (CardAction) -> Unit,
-    onDismiss: () -> Unit
-) {
-    // Move to Graveyard
-    // Move to Exile
-    // Tap/Untap
-    // Add +1/+1 counter
-    // Add -1/-1 counter
-    // Attach to...
-    // View card details
-    // etc.
-}
-
-enum class CardAction {
-    MOVE_TO_GRAVEYARD,
-    MOVE_TO_EXILE,
-    MOVE_TO_HAND,
-    MOVE_TO_LIBRARY_TOP,
-    MOVE_TO_LIBRARY_BOTTOM,
-    SHUFFLE_INTO_LIBRARY,
-    TAP,
-    UNTAP,
-    FLIP,
-    ADD_COUNTER_PLUS_ONE,
-    ADD_COUNTER_MINUS_ONE,
-    ADD_LOYALTY_COUNTER,
-    REMOVE_COUNTER,
-    ATTACH_TO,
-    VIEW_DETAILS
-}
-```
+**Impact:** Commander format rules cannot be enforced without this.
 
 ---
 
-## 4. GAMEVIEWMODEL MISSING FUNCTIONS
+### Game Log/History
+**Status:** ❌ Not Implemented
 
-**Location:** `desktop/src/main/kotlin/com/commandermtg/viewmodel/GameViewModel.kt`
+**Description:** Scrollable log of all game actions and events.
 
-**Missing functions:**
-```kotlin
-// Load deck for specific player (for network sync)
-fun loadDeckForPlayer(playerId: String, deck: Deck)
+**Needed:**
+- Real-time event feed
+- Player actions ("Alice drew 2 cards")
+- Game state changes ("Turn 5 - Bob's Main Phase")
+- Chat messages
+- Timestamp display
+- Player color coding
+- Auto-scroll to latest
 
-// Get all battlefield cards
-fun getBattlefieldCards(): List<CardInstance>
-
-// Get battlefield cards for specific player
-fun getPlayerBattlefieldCards(playerId: String): List<CardInstance>
-
-// Shuffle library
-fun shuffleLibrary(playerId: String)
-
-// Search library
-fun searchLibrary(playerId: String, predicate: (Card) -> Boolean): List<CardInstance>
-
-// Mill cards (library to graveyard)
-fun millCards(playerId: String, count: Int)
-
-// Mulligan (shuffle hand back and draw N-1)
-fun mulligan(playerId: String)
-
-// Add counter to card
-fun addCounter(cardInstanceId: String, counterType: String, amount: Int)
-
-// Remove counter from card
-fun removeCounter(cardInstanceId: String, counterType: String, amount: Int)
-
-// Flip card
-fun flipCard(cardInstanceId: String)
-
-// Attach card to another (auras/equipment)
-fun attachCard(sourceId: String, targetId: String)
-
-// Detach card
-fun detachCard(cardInstanceId: String)
-
-// Take commander damage
-fun takeCommanderDamage(playerId: String, commanderId: String, amount: Int)
-
-// Advance phase
-fun advancePhase()
-
-// Pass turn
-fun passTurn()
-
-// Untap all permanents for player
-fun untapAll(playerId: String)
-
-// Set active player
-fun setActivePlayer(playerId: String)
-
-// Broadcast action to network (if hosting/connected)
-private fun broadcastAction(action: GameMessage)
-
-// Handle incoming network action
-fun handleNetworkAction(action: GameMessage)
-```
+**Impact:** Players lose track of what happened, especially in multiplayer.
 
 ---
 
-## 5. GAME STATE UPDATES
+## 🟡 HIGH Priority Features
 
-**Location:** `shared/src/main/kotlin/com/commandermtg/models/GameState.kt`
+### Commander Tax
+**Status:** ❌ Not Implemented
 
-**Missing functions:**
-```kotlin
-// Get all cards in specific zone across all players
-fun getAllCardsInZone(zone: Zone): List<CardInstance>
+**Description:** Track additional cost for casting commander from command zone.
 
-// Get all battlefield permanents
-fun getAllBattlefieldCards(): List<CardInstance>
-
-// Find card by instance ID
-fun findCard(instanceId: String): CardInstance?
-
-// Move card and maintain game rules
-fun moveCardWithRules(instanceId: String, targetZone: Zone): GameState
-
-// Handle state transition rules (e.g., auras fall off when creature dies)
-fun applyStateBasedActions(): GameState
-```
+**Needed:**
+- Counter for times cast from command zone
+- Display tax amount ({2} per previous cast)
+- Increment on cast
+- Optional reset on commander death
 
 ---
 
-## 6. MENU/LOBBY ENHANCEMENTS
+### Card Images
+**Status:** ⚠️ Partially Implemented (URLs from Scryfall, not rendered)
 
-### MenuViewModel Missing
-**Location:** `desktop/src/main/kotlin/com/commandermtg/viewmodel/MenuViewModel.kt`
+**Description:** Display card artwork instead of text-only.
 
-```kotlin
-// Track all connected players
-data class PlayerInfo(
-    val id: String,
-    val name: String,
-    val deckName: String?,
-    val isReady: Boolean
-)
-
-// In MenuUiState:
-val allPlayers: List<PlayerInfo> = emptyList()
-val isReady: Boolean = false
-
-// Functions:
-fun setPlayerReady(isReady: Boolean)
-fun kickPlayer(playerId: String)  // Host only
-fun updatePlayerDeck(playerId: String, deckName: String)  // Network event
-```
-
-### HostLobbyScreen Enhancements
-**Location:** `desktop/src/main/kotlin/com/commandermtg/ui/MainScreen.kt:141`
-
-**Current:** Shows placeholder player list
-**Needs:**
-- Show actual connected players with ready status
-- Show each player's loaded deck name
-- Kick button (for host)
-- Can only start when all players ready
-- Player count selector (2-4 players)
+**Needed:**
+- AsyncImage loading from Scryfall
+- Local image cache
+- Placeholder while loading
+- Fallback for failed loads
+- Image display in all zones
 
 ---
 
-## 7. CLICK INTERACTIONS MISSING
+### Additional Game Actions
+**Status:** ❌ Not Implemented
 
-### Zones Not Clickable
-**Location:** `desktop/src/main/kotlin/com/commandermtg/ui/GameScreen.kt:263-289`
-
-**Current:** `ZoneCard` is just static display
-**Needs:**
-```kotlin
-@Composable
-fun ZoneCard(
-    label: String,
-    zone: Zone,
-    cardCount: Int,
-    onClick: () -> Unit,  // MISSING
-    modifier: Modifier = Modifier
-) {
-    Card(
-        modifier = modifier
-            .clickable { onClick() }  // MISSING
-            .border(...)
-    ) {
-        // ... existing content
-    }
-}
-```
-
-**Then in GameScreen:**
-```kotlin
-ZoneCard(
-    "Graveyard",
-    Zone.GRAVEYARD,
-    graveyardCount,
-    onClick = { showGraveyardDialog = true }  // MISSING
-)
-```
-
-### Battlefield Cards Not Clickable
-**Needs:** Right-click context menu on battlefield cards
-
-### Hand Cards Limited Actions
-**Location:** `desktop/src/main/kotlin/com/commandermtg/ui/GameScreen.kt:342-348`
-
-**Current:** Only "Play" button
-**Needs:**
-- Discard to graveyard
-- Exile from hand
-- Put on top/bottom of library
-- Context menu with all options
+**Missing Actions:**
+- Shuffle library
+- Scry (look at top N, reorder)
+- Mill (library to graveyard)
+- Create tokens
+- Mulligan
+- Search library (tutor)
+- Reveal cards
+- Transform/flip cards
+- Copy permanents
 
 ---
 
-## 8. CARD IMAGES
+### Multi-Player Dynamic Layout
+**Status:** ⚠️ Fixed 2-player layout only
 
-**Location:** Throughout UI
+**Description:** UI layout that scales for 2-4 players.
 
-**Current:** Cards show as text only
-**Needs:**
-```kotlin
-@Composable
-fun CardImage(
-    card: Card,
-    modifier: Modifier = Modifier
-) {
-    // Use card.imageUri from Scryfall
-    // AsyncImage loading (Ktor client)
-    // Cache images locally
-    // Placeholder while loading
-    // Fallback if image fails
-}
-```
+**Needed:**
+- Different layouts for 2, 3, and 4 players
+- Players arranged around virtual table
+- Shared battlefield in center
+- Compact opponent areas
 
-**Image caching:**
-```kotlin
-// Location: shared/src/main/kotlin/com/commandermtg/game/ImageCache.kt
-object ImageCache {
-    private val cacheDir = File("resources/cache/images")
-
-    suspend fun getCardImage(imageUri: String): File {
-        // Check local cache first
-        // Download if not cached
-        // Return file path
-    }
-}
-```
+**Current:** Only supports vertical 2-player layout.
 
 ---
 
-## 9. GAME ACTIONS NOT IMPLEMENTED
+## 🔵 CRITICAL for Network Play
 
-### In GameViewModel - All Missing:
-1. **Shuffle library** - exists in concept, not exposed
-2. **Scry** (look at top N cards, reorder)
-3. **Reveal cards**
-4. **Create tokens**
-5. **Copy permanents**
-6. **Transform/flip cards**
-7. **Manifest cards**
-8. **Foretell**
-9. **Mill** (library to graveyard)
-10. **Tutor** (search library)
-11. **Reanimate** (graveyard to battlefield)
-12. **Blink** (exile and return)
-13. **Bounce** (battlefield to hand)
+### P2P Networking
+**Status:** ❌ Not Implemented
+
+**Description:** Ktor WebSocket-based client-server architecture for remote multiplayer.
+
+**Needed:**
+- GameServer (host)
+- GameClient (joiners)
+- GameAction protocol
+- State synchronization
+- Connection management
+- Reconnection handling
 
 ---
 
-## 10. MISSING UI/UX FEATURES
+### Lobby System
+**Status:** ⚠️ UI exists, not functional
 
-### No Keyboard Shortcuts
-- Space: Pass priority
-- Enter: Pass turn
-- T: Tap selected card
-- U: Untap selected card
-- D: Draw card
-- M: Mulligan
+**Description:** Pre-game lobby for player connections and deck loading.
 
-### No Card Selection
-- Can't select multiple cards
-- Can't select "all creatures"
-- No shift/ctrl-click multi-select
-
-### No Zoom/Preview
-- Can't hover to see card details
-- Can't zoom in on card images
-- No oracle text display on hover
-
-### No Game Log
-- No history of actions taken
-- Can't see "Alice drew 3 cards"
-- Can't see "Bob played Sol Ring"
-- No undo/history
-
-### No Chat
-- Can't communicate with opponents
-- No emotes
-- No game messages
-
-### No Search/Filter
-- Can't search battlefield for "all artifacts"
-- Can't filter graveyard by card type
-- No advanced search
+**Needed:**
+- Show all connected players
+- Ready/unready status
+- Deck validation
+- Kick player (host only)
+- Start game when all ready
+- Pass player list to game
 
 ---
 
-## 11. MISSING GAME RULES ENFORCEMENT
+## 🟢 MEDIUM Priority Features
 
-**Currently:** NO rules enforcement at all
+### Improved Battlefield
+**Needed:**
+- Card hover preview (large card view)
+- Multi-card selection
+- P/T modification display
+- Card attachments (auras/equipment) visualization
+- Attack arrows
 
-**Missing:**
-- Can't prevent playing lands on opponent's turn
-- Can't prevent playing more than 1 land per turn
-- No mana system (can play anything anytime)
-- No stack (spells resolve instantly)
-- No priority system
-- No "until end of turn" effects
-- No triggered abilities
-- No state-based actions (creatures with 0 toughness die)
+### UI Enhancements
+**Needed:**
+- Keyboard shortcuts (Space = pass, T = tap, etc.)
+- Card zoom on hover
+- Settings dialog
+- Improved context menus
+- Theme customization
 
-**Note:** Cockatrice doesn't enforce these either - it's manual like real paper Magic. But the UI should support the manual workflow.
-
----
-
-## 12. PERSISTENCE/SAVE
-
-**Missing:**
-- No save game state
-- No load game
-- No game replay
-- No export game log
-- No deck builder (currently file-only)
+### Deck Management
+**Needed:**
+- Deck validation (commander legality, 100 cards, color identity)
+- Multiple deck formats (.dec, .cod, JSON)
+- Basic deck editor
+- Recent decks list
 
 ---
 
-## SUMMARY COUNT
+## 🟣 LOW Priority / Future
 
-### Code Files That Don't Exist But Are Needed:
-1. `GameServer.kt` (Server implementation)
-2. `GameClient.kt` (Client implementation)
-3. `GameMessage.kt` (Network protocol)
-4. `ZoneViewer.kt` (Zone dialog components)
-5. `TurnIndicator.kt` (Turn/phase UI)
-6. `CommanderDamageDialog.kt` (Commander damage tracker)
-7. `CardContextMenu.kt` (Right-click menu)
-8. `CardImage.kt` (Image loading/display)
-9. `ImageCache.kt` (Image caching system)
-10. `BattlefieldCard.kt` (Battlefield card component)
+### Game Management
+- Save/load game state
+- Export game log
+- Concede button
+- Restart game
+- Game statistics
 
-### Major Functions Missing from Existing Files:
-- **GameViewModel:** 20+ functions
-- **MenuViewModel:** 5+ functions
-- **GameState:** 8+ functions
-- **UI Components:** 15+ click handlers
+### Advanced Features
+- Game replay system
+- Chat system
+- Spectator mode
+- Partner commander support
+- Planechase support
 
-### UI Components Missing:
-- Multi-player layout (3 variants)
-- Battlefield card display
-- 4 zone viewer dialogs
-- Turn/phase indicator
-- Commander damage tracker
-- Card context menu
-- Card image component
-- Game log
+### Special Mechanics
+- Monarch/Initiative tracking
+- Energy counters
+- Poison counters
+- Experience counters
+- Day/Night indicator
+- Dungeon cards
+
+---
+
+## Feature Comparison vs Full Implementation
+
+| Category | Commander MTG | Complete Implementation |
+|----------|--------------|-------------------------|
+| Basic Zones | ✅ 100% | ✅ 100% |
+| Zone Viewers | ✅ 100% | ✅ 100% |
+| Life Tracking | ✅ 100% | ✅ 100% |
+| Drag & Drop | ✅ 100% | ✅ 100% |
+| Tap/Untap | ✅ 100% | ✅ 100% |
+| Hotseat UI | ✅ 75% | ✅ 100% |
+| Turn System | ❌ 0% | ✅ 100% |
+| Commander Damage | ⚠️ 20% | ✅ 100% |
+| Game Log | ❌ 0% | ✅ 100% |
+| Card Images | ⚠️ 10% | ✅ 100% |
+| Game Actions | ⚠️ 30% | ✅ 100% |
+| Networking | ❌ 0% | ✅ 100% |
+| **Overall** | **~25%** | **100%** |
+
+---
+
+## Prioritization Rationale
+
+### Why Turn System is #1 Priority
+Without turn management, players cannot properly sequence their actions. This is fundamental to Magic gameplay.
+
+### Why Commander Damage is #2 Priority
+Commander damage is a core win condition in the Commander format. Games are incomplete without it.
+
+### Why Game Log is #3 Priority
+In multiplayer games, players need to track what happened. The log provides game state awareness and prevents confusion.
+
+### Why Networking Can Wait
+Hotseat mode (local multiplayer on same computer) is valuable and should be fully functional before adding network complexity. This allows testing game logic without network complications.
+
+---
+
+## Estimated Completion Timeline
+
+### Phase 1: Playable Hotseat (2 weeks)
+- Turn/Phase System
+- Commander Damage UI
+- Game Log
+- Commander Tax
+
+**Result:** Fully playable local multiplayer
+
+### Phase 2: Enhanced Gameplay (2-3 weeks)
+- Card Images
+- Additional Game Actions
+- Improved Battlefield
+- UI Enhancements
+
+**Result:** Polished hotseat experience
+
+### Phase 3: Network Multiplayer (3-4 weeks)
+- P2P Networking
+- Lobby System
+- State Synchronization
+- Network Testing
+
+**Result:** Remote multiplayer capability
+
+### Phase 4: Polish (1-2 weeks)
+- Deck Management
+- Save/Load
 - Chat
+- Performance
 
-### Features Completely Missing:
-- Networking (100%)
-- Multi-player support (95%)
-- Battlefield visualization (100%)
-- Zone viewers (100%)
-- Turn system UI (100%)
-- Card images (100%)
-- Commander damage tracking UI (100%)
-- Game actions (80%)
-- Rules support (100% - by design like Cockatrice)
+**Result:** Production-ready application
 
-**Total Missing:** Roughly 50-60% of a complete Cockatrice-like application.
+**Total Estimate:** 8-11 weeks for feature-complete Commander multiplayer game
+
+---
+
+## Dependencies Between Features
+
+```
+Turn System ──> Game Log (logs turn events)
+              └─> Untap Automation
+
+Commander Damage ──> Game Log (logs damage events)
+
+Card Images ──> Image Cache
+             └─> AsyncImage Loading
+
+Networking ──> Lobby System
+            └─> Game State Sync
+            └─> All Game Actions (must be networkable)
+
+Game Log ──> All Features (logs all events)
+```
+
+---
+
+**See [TODO.md](TODO.md) for implementation details and task breakdown.**

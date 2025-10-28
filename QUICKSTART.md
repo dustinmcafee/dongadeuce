@@ -11,8 +11,7 @@ This will launch the Commander MTG application.
 ## Loading a Deck
 
 Three example deck files are included in the project root:
-- `edgar_markov_cockatrice.txt` - Edgar Markov Vampire tribal
-- `edgar_markov_deck.txt` - Alternative Edgar Markov list
+- `edgar_markov_deck.txt` - Edgar Markov Vampire tribal
 - `first_sliver_deck.txt` - The First Sliver
 
 To load a deck:
@@ -50,7 +49,7 @@ To load a deck:
 ✅ Game screen with all zones
 ✅ Life tracking
 ✅ MVVM architecture with reactive state
-✅ Cockatrice deck file parsing
+✅ Text-based deck file parsing
 
 ## What's Coming Next
 
