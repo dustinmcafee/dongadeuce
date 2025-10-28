@@ -383,11 +383,31 @@ fun HotseatPlayerSection(
                         style = MaterialTheme.typography.labelSmall,
                         color = Color.White
                     )
-                    Text(
-                        "Life: ${player.life}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color.White
-                    )
+
+                    // Life with increment/decrement buttons
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(2.dp)
+                    ) {
+                        IconButton(
+                            onClick = { viewModel.updateLife(player.id, player.life - 1) },
+                            modifier = Modifier.size(20.dp)
+                        ) {
+                            Text("-", style = MaterialTheme.typography.labelSmall, color = Color.White)
+                        }
+                        Text(
+                            "Life: ${player.life}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color.White
+                        )
+                        IconButton(
+                            onClick = { viewModel.updateLife(player.id, player.life + 1) },
+                            modifier = Modifier.size(20.dp)
+                        ) {
+                            Text("+", style = MaterialTheme.typography.labelSmall, color = Color.White)
+                        }
+                    }
+
                     Spacer(modifier = Modifier.height(4.dp))
 
                     // Clickable zone cards
@@ -395,28 +415,28 @@ fun HotseatPlayerSection(
                         "Commander",
                         Zone.COMMAND_ZONE,
                         commanderCount,
-                        Modifier.fillMaxWidth().height(28.dp),
+                        Modifier.fillMaxWidth().height(45.dp),
                         onClick = if (isActivePlayer) ({ showCommandZoneDialog = true }) else null
                     )
                     ZoneCard(
                         "Library",
                         Zone.LIBRARY,
                         libraryCount,
-                        Modifier.fillMaxWidth().height(28.dp),
+                        Modifier.fillMaxWidth().height(45.dp),
                         onClick = if (isActivePlayer) ({ showLibrarySearchDialog = true }) else null
                     )
                     ZoneCard(
                         "Graveyard",
                         Zone.GRAVEYARD,
                         graveyardCount,
-                        Modifier.fillMaxWidth().height(28.dp),
+                        Modifier.fillMaxWidth().height(45.dp),
                         onClick = if (isActivePlayer) ({ showGraveyardDialog = true }) else null
                     )
                     ZoneCard(
                         "Exile",
                         Zone.EXILE,
                         exileCount,
-                        Modifier.fillMaxWidth().height(28.dp),
+                        Modifier.fillMaxWidth().height(45.dp),
                         onClick = if (isActivePlayer) ({ showExileDialog = true }) else null
                     )
                 }

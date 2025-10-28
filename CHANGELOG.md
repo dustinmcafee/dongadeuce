@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.9.7] - 2025-10-28
+
+### Fixed
+- **Zone Card Text Truncation** - Fixed zone card counts being cut off at bottom
+  - Increased zone card height from 28dp to 45dp in hotseat sidebar
+  - Card counts now fully visible (e.g., "Library (92)")
+- **Life Adjustment in Hotseat** - Added life increment/decrement buttons
+  - Players can now increase/decrease life in hotseat mode
+  - Added +/- buttons next to life display
+  - Works for both active and inactive players
+
+### Technical Details
+- Zone card height: 28dp → 45dp
+- Added IconButton row with +/- for life adjustment
+- Life buttons are 20dp size with proper spacing
+
 ## [2.9.6] - 2025-10-28
 
 ### Added
