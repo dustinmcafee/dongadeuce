@@ -82,6 +82,7 @@ class MenuViewModel {
 
             try {
                 cardCache.updateCache { message, percent ->
+                    // StateFlow.update is thread-safe and triggers recomposition
                     _uiState.update { it.copy(loadingProgress = message, loadingProgressPercent = percent) }
                 }
 

@@ -83,18 +83,25 @@ fun MenuScreen(
                     ) {
                         Text(uiState.loadingProgress, style = MaterialTheme.typography.bodyMedium)
 
+                        Spacer(modifier = Modifier.height(8.dp))
+
                         if (uiState.loadingProgressPercent > 0) {
+                            // Show determinate progress bar with percentage
                             LinearProgressIndicator(
                                 progress = uiState.loadingProgressPercent / 100f,
                                 modifier = Modifier.fillMaxWidth()
                             )
+                            Spacer(modifier = Modifier.height(4.dp))
                             Text(
                                 "${uiState.loadingProgressPercent.toInt()}%",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSecondaryContainer
                             )
                         } else {
-                            CircularProgressIndicator(modifier = Modifier.size(32.dp))
+                            // Show indeterminate progress bar
+                            LinearProgressIndicator(
+                                modifier = Modifier.fillMaxWidth()
+                            )
                         }
                     }
                 }

@@ -70,17 +70,18 @@ class CardCache(
                 ?: throw Exception("Could not find default_cards bulk data")
 
             val sizeMB = defaultCards.size / 1024 / 1024
-            onProgress("Downloading $sizeMB MB...", 0f)
+            onProgress("Starting download of $sizeMB MB...", 1f)
 
             // Download the bulk data file with progress tracking
             val response: HttpResponse = client.get(defaultCards.downloadUri)
             val contentLength = defaultCards.size
             val channel: ByteReadChannel = response.bodyAsChannel()
 
-            val buffer = ByteArray(8192)
+            // Use larger buffer for better performance
+            val buffer = ByteArray(1024 * 1024) // 1MB buffer
             var downloadedBytes = 0L
             val chunks = mutableListOf<ByteArray>()
-            var lastReportedPercent = 0f
+            var lastReportedPercent = -1f
 
             while (!channel.isClosedForRead) {
                 val bytesRead = channel.readAvailable(buffer, 0, buffer.size)
@@ -89,12 +90,14 @@ class CardCache(
                     chunks.add(buffer.copyOf(bytesRead))
 
                     val percent = (downloadedBytes.toFloat() / contentLength * 100).coerceIn(0f, 100f)
+                    val currentPercent = percent.toInt().toFloat()
 
-                    // Only report progress when it changes by at least 1%
-                    if (percent - lastReportedPercent >= 1f || percent >= 100f) {
+                    // Report progress when percentage changes by at least 1%
+                    if (currentPercent > lastReportedPercent) {
                         val downloadedMB = downloadedBytes / 1024 / 1024
-                        onProgress("Downloaded $downloadedMB / $sizeMB MB", percent)
-                        lastReportedPercent = percent
+                        onProgress("Downloaded $downloadedMB / $sizeMB MB", currentPercent)
+                        lastReportedPercent = currentPercent
+                        println("Progress: $currentPercent% ($downloadedMB MB / $sizeMB MB)")
                     }
                 }
             }
