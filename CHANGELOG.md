@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.10.3] - 2025-10-28
+
+### Fixed
+- **Grid Drop Position Calculation** - Cards now drop at correct grid position
+  - Fixed calculation to use captured starting grid position
+  - Prevents using stale xPos/yPos values that change during drag
+  - Calculate from startGridPos * cellWidth + dragOffset for accuracy
+  - Eliminates visual flash and incorrect drop positions
+
+### Technical Details
+- Changed dragStartPos (pixels) to dragStartGridPos (grid coordinates)
+- Calculate pixel position from grid coords at drop time
+- Ensures consistent calculation regardless of state updates during drag
+
 ## [2.10.2] - 2025-10-28
 
 ### Fixed

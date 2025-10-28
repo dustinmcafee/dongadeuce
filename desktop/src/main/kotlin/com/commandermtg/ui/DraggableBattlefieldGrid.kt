@@ -57,7 +57,7 @@ fun DraggableBattlefieldGrid(
     // Track dragging state
     var draggedCardId by remember { mutableStateOf<String?>(null) }
     var dragOffset by remember { mutableStateOf(Offset.Zero) }
-    var dragStartPos by remember { mutableStateOf(Offset.Zero) }
+    var dragStartGridPos by remember { mutableStateOf<Pair<Int, Int>?>(null) }
 
     // Container size
     var containerWidth by remember { mutableStateOf(0f) }
@@ -153,48 +153,47 @@ fun DraggableBattlefieldGrid(
                                 if (canDrag) {
                                     Modifier.pointerInput(card.instanceId) {
                                         detectDragGestures(
-                                            onDragStart = {
+                                            onDragStart = { _ ->
                                                 draggedCardId = card.instanceId
                                                 dragOffset = Offset.Zero
-                                                // Capture starting position at drag start
-                                                dragStartPos = Offset(xPos, yPos)
+                                                // Store the starting grid position
+                                                dragStartGridPos = Pair(col, row)
                                             },
                                             onDrag = { change, dragAmount ->
                                                 change.consume()
                                                 dragOffset += dragAmount
                                             },
                                             onDragEnd = {
-                                                // Calculate new grid position based on final position
-                                                // Use the captured start position plus drag offset
-                                                val finalX = dragStartPos.x + dragOffset.x
-                                                val finalY = dragStartPos.y + dragOffset.y
+                                                // Use the captured starting grid position to calculate drop position
+                                                val startGridPos = dragStartGridPos ?: Pair(col, row)
+                                                val startX = startGridPos.first * cellWidth
+                                                val startY = startGridPos.second * cellHeight
 
-                                                // Calculate center point of the card at final position
-                                                val cardCenterX = finalX + (cardWidth.value / 2)
-                                                val cardCenterY = finalY + (cardHeight.value / 2)
+                                                // Calculate final position from start + drag offset
+                                                val finalX = startX + dragOffset.x + (cardWidth.value / 2)
+                                                val finalY = startY + dragOffset.y + (cardHeight.value / 2)
 
                                                 // Calculate target grid cell from center point
-                                                val newCol = (cardCenterX / cellWidth)
+                                                val newCol = (finalX / cellWidth)
                                                     .toInt()
                                                     .coerceIn(0, columns - 1)
-                                                val newRow = (cardCenterY / cellHeight)
+                                                val newRow = (finalY / cellHeight)
                                                     .toInt()
                                                     .coerceAtLeast(0)
-                                                    .coerceAtMost(9) // Max 10 rows (0-9)
+                                                    .coerceAtMost(9)
 
-                                                // Always update position - allow dropping anywhere
-                                                // This allows swapping cards if the position is occupied
+                                                // Update position
                                                 onCardPositionChanged(card.instanceId, newCol, newRow)
 
                                                 // Reset drag state
                                                 draggedCardId = null
                                                 dragOffset = Offset.Zero
-                                                dragStartPos = Offset.Zero
+                                                dragStartGridPos = null
                                             },
                                             onDragCancel = {
                                                 draggedCardId = null
                                                 dragOffset = Offset.Zero
-                                                dragStartPos = Offset.Zero
+                                                dragStartGridPos = null
                                             }
                                         )
                                     }
