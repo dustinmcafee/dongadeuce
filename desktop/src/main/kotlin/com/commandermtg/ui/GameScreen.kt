@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 @Composable
 fun GameScreen(
     loadedDeck: com.commandermtg.models.Deck? = null,
+    playerCount: Int = 2, // Total players (including local player): 2, 3, or 4
     viewModel: GameViewModel = remember { GameViewModel() }
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -30,9 +31,15 @@ fun GameScreen(
     LaunchedEffect(Unit) {
         // Initialize game if not already done
         if (uiState.localPlayer == null) {
+            // Generate opponent names based on player count
+            val opponentCount = (playerCount - 1).coerceIn(1, 3)
+            val opponentNames = List(opponentCount) { index ->
+                "Opponent ${index + 1}"
+            }
+
             viewModel.initializeGame(
                 localPlayerName = "You",
-                opponentNames = listOf("Opponent")
+                opponentNames = opponentNames
             )
         }
     }
@@ -63,14 +70,13 @@ fun GameScreen(
         Column(
             modifier = Modifier.weight(1f)
         ) {
-            // Get opponent (first opponent in list)
-            val opponent = uiState.opponents.firstOrNull()
+            val opponents = uiState.opponents
             val localPlayer = uiState.localPlayer
 
-            // Opponent's area (top)
-            if (opponent != null) {
-                OpponentArea(
-                    player = opponent,
+            // Opponents' area (top) - dynamic layout based on player count
+            if (opponents.isNotEmpty()) {
+                OpponentsArea(
+                    opponents = opponents,
                     viewModel = viewModel,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -118,6 +124,76 @@ fun GameScreen(
                 onPassTurn = { viewModel.passTurn() },
                 modifier = Modifier.width(250.dp)
             )
+        }
+    }
+}
+
+/**
+ * Dynamic opponents layout that arranges 1-3 opponents based on player count
+ */
+@Composable
+fun OpponentsArea(
+    opponents: List<Player>,
+    viewModel: GameViewModel,
+    modifier: Modifier = Modifier
+) {
+    when (opponents.size) {
+        1 -> {
+            // Single opponent - full width
+            OpponentArea(
+                player = opponents[0],
+                viewModel = viewModel,
+                modifier = modifier
+            )
+        }
+        2 -> {
+            // Two opponents - side by side
+            Row(
+                modifier = modifier,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                OpponentArea(
+                    player = opponents[0],
+                    viewModel = viewModel,
+                    modifier = Modifier.weight(1f)
+                )
+                OpponentArea(
+                    player = opponents[1],
+                    viewModel = viewModel,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+        3 -> {
+            // Three opponents - all in a row
+            Row(
+                modifier = modifier,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                opponents.forEach { opponent ->
+                    OpponentArea(
+                        player = opponent,
+                        viewModel = viewModel,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+        }
+        else -> {
+            // Fallback for > 3 opponents (not typical in Commander)
+            // Display first 3 opponents
+            Row(
+                modifier = modifier,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                opponents.take(3).forEach { opponent ->
+                    OpponentArea(
+                        player = opponent,
+                        viewModel = viewModel,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
         }
     }
 }

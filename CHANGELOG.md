@@ -7,6 +7,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.0] - 2025-10-27
+
+### Added
+- Multi-player UI layouts for 2-4 player games
+  - Dynamic opponent positioning based on player count
+  - 2 players: 1 opponent at top (full width)
+  - 3 players: 2 opponents side-by-side at top
+  - 4 players: 3 opponents in a row at top
+  - Local player always at bottom
+- Player count selector in main menu
+  - Choose 2, 3, or 4 players before starting game
+  - FilterChip UI for easy selection
+  - Persists selection in MenuUiState
+- Automatic opponent name generation
+  - Opponents named "Opponent 1", "Opponent 2", etc.
+  - Based on selected player count
+
+### Changed
+- GameScreen now accepts playerCount parameter (defaults to 2)
+- Game initialization creates appropriate number of opponents
+- OpponentArea can now display in compact side-by-side layouts
+- Created OpponentsArea composable for dynamic layout management
+- MenuUiState includes playerCount field (default: 2)
+- MenuViewModel has setPlayerCount() function
+
+### Technical Details
+- OpponentsArea uses Row with weighted modifiers for equal spacing
+- Each opponent gets equal width when multiple are displayed
+- Game initialization uses coerceIn(1, 3) for opponent count validation
+- Commander format supports 2-4 players (1-3 opponents)
+- All existing dialogs and interactions work with multiple opponents
+- Turn system already supports multiple players
+
+### Breaking Changes
+- GameScreen signature changed (added optional playerCount parameter)
+- MenuUiState structure changed (added playerCount field)
+
 ## [1.9.0] - 2025-10-27
 
 ### Added
@@ -617,13 +654,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Current Progress
 
-**Overall Completion:** ~78% for full 2+ player multiplayer experience
+**Overall Completion:** ~82% for full 2+ player multiplayer experience
 
 **By Category:**
 - ✅ Core Architecture: 100%
 - ✅ Single Player Deck Loading: 100%
 - ✅ Scryfall Integration: 100%
-- 🟡 Multi-Player Support: 10%
+- ✅ Multi-Player Support (Hotseat): 90% (2-4 player layouts complete, missing player-specific deck loading)
 - ❌ Networking: 0%
 - ✅ Battlefield Visualization: 95% (core display, tap/untap, images, and context menus complete, missing drag-drop)
 - ✅ Zone Interactions: 95% (all zones have dialogs and context menus)
@@ -632,6 +669,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - ✅ Commander Damage UI: 100%
 - ✅ Game Actions: 100% (all essential functions implemented)
 
-**Estimated Time to MVP (v1.9.0):**
+**Estimated Time to MVP (v2.0.0):**
 - With networking: 2-3 weeks
-- Without networking (local hotseat): Complete! All core single-player features done.
+- Without networking (local hotseat): Complete! Full 2-4 player support.

@@ -24,7 +24,10 @@ fun MainScreen(
         )
         Screen.HostLobby -> HostLobbyScreen(viewModel = menuViewModel)
         Screen.JoinLobby -> JoinLobbyScreen(viewModel = menuViewModel)
-        Screen.Game -> GameScreen(loadedDeck = uiState.loadedDeck)
+        Screen.Game -> GameScreen(
+            loadedDeck = uiState.loadedDeck,
+            playerCount = uiState.playerCount
+        )
     }
 
     // Show error snackbar if there's an error
@@ -42,6 +45,7 @@ fun MainScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MenuScreen(
     viewModel: MenuViewModel,
@@ -95,6 +99,35 @@ fun MenuScreen(
                         Text("Deck Loaded", style = MaterialTheme.typography.labelMedium)
                         Text(uiState.loadedDeck.commander.name, style = MaterialTheme.typography.titleMedium)
                         Text("${uiState.loadedDeck.totalCards} cards", style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Player count selector
+            Card(
+                modifier = Modifier.width(300.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                )
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text("Player Count", style = MaterialTheme.typography.labelMedium)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        listOf(2, 3, 4).forEach { count ->
+                            FilterChip(
+                                selected = uiState.playerCount == count,
+                                onClick = { viewModel.setPlayerCount(count) },
+                                label = { Text("$count Players") }
+                            )
+                        }
                     }
                 }
             }

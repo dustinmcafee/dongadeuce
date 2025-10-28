@@ -18,6 +18,7 @@ import java.io.File
  */
 data class MenuUiState(
     val playerName: String = "Player 1",
+    val playerCount: Int = 2, // Total players for hotseat: 2, 3, or 4
     val loadedDeck: Deck? = null,
     val isHosting: Boolean = false,
     val connectedPlayers: List<String> = emptyList(),
@@ -48,6 +49,13 @@ class MenuViewModel {
      */
     fun setPlayerName(name: String) {
         _uiState.update { it.copy(playerName = name) }
+    }
+
+    /**
+     * Set player count for hotseat games (2-4 players)
+     */
+    fun setPlayerCount(count: Int) {
+        _uiState.update { it.copy(playerCount = count.coerceIn(2, 4)) }
     }
 
     /**
