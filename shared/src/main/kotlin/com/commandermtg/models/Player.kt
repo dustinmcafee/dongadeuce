@@ -10,7 +10,13 @@ data class Player(
     val commanderDamage: Map<String, Int> = emptyMap(), // commanderId -> damage
     val hasLost: Boolean = false
 ) {
-    fun takeDamage(amount: Int) = copy(life = life - amount)
+    fun takeDamage(amount: Int): Player {
+        val newLife = life - amount
+        return copy(
+            life = newLife,
+            hasLost = hasLost || newLife <= 0
+        )
+    }
 
     fun takeCommanderDamage(commanderId: String, amount: Int): Player {
         val current = commanderDamage[commanderId] ?: 0
@@ -21,7 +27,15 @@ data class Player(
         )
     }
 
-    fun gainLife(amount: Int) = copy(life = life + amount)
+    fun gainLife(amount: Int): Player {
+        val newLife = life + amount
+        return copy(life = newLife)
+    }
 
-    fun setLife(newLife: Int) = copy(life = newLife)
+    fun setLife(newLife: Int): Player {
+        return copy(
+            life = newLife,
+            hasLost = hasLost || newLife <= 0
+        )
+    }
 }

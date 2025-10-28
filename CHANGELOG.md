@@ -7,6 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.1] - 2025-10-27
+
+### Fixed
+- **Critical:** Library card ordering now consistent (last card = top of library, stack-based)
+  - drawCard() now uses lastOrNull() instead of firstOrNull()
+  - millCards() updated to use lastOrNull()
+  - moveCardToTopOfLibrary() places card at end of library list
+  - Establishes clear convention for library ordering across all operations
+- **Critical:** Drawing from empty library now correctly causes player loss
+  - Player.hasLost set to true when attempting to draw with no cards in library
+  - Follows MTG rules for drawing from empty library
+  - UI updates to show defeated player status
+- **High:** Active player bounds checking added to prevent crashes
+  - GameState.activePlayer now validates index before access
+  - Throws descriptive IllegalStateException if out of bounds
+  - Prevents application crashes on edge cases
+- **High:** Life total changes now check for player loss (life <= 0)
+  - Player.takeDamage() sets hasLost = true when life <= 0
+  - Player.setLife() sets hasLost = true when new life <= 0
+  - Player.gainLife() no longer needs loss checking
+  - Follows MTG rules for life total loss condition
+- **High:** moveCardToTopOfLibrary() now consistent with library ordering
+  - Places card at end of list (top of stack)
+  - Works correctly with drawCard() and millCards()
+  - Clear documentation of stack-based convention
+
+### Technical Details
+- Established library convention: list[last] = top of library (stack-based)
+- All library operations now use this consistent ordering
+- Player loss conditions properly enforced for both life and draw-from-empty
+- GameState validation prevents index out of bounds errors
+- Improved error messages for debugging
+
 ## [2.0.0] - 2025-10-27
 
 ### Added

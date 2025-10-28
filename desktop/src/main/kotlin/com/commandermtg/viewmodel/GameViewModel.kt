@@ -149,6 +149,7 @@ class GameViewModel {
 
     /**
      * Draw a card from library to hand
+     * If library is empty, player loses the game
      */
     fun drawCard(playerId: String) {
         val currentState = _uiState.value
@@ -157,7 +158,33 @@ class GameViewModel {
         // Find the top card of player's library
         val topCard = gameState.cardInstances
             .filter { it.ownerId == playerId && it.zone == Zone.LIBRARY }
-            .firstOrNull() ?: return
+            .lastOrNull() // Last card in list = top of library (stack-based)
+
+        if (topCard == null) {
+            // Player loses when trying to draw from empty library
+            val updatedGameState = gameState.updatePlayer(playerId) { player ->
+                player.copy(hasLost = true)
+            }
+
+            _uiState.update {
+                it.copy(
+                    gameState = updatedGameState,
+                    localPlayer = if (currentState.localPlayer?.id == playerId) {
+                        updatedGameState.players.find { p -> p.id == playerId }
+                    } else {
+                        currentState.localPlayer
+                    },
+                    opponents = currentState.opponents.map { opponent ->
+                        if (opponent.id == playerId) {
+                            updatedGameState.players.find { p -> p.id == playerId } ?: opponent
+                        } else {
+                            opponent
+                        }
+                    }
+                )
+            }
+            return
+        }
 
         val updatedGameState = gameState.updateCardInstance(topCard.instanceId) {
             it.moveToZone(Zone.HAND)
@@ -491,10 +518,10 @@ class GameViewModel {
             val currentState = _uiState.value
             val gameState = currentState.gameState ?: return@repeat
 
-            // Get top card of library
+            // Get top card of library (last in list)
             val topCard = gameState.cardInstances
                 .filter { it.ownerId == playerId && it.zone == Zone.LIBRARY }
-                .firstOrNull()
+                .lastOrNull()
 
             if (topCard != null) {
                 moveCard(topCard.instanceId, Zone.GRAVEYARD)
@@ -527,6 +554,7 @@ class GameViewModel {
 
     /**
      * Move a card to the top of its owner's library
+     * Convention: Last card in library list = top of library (stack-based)
      */
     fun moveCardToTopOfLibrary(cardId: String) {
         val currentState = _uiState.value
@@ -548,8 +576,8 @@ class GameViewModel {
         // Get all non-library cards
         val nonLibraryCards = otherCards.filter { !(it.ownerId == ownerId && it.zone == Zone.LIBRARY) }
 
-        // Rebuild card list: non-library cards + target card (top of library) + rest of library
-        val reorderedCards = nonLibraryCards + listOf(updatedCard) + libraryCards
+        // Rebuild card list: non-library cards + rest of library + target card (top = last)
+        val reorderedCards = nonLibraryCards + libraryCards + listOf(updatedCard)
 
         _uiState.update {
             it.copy(
