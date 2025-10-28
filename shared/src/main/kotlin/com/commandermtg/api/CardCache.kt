@@ -80,6 +80,7 @@ class CardCache(
             val buffer = ByteArray(8192)
             var downloadedBytes = 0L
             val chunks = mutableListOf<ByteArray>()
+            var lastReportedPercent = 0f
 
             while (!channel.isClosedForRead) {
                 val bytesRead = channel.readAvailable(buffer, 0, buffer.size)
@@ -88,8 +89,13 @@ class CardCache(
                     chunks.add(buffer.copyOf(bytesRead))
 
                     val percent = (downloadedBytes.toFloat() / contentLength * 100).coerceIn(0f, 100f)
-                    val downloadedMB = downloadedBytes / 1024 / 1024
-                    onProgress("Downloaded $downloadedMB / $sizeMB MB", percent)
+
+                    // Only report progress when it changes by at least 1%
+                    if (percent - lastReportedPercent >= 1f || percent >= 100f) {
+                        val downloadedMB = downloadedBytes / 1024 / 1024
+                        onProgress("Downloaded $downloadedMB / $sizeMB MB", percent)
+                        lastReportedPercent = percent
+                    }
                 }
             }
 
