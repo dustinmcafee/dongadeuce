@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.10.1] - 2025-10-28
+
+### Fixed
+- **Drag Position Reset Issue** - Cards no longer reset to top-left after long drags
+  - Fixed remember dependency that wasn't detecting grid position changes
+  - Added gridPositionsKey to track actual card positions, not just list reference
+  - Ensures cardPositions map recalculates when any card's gridX/gridY changes
+  - Cards now stay exactly where dropped, regardless of drag distance
+
+### Technical Details
+- Added gridPositionsKey that maps all card positions: "instanceId:gridX:gridY"
+- Changed remember dependency from (cards, columns) to (gridPositionsKey, columns)
+- Prevents stale position data from causing auto-arrangement to reset card positions
+
 ## [2.10.0] - 2025-10-28
 
 ### Fixed

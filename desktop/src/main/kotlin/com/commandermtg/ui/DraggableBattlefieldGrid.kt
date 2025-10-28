@@ -71,7 +71,12 @@ fun DraggableBattlefieldGrid(
     }
 
     // Organize cards into grid positions
-    val cardPositions = remember(cards, columns) {
+    // Key by the grid positions of all cards to ensure recalculation when positions change
+    val gridPositionsKey = remember(cards) {
+        cards.map { "${it.instanceId}:${it.gridX}:${it.gridY}" }.joinToString(",")
+    }
+
+    val cardPositions = remember(gridPositionsKey, columns) {
         val positionMap = mutableMapOf<String, Pair<Int, Int>>()
 
         // First, place cards that have explicit grid positions
