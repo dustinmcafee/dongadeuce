@@ -415,28 +415,28 @@ fun HotseatPlayerSection(
                         "Commander",
                         Zone.COMMAND_ZONE,
                         commanderCount,
-                        Modifier.fillMaxWidth().height(45.dp),
+                        Modifier.fillMaxWidth().height(50.dp),
                         onClick = if (isActivePlayer) ({ showCommandZoneDialog = true }) else null
                     )
                     ZoneCard(
                         "Library",
                         Zone.LIBRARY,
                         libraryCount,
-                        Modifier.fillMaxWidth().height(45.dp),
+                        Modifier.fillMaxWidth().height(50.dp),
                         onClick = if (isActivePlayer) ({ showLibrarySearchDialog = true }) else null
                     )
                     ZoneCard(
                         "Graveyard",
                         Zone.GRAVEYARD,
                         graveyardCount,
-                        Modifier.fillMaxWidth().height(45.dp),
+                        Modifier.fillMaxWidth().height(50.dp),
                         onClick = if (isActivePlayer) ({ showGraveyardDialog = true }) else null
                     )
                     ZoneCard(
                         "Exile",
                         Zone.EXILE,
                         exileCount,
-                        Modifier.fillMaxWidth().height(45.dp),
+                        Modifier.fillMaxWidth().height(50.dp),
                         onClick = if (isActivePlayer) ({ showExileDialog = true }) else null
                     )
                 }

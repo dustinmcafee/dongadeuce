@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.10.6] - 2025-10-28
+
+### Fixed
+- **Zone Card Text Cutoff** - Fixed text being cut off at bottom of zone cards
+  - Increased zone card height from 45dp to 50dp in hotseat sidebar
+  - Commander, Library, Graveyard, and Exile card counts now fully visible
+
 ## [2.10.5] - 2025-10-28
 
 ### Fixed
