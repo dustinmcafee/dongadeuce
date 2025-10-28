@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.9.2] - 2025-10-28
+
+### Fixed
+- **Critical PlayerArea Layout Bug** - Fixed broken Row structure causing UI to be crammed horizontally
+  - Corrected misaligned braces that put commander zone, player info, and library zones in single row
+  - Added proper Row wrapper with fillMaxWidth and spacing modifiers
+  - All player zone elements now properly arranged horizontally
+- **Battlefield Box Modifiers** - Fixed battlefield display issues
+  - Changed from heightIn with separate Box to fixed height with fillMaxSize
+  - Removed unnecessary Box wrapper around DraggableBattlefieldGrid
+  - Battlefield now properly fills Card container
+  - Player battlefield: 240dp height, Opponent battlefield: 200dp height
+- **ZoneCard Weight Modifiers** - Fixed Library card sizing issues
+  - Changed Library ZoneCard from weight(1f) to height(100dp)
+  - Prevents library zone from expanding inappropriately
+  - Consistent sizing across all zone cards
+
+### Technical Details
+- Restructured PlayerArea Row layout (lines 865-969)
+- Applied fillMaxSize().padding(8.dp) to battlefield grids
+- Removed intermediate Box wrappers from battlefield Cards
+- Fixed all ZoneCard modifiers for proper sizing
+
 ## [2.9.1] - 2025-10-28
 
 ### Fixed

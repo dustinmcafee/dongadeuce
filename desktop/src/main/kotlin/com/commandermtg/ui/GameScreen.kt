@@ -613,7 +613,7 @@ fun OpponentArea(
                 modifier = Modifier.width(200.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                ZoneCard("Library", Zone.LIBRARY, libraryCount, Modifier.weight(1f))
+                ZoneCard("Library", Zone.LIBRARY, libraryCount, Modifier.height(100.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     ZoneCard(
                         "Graveyard",
@@ -678,26 +678,20 @@ fun OpponentArea(
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(min = 180.dp, max = 400.dp),
+                .height(200.dp),
             colors = CardDefaults.cardColors(containerColor = Color(0xFF1B5E20))
         ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(8.dp)
-            ) {
-                DraggableBattlefieldGrid(
-                    cards = battlefieldCards,
-                    isLocalPlayer = false,
-                    onCardClick = { viewModel.toggleTap(it.instanceId) },
-                    onContextAction = onCardAction,
-                    onCardPositionChanged = { cardId, gridX, gridY ->
-                        viewModel.updateCardGridPosition(cardId, gridX, gridY)
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    currentPlayerId = null // Opponent cards cannot be dragged
-                )
-            }
+            DraggableBattlefieldGrid(
+                cards = battlefieldCards,
+                isLocalPlayer = false,
+                onCardClick = { viewModel.toggleTap(it.instanceId) },
+                onContextAction = onCardAction,
+                onCardPositionChanged = { cardId, gridX, gridY ->
+                    viewModel.updateCardGridPosition(cardId, gridX, gridY)
+                },
+                modifier = Modifier.fillMaxSize().padding(8.dp),
+                currentPlayerId = null // Opponent cards cannot be dragged
+            )
         }
     }
 }
@@ -839,30 +833,27 @@ fun PlayerArea(
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(min = 180.dp, max = 400.dp),
+                .height(240.dp),
             colors = CardDefaults.cardColors(containerColor = Color(0xFF1B5E20))
         ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(8.dp)
-            ) {
-                DraggableBattlefieldGrid(
-                    cards = battlefieldCards,
-                    isLocalPlayer = true,
-                    onCardClick = { viewModel.toggleTap(it.instanceId) },
-                    onContextAction = onCardAction,
-                    onCardPositionChanged = { cardId, gridX, gridY ->
-                        viewModel.updateCardGridPosition(cardId, gridX, gridY)
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    currentPlayerId = player.id // Only this player can drag their cards
-                )
-            }
+            DraggableBattlefieldGrid(
+                cards = battlefieldCards,
+                isLocalPlayer = true,
+                onCardClick = { viewModel.toggleTap(it.instanceId) },
+                onContextAction = onCardAction,
+                onCardPositionChanged = { cardId, gridX, gridY ->
+                    viewModel.updateCardGridPosition(cardId, gridX, gridY)
+                },
+                modifier = Modifier.fillMaxSize().padding(8.dp),
+                currentPlayerId = player.id // Only this player can drag their cards
+            )
         }
 
         // Player zones row
-        Row {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
             // Commander zone
             ZoneCard(
                 "Commander",
@@ -872,54 +863,48 @@ fun PlayerArea(
                 onClick = { showCommandZoneDialog = true }
             )
 
-            Spacer(modifier = Modifier.width(16.dp))
-
-        // Your hand and info
-        Column(
-            modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = if (player.hasLost) {
-                        MaterialTheme.colorScheme.errorContainer
-                    } else {
-                        MaterialTheme.colorScheme.primaryContainer
-                    }
-                )
+            // Your hand and info
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Row(
-                    modifier = Modifier.padding(16.dp),
-                    horizontalArrangement = Arrangement.SpaceEvenly,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(player.name, style = MaterialTheme.typography.titleMedium)
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            IconButton(onClick = { viewModel.updateLife(player.id, player.life - 1) }) {
-                                Text("-", style = MaterialTheme.typography.headlineSmall)
-                            }
-                            Text("Life: ${player.life}", style = MaterialTheme.typography.headlineMedium)
-                            IconButton(onClick = { viewModel.updateLife(player.id, player.life + 1) }) {
-                                Text("+", style = MaterialTheme.typography.headlineSmall)
-                            }
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (player.hasLost) {
+                            MaterialTheme.colorScheme.errorContainer
+                        } else {
+                            MaterialTheme.colorScheme.primaryContainer
                         }
-                        if (player.hasLost) {
-                            Text(
-                                "DEFEATED",
-                                style = MaterialTheme.typography.labelLarge,
-                                color = MaterialTheme.colorScheme.error
-                            )
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        horizontalArrangement = Arrangement.SpaceEvenly,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(player.name, style = MaterialTheme.typography.titleMedium)
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                IconButton(onClick = { viewModel.updateLife(player.id, player.life - 1) }) {
+                                    Text("-", style = MaterialTheme.typography.headlineSmall)
+                                }
+                                Text("Life: ${player.life}", style = MaterialTheme.typography.headlineMedium)
+                                IconButton(onClick = { viewModel.updateLife(player.id, player.life + 1) }) {
+                                    Text("+", style = MaterialTheme.typography.headlineSmall)
+                                }
+                            }
+                            if (player.hasLost) {
+                                Text(
+                                    "DEFEATED",
+                                    style = MaterialTheme.typography.labelLarge,
+                                    color = MaterialTheme.colorScheme.error
+                                )
+                            }
                         }
                     }
                 }
-            }
 
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -939,39 +924,36 @@ fun PlayerArea(
                     }
                 }
             }
-        }
 
-        Spacer(modifier = Modifier.width(16.dp))
-
-        // Your library, graveyard, exile
-        Column(
-            modifier = Modifier.width(200.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            ZoneCard(
-                "Library",
-                Zone.LIBRARY,
-                libraryCount,
-                Modifier.weight(1f),
-                onClick = { showLibrarySearchDialog = true }
-            )
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            // Your library, graveyard, exile
+            Column(
+                modifier = Modifier.width(200.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
                 ZoneCard(
-                    "Graveyard",
-                    Zone.GRAVEYARD,
-                    graveyardCount,
-                    Modifier.weight(1f),
-                    onClick = { showGraveyardDialog = true }
+                    "Library",
+                    Zone.LIBRARY,
+                    libraryCount,
+                    Modifier.height(100.dp),
+                    onClick = { showLibrarySearchDialog = true }
                 )
-                ZoneCard(
-                    "Exile",
-                    Zone.EXILE,
-                    exileCount,
-                    Modifier.weight(1f),
-                    onClick = { showExileDialog = true }
-                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    ZoneCard(
+                        "Graveyard",
+                        Zone.GRAVEYARD,
+                        graveyardCount,
+                        Modifier.weight(1f),
+                        onClick = { showGraveyardDialog = true }
+                    )
+                    ZoneCard(
+                        "Exile",
+                        Zone.EXILE,
+                        exileCount,
+                        Modifier.weight(1f),
+                        onClick = { showExileDialog = true }
+                    )
+                }
             }
-        }
         }
 
         // Hand display - always visible for local player
