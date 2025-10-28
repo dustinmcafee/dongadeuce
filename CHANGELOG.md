@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.10.2] - 2025-10-28
+
+### Fixed
+- **Grid Snapping Accuracy** - Cards now snap to correct grid cell when dropped
+  - Fixed calculation using stale position values during drag
+  - Capture starting position at onDragStart and use consistently
+  - Calculate final grid position from captured start + drag offset
+  - Eliminates incorrect snapping to wrong cells or reverting to original position
+
+### Technical Details
+- Added dragStartPos state to capture initial position at drag start
+- Changed onDragEnd to calculate from dragStartPos + dragOffset
+- Prevents position recalculation from using updated cardPositions mid-drag
+- Ensures accurate grid cell calculation regardless of drag distance
+
 ## [2.10.1] - 2025-10-28
 
 ### Fixed
