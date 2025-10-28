@@ -23,6 +23,7 @@ import com.commandermtg.models.CardInstance
 import com.commandermtg.viewmodel.GameViewModel
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.material3.ExperimentalMaterial3Api
 
 @Composable
 fun GameScreen(
@@ -450,6 +451,7 @@ fun HotseatPlayerSection(
     var showExileDialog by remember { mutableStateOf(false) }
     var showLibrarySearchDialog by remember { mutableStateOf(false) }
     var showCommandZoneDialog by remember { mutableStateOf(false) }
+    var showTokenCreationDialog by remember { mutableStateOf(false) }
 
     Column(
         modifier = modifier.background(
@@ -544,6 +546,17 @@ fun HotseatPlayerSection(
                         Modifier.fillMaxWidth().height(50.dp),
                         onClick = if (isActivePlayer) ({ showExileDialog = true }) else null
                     )
+
+                    // Token creation button (only for active player)
+                    if (isActivePlayer) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        OutlinedButton(
+                            onClick = { showTokenCreationDialog = true },
+                            modifier = Modifier.fillMaxWidth().height(50.dp)
+                        ) {
+                            Text("Create Token", style = MaterialTheme.typography.labelSmall)
+                        }
+                    }
                 }
 
                 // Battlefield cards
@@ -636,6 +649,15 @@ fun HotseatPlayerSection(
                 },
                 onToHand = { cardInstance ->
                     viewModel.moveCard(cardInstance.instanceId, Zone.HAND)
+                }
+            )
+        }
+
+        if (showTokenCreationDialog) {
+            TokenCreationDialog(
+                onDismiss = { showTokenCreationDialog = false },
+                onCreateToken = { tokenName, tokenType, power, toughness, color, quantity ->
+                    viewModel.createToken(player.id, tokenName, tokenType, power, toughness, color, quantity)
                 }
             )
         }
@@ -1007,6 +1029,7 @@ fun PlayerArea(
     var showCommanderDamageDialog by remember { mutableStateOf(false) }
     var showLibrarySearchDialog by remember { mutableStateOf(false) }
     var showCommandZoneDialog by remember { mutableStateOf(false) }
+    var showTokenCreationDialog by remember { mutableStateOf(false) }
 
     val libraryCount = viewModel.getCardCount(player.id, Zone.LIBRARY)
     val handCount = viewModel.getCardCount(player.id, Zone.HAND)
@@ -1124,6 +1147,16 @@ fun PlayerArea(
         )
     }
 
+    // Show token creation dialog if requested
+    if (showTokenCreationDialog) {
+        TokenCreationDialog(
+            onDismiss = { showTokenCreationDialog = false },
+            onCreateToken = { tokenName, tokenType, power, toughness, color, quantity ->
+                viewModel.createToken(player.id, tokenName, tokenType, power, toughness, color, quantity)
+            }
+        )
+    }
+
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
         // Player's battlefield
         Card(
@@ -1201,22 +1234,33 @@ fun PlayerArea(
                     }
                 }
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Button(
-                        onClick = { viewModel.drawCard(player.id) },
-                        modifier = Modifier.weight(1f)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Text("Draw")
+                        Button(
+                            onClick = { viewModel.drawCard(player.id) },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("Draw")
+                        }
+
+                        OutlinedButton(
+                            onClick = { showCommanderDamageDialog = true },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("Commander Damage")
+                        }
                     }
 
                     OutlinedButton(
-                        onClick = { showCommanderDamageDialog = true },
-                        modifier = Modifier.weight(1f)
+                        onClick = { showTokenCreationDialog = true },
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text("Commander Damage")
+                        Text("Create Token")
                     }
                 }
             }
@@ -1642,4 +1686,128 @@ fun HandCardDisplay(
             }
         }
     }
+}
+
+/**
+ * Dialog for creating tokens
+ */
+@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
+@Composable
+fun TokenCreationDialog(
+    onDismiss: () -> Unit,
+    onCreateToken: (tokenName: String, tokenType: String, power: String?, toughness: String?, color: String, quantity: Int) -> Unit
+) {
+    var tokenName by remember { mutableStateOf("") }
+    var tokenType by remember { mutableStateOf("Creature Token") }
+    var power by remember { mutableStateOf("") }
+    var toughness by remember { mutableStateOf("") }
+    var selectedColor by remember { mutableStateOf("Colorless") }
+    var quantity by remember { mutableStateOf("1") }
+
+    val colors = listOf("Colorless", "White", "Blue", "Black", "Red", "Green", "Multicolor")
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Create Token") },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                // Token Name
+                OutlinedTextField(
+                    value = tokenName,
+                    onValueChange = { tokenName = it },
+                    label = { Text("Token Name") },
+                    placeholder = { Text("e.g., Goblin, Soldier, Treasure") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+
+                // Token Type
+                OutlinedTextField(
+                    value = tokenType,
+                    onValueChange = { tokenType = it },
+                    label = { Text("Type") },
+                    placeholder = { Text("e.g., Creature — Goblin, Artifact") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+
+                // Power/Toughness Row
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedTextField(
+                        value = power,
+                        onValueChange = { power = it },
+                        label = { Text("Power") },
+                        placeholder = { Text("1") },
+                        modifier = Modifier.weight(1f),
+                        singleLine = true
+                    )
+                    OutlinedTextField(
+                        value = toughness,
+                        onValueChange = { toughness = it },
+                        label = { Text("Toughness") },
+                        placeholder = { Text("1") },
+                        modifier = Modifier.weight(1f),
+                        singleLine = true
+                    )
+                }
+
+                // Color Dropdown
+                Text("Color", style = MaterialTheme.typography.labelMedium)
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    colors.forEach { color ->
+                        FilterChip(
+                            selected = selectedColor == color,
+                            onClick = { selectedColor = color },
+                            label = { Text(color) }
+                        )
+                    }
+                }
+
+                // Quantity
+                OutlinedTextField(
+                    value = quantity,
+                    onValueChange = { if (it.all { char -> char.isDigit() }) quantity = it },
+                    label = { Text("Quantity") },
+                    placeholder = { Text("1") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    val name = tokenName.trim().ifBlank { "Token" }
+                    val type = tokenType.trim().ifBlank { "Token" }
+                    val pow = power.trim().ifBlank { null }
+                    val tough = toughness.trim().ifBlank { null }
+                    val qty = quantity.toIntOrNull()?.coerceAtLeast(1) ?: 1
+                    val colorValue = if (selectedColor == "Colorless") "" else selectedColor
+
+                    onCreateToken(name, type, pow, tough, colorValue, qty)
+                    onDismiss()
+                },
+                enabled = tokenName.isNotBlank()
+            ) {
+                Text("Create")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
 }

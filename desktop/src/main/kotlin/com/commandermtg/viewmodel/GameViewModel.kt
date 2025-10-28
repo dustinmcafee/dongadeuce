@@ -672,6 +672,51 @@ class GameViewModel {
     }
 
     /**
+     * Create token(s) on the battlefield
+     */
+    fun createToken(
+        playerId: String,
+        tokenName: String,
+        tokenType: String,
+        power: String?,
+        toughness: String?,
+        color: String,
+        quantity: Int = 1
+    ) {
+        val currentState = _uiState.value
+        val gameState = currentState.gameState ?: return
+
+        // Create a Card object for the token
+        val tokenCard = Card(
+            name = tokenName,
+            type = tokenType,
+            power = power,
+            toughness = toughness,
+            colors = if (color.isNotBlank()) listOf(color) else emptyList(),
+            imageUri = null, // Tokens don't have images from Scryfall by default
+            scryfallId = null
+        )
+
+        // Create the specified number of token instances
+        val tokenInstances = List(quantity) {
+            CardInstance(
+                card = tokenCard,
+                ownerId = playerId,
+                zone = Zone.BATTLEFIELD
+            )
+        }
+
+        // Add tokens to the game state
+        val updatedGameState = gameState.copy(
+            cardInstances = gameState.cardInstances + tokenInstances
+        )
+
+        _uiState.update {
+            it.copy(gameState = updatedGameState)
+        }
+    }
+
+    /**
      * Update a card's grid position on the battlefield
      */
     fun updateCardGridPosition(cardId: String, gridX: Int, gridY: Int) {
