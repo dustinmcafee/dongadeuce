@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.10.0] - 2025-10-28
+
+### Fixed
+- **Drag-and-Drop Snap-Back Issue** - Cards no longer snap back to original position
+  - Removed overly strict collision detection that blocked valid drops
+  - Cards can now be dropped on any grid position
+  - If two cards occupy same position, the dragged card takes priority
+  - Auto-arrangement handles cards without explicit positions
+
+### Technical Details
+- Removed occupiedPositions check that prevented drops
+- Simplified onDragEnd to always call onCardPositionChanged
+- Cards with gridX/gridY are placed first, others auto-arranged
+- Allows implicit swapping when dropping on occupied position
+
 ## [2.9.9] - 2025-10-28
 
 ### Fixed

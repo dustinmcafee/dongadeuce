@@ -110,11 +110,6 @@ fun DraggableBattlefieldGrid(
         positionMap
     }
 
-    // Build a map of occupied positions (excluding the dragged card)
-    val occupiedPositions = remember(cardPositions, draggedCardId) {
-        cardPositions.filter { it.key != draggedCardId }.values.toSet()
-    }
-
     // Calculate total rows needed
     val totalRows = ((cardPositions.values.maxOfOrNull { it.second } ?: 0) + 1).coerceAtMost(10)
 
@@ -175,13 +170,9 @@ fun DraggableBattlefieldGrid(
                                                     .coerceAtLeast(0)
                                                     .coerceAtMost(9) // Max 10 rows (0-9)
 
-                                                // Check if target position is occupied
-                                                val targetPosition = Pair(newCol, newRow)
-                                                if (!occupiedPositions.contains(targetPosition)) {
-                                                    // Position is free, update card position
-                                                    onCardPositionChanged(card.instanceId, newCol, newRow)
-                                                }
-                                                // If occupied, card snaps back to original position
+                                                // Always update position - allow dropping anywhere
+                                                // This allows swapping cards if the position is occupied
+                                                onCardPositionChanged(card.instanceId, newCol, newRow)
 
                                                 // Reset drag state
                                                 draggedCardId = null
