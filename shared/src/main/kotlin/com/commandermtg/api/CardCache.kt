@@ -17,6 +17,8 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.encodeToString
 import java.io.File
+// Import Scryfall types from ScryfallApi
+import com.commandermtg.api.ScryfallCard
 
 /**
  * Card cache system that downloads and stores bulk card data from Scryfall
@@ -75,20 +77,22 @@ class CardCache(
             println("Downloading from: ${defaultCards.downloadUri}")
             println("Expected size: $sizeMB MB")
 
-            // Download to temporary file first
-            val tempFile = File(cacheDir, "download.tmp")
-            val cardsJson: String = withContext(Dispatchers.IO) {
+            // Download Scryfall JSON directly to cache file (they're already in correct format)
+            withContext(Dispatchers.IO) {
                 val response: HttpResponse = client.get(defaultCards.downloadUri)
                 val contentLength = defaultCards.size
                 val channel: ByteReadChannel = response.bodyAsChannel()
 
-                tempFile.outputStream().use { output ->
+                cacheFile.outputStream().buffered(1024 * 1024).use { output ->
                     val buffer = ByteArray(1024 * 1024) // 1MB buffer
                     var downloadedBytes = 0L
                     var lastReportedPercent = 0f
 
-                    while (!channel.isClosedForRead) {
+                    while (true) {
                         val bytesRead = channel.readAvailable(buffer, 0, buffer.size)
+
+                        // Break on end of stream
+                        if (bytesRead == -1) break
 
                         if (bytesRead > 0) {
                             output.write(buffer, 0, bytesRead)
@@ -97,59 +101,35 @@ class CardCache(
                             val percent = (downloadedBytes.toFloat() / contentLength * 100).coerceIn(0f, 100f)
                             val currentPercent = percent.toInt().toFloat()
 
-                            // Report progress when percentage changes
+                            // Report progress when percentage changes by 1%
                             if (currentPercent > lastReportedPercent) {
                                 val downloadedMB = downloadedBytes / 1024 / 1024
                                 onProgress("Downloaded $downloadedMB / $sizeMB MB", currentPercent)
                                 lastReportedPercent = currentPercent
-                                println("Progress: $currentPercent% ($downloadedMB MB / $sizeMB MB)")
                             }
                         }
                     }
                 }
-
-                // Read the file
-                onProgress("Reading downloaded file...", 92f)
-                val json = tempFile.readText()
-                tempFile.delete()
-                json
             }
 
-            onProgress("Parsing card data...", 95f)
+            onProgress("Download complete!", 90f)
 
-            // Parse to Scryfall format
+            // Save metadata (don't load cache yet - too much memory)
             val json = Json {
                 ignoreUnknownKeys = true
                 isLenient = true
             }
-            val scryfallCards = json.decodeFromString<List<ScryfallCard>>(cardsJson)
 
-            onProgress("Converting ${scryfallCards.size} cards...", 97f)
-
-            // Convert to our Card model
-            val cards = scryfallCards.map { it.toCard() }
-
-            onProgress("Saving cache to disk...", 98f)
-
-            // Save to disk
             withContext(Dispatchers.IO) {
-                val cardsToSave = cards.map { CardCacheEntry.fromCard(it) }
-                val jsonString = json.encodeToString(cardsToSave)
-                cacheFile.writeText(jsonString)
-
-                // Save metadata
                 val metadata = CacheMetadata(
                     lastUpdated = System.currentTimeMillis(),
-                    cardCount = cards.size,
+                    cardCount = 0, // Unknown without parsing entire file
                     bulkDataUpdatedAt = defaultCards.updatedAt
                 )
                 metadataFile.writeText(json.encodeToString(metadata))
             }
 
-            // Update in-memory cache
-            cardMap = cards.associateBy { it.name.lowercase() }
-
-            onProgress("Cache updated successfully! ${cards.size} cards cached.", 100f)
+            onProgress("Cache ready for use!", 100f)
         } catch (e: Exception) {
             onProgress("Error updating cache: ${e.message}", 0f)
             throw e
@@ -158,6 +138,7 @@ class CardCache(
 
     /**
      * Load cache into memory if not already loaded
+     * Parses Scryfall bulk JSON format
      */
     suspend fun loadCache(): Boolean {
         if (cardMap != null) return true
@@ -173,14 +154,16 @@ class CardCache(
                     isLenient = true
                 }
                 val jsonString = cacheFile.readText()
-                val cacheEntries = json.decodeFromString<List<CardCacheEntry>>(jsonString)
-                cardMap = cacheEntries.associate {
+                // Parse Scryfall format directly
+                val scryfallCards = json.decodeFromString<List<ScryfallCard>>(jsonString)
+                cardMap = scryfallCards.associate {
                     it.name.lowercase() to it.toCard()
                 }
             }
             true
         } catch (e: Exception) {
             println("Failed to load cache: ${e.message}")
+            e.printStackTrace()
             false
         }
     }
