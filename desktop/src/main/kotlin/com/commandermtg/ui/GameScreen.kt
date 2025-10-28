@@ -833,7 +833,7 @@ fun PlayerArea(
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(240.dp),
+                .weight(0.4f),
             colors = CardDefaults.cardColors(containerColor = Color(0xFF1B5E20))
         ) {
             DraggableBattlefieldGrid(
@@ -851,7 +851,7 @@ fun PlayerArea(
 
         // Player zones row
         Row(
-            modifier = Modifier.fillMaxWidth().height(170.dp),
+            modifier = Modifier.fillMaxWidth().weight(0.3f),
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // Commander zone
@@ -934,11 +934,11 @@ fun PlayerArea(
                     "Library",
                     Zone.LIBRARY,
                     libraryCount,
-                    Modifier.height(100.dp),
+                    Modifier.weight(1f).fillMaxWidth(),
                     onClick = { showLibrarySearchDialog = true }
                 )
                 Row(
-                    modifier = Modifier.fillMaxWidth().height(60.dp),
+                    modifier = Modifier.fillMaxWidth().weight(1f),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     ZoneCard(
@@ -963,7 +963,7 @@ fun PlayerArea(
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(140.dp),
+                .weight(0.3f),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
         ) {
             Column(

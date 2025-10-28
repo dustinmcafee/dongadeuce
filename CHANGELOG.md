@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.9.4] - 2025-10-28
+
+### Fixed
+- **PlayerArea Layout - Fully Responsive** - Fixed zones row completely hidden
+  - Changed all PlayerArea children from fixed heights to proportional weights
+  - Battlefield: weight(0.4f) - 40% of available space
+  - Player zones row: weight(0.3f) - 30% of available space
+  - Hand display: weight(0.3f) - 30% of available space
+  - Layout now scales properly with window resizing
+  - Graveyard, exile, library, commander zone, life counter, and buttons all visible
+
+### Technical Details
+- Battlefield Card: height(240dp) → weight(0.4f)
+- Player zones Row: height(170dp) → weight(0.3f)
+- Hand Card: height(140dp) → weight(0.3f)
+- Library ZoneCard: height(100dp) → weight(1f)
+- Graveyard/Exile Row: height(60dp) → weight(1f)
+- All zones now use proportional weights for responsive scaling
+
 ## [2.9.3] - 2025-10-28
 
 ### Fixed
