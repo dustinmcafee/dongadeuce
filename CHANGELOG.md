@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.10.4] - 2025-10-28
+
+### Fixed
+- **Grid Drop Position Units** - Fixed calculation using consistent pixel units
+  - Captured dragStartPixelPos (xPos, yPos) at drag start
+  - Ensures calculation uses same coordinate system throughout drag
+  - Prevents incorrect grid snapping from mixed units or stale positions
+  - Cards now drop at exact grid position matching visual location
+
+### Technical Details
+- Changed from dragStartGridPos to dragStartPixelPos
+- Capture xPos/yPos at onDragStart to freeze reference point
+- Calculate finalX/Y from dragStartPixelPos + dragOffset
+- All values now in same pixel coordinate system
+
 ## [2.10.3] - 2025-10-28
 
 ### Fixed

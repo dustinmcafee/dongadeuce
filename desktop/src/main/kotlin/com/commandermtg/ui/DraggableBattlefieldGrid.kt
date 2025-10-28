@@ -57,7 +57,7 @@ fun DraggableBattlefieldGrid(
     // Track dragging state
     var draggedCardId by remember { mutableStateOf<String?>(null) }
     var dragOffset by remember { mutableStateOf(Offset.Zero) }
-    var dragStartGridPos by remember { mutableStateOf<Pair<Int, Int>?>(null) }
+    var dragStartPixelPos by remember { mutableStateOf(Offset.Zero) }
 
     // Container size
     var containerWidth by remember { mutableStateOf(0f) }
@@ -156,22 +156,17 @@ fun DraggableBattlefieldGrid(
                                             onDragStart = { _ ->
                                                 draggedCardId = card.instanceId
                                                 dragOffset = Offset.Zero
-                                                // Store the starting grid position
-                                                dragStartGridPos = Pair(col, row)
+                                                // Capture the starting pixel position
+                                                dragStartPixelPos = Offset(xPos, yPos)
                                             },
                                             onDrag = { change, dragAmount ->
                                                 change.consume()
                                                 dragOffset += dragAmount
                                             },
                                             onDragEnd = {
-                                                // Use the captured starting grid position to calculate drop position
-                                                val startGridPos = dragStartGridPos ?: Pair(col, row)
-                                                val startX = startGridPos.first * cellWidth
-                                                val startY = startGridPos.second * cellHeight
-
-                                                // Calculate final position from start + drag offset
-                                                val finalX = startX + dragOffset.x + (cardWidth.value / 2)
-                                                val finalY = startY + dragOffset.y + (cardHeight.value / 2)
+                                                // Calculate drop position from captured start + drag offset
+                                                val finalX = dragStartPixelPos.x + dragOffset.x + (cardWidth.value / 2)
+                                                val finalY = dragStartPixelPos.y + dragOffset.y + (cardHeight.value / 2)
 
                                                 // Calculate target grid cell from center point
                                                 val newCol = (finalX / cellWidth)
@@ -188,12 +183,12 @@ fun DraggableBattlefieldGrid(
                                                 // Reset drag state
                                                 draggedCardId = null
                                                 dragOffset = Offset.Zero
-                                                dragStartGridPos = null
+                                                dragStartPixelPos = Offset.Zero
                                             },
                                             onDragCancel = {
                                                 draggedCardId = null
                                                 dragOffset = Offset.Zero
-                                                dragStartGridPos = null
+                                                dragStartPixelPos = Offset.Zero
                                             }
                                         )
                                     }
