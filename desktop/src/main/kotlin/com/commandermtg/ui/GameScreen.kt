@@ -3,6 +3,7 @@ package com.commandermtg.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
@@ -23,6 +24,7 @@ import com.commandermtg.models.CardInstance
 import com.commandermtg.viewmodel.GameViewModel
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.material3.ExperimentalMaterial3Api
 import kotlinx.coroutines.launch
 
@@ -1591,6 +1593,7 @@ fun HandDialog(
     )
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun HandCardDisplay(
     cardInstance: CardInstance,
@@ -1600,7 +1603,6 @@ fun HandCardDisplay(
     dragDropState: DragDropState? = null,
     selectionState: SelectionState? = null
 ) {
-    var lastClickTime by remember { mutableStateOf(0L) }
     val isDragging = dragDropState?.isDragging == true && dragDropState.draggedCard?.instanceId == cardInstance.instanceId
     val isSelected = selectionState?.isSelected(cardInstance.instanceId) == true
 
@@ -1638,24 +1640,22 @@ fun HandCardDisplay(
                         Modifier
                     }
                 )
-                // Click gesture support (always available)
-                .clickable {
-                    val currentTime = System.currentTimeMillis()
-                    if (currentTime - lastClickTime < 300) {
-                        // Double-click detected
-                        selectionState?.clearSelection() // Clear selection on double-click
-                        onDoubleClick()
-                        lastClickTime = 0L
-                    } else {
+                // Click gesture support with proper double-click handling
+                .combinedClickable(
+                    onClick = {
                         // Single click - toggle selection if selectionState exists
-                        lastClickTime = currentTime
                         if (selectionState != null) {
                             selectionState.toggleSelection(cardInstance.instanceId)
                         } else {
                             onCardClick(cardInstance)
                         }
+                    },
+                    onDoubleClick = {
+                        // Double-click - clear selection and play card
+                        selectionState?.clearSelection()
+                        onDoubleClick()
                     }
-                }
+                )
                 .then(
                     if (isDragging) Modifier.alpha(0.5f) else Modifier
                 )
