@@ -6,5 +6,5 @@ plugins {
 
 allprojects {
     group = "com.commandermtg"
-    version = "2.10.6"
+    version = "2.11.0"
 }

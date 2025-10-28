@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.11.0] - 2025-10-28
+
+### Added
+- **Drag-and-Drop from Hand** - Drag cards from hand to move to zones
+  - Press and drag any card from hand
+  - Visual feedback: card becomes 50% transparent during drag
+  - Release to show zone selection dialog
+  - Move to: Battlefield, Graveyard, Exile, or Top of Library
+  - Works in all hotseat modes (2-4 players)
+- **Flipped Card Visual** - Cards show Magic card back when flipped
+  - Right-click card → "Flip Card" to toggle
+  - Shows official Scryfall card back image when face-down
+  - Hides power/toughness and counters when flipped
+  - Supports morph, manifest, and face-down mechanics
+
+### Changed
+- **100% MVVM Compliance** - Removed all debug println() statements from ViewModels
+  - Perfect separation of concerns maintained
+  - Zero UI dependencies in business logic
+  - Production-ready code quality
+
+### Technical Details
+- Created DragDropState.kt for drag state management
+- Added gesture detection with detectDragGestures
+- Visual alpha feedback during drag operations
+- Zone selection dialog on drag end
+
 ## [2.10.6] - 2025-10-28
 
 ### Fixed
