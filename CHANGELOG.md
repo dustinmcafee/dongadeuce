@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.12.0] - 2025-10-28
+
+### Added
+- **Multi-Select Feature for Hand Cards** - Select and batch-move multiple cards
+  - Click cards to toggle selection (green border indicates selected)
+  - Double-click to play card (clears selection)
+  - Batch action buttons appear when cards are selected:
+    - Move selected cards to Battlefield
+    - Move selected cards to Graveyard
+    - Move selected cards to Exile
+    - Clear selection
+  - Works in both hotseat mode and network mode
+  - Only active player can select cards in hotseat mode
+
+- **Token Creation Feature** - Create custom tokens similar to Cockatrice
+  - Search Scryfall's token database with real-time lookup
+  - Click search results to auto-fill token properties
+  - Manual custom token creation with full customization:
+    - Token name (required)
+    - Token type (e.g., Creature — Goblin, Artifact)
+    - Power/Toughness for creatures
+    - Color selection (Colorless, W, U, B, R, G, Multicolor)
+    - Quantity (create multiple identical tokens at once)
+  - "Create Token" button in both game modes
+  - Tokens appear directly on battlefield
+  - Full integration with card management system
+
 ## [2.11.0] - 2025-10-28
 
 ### Added
