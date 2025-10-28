@@ -115,26 +115,17 @@ fun DraggableBattlefieldGrid(
         cardPositions.filter { it.key != draggedCardId }.values.toSet()
     }
 
+    // Calculate total rows needed
+    val totalRows = ((cardPositions.values.maxOfOrNull { it.second } ?: 0) + 1).coerceAtMost(10)
+
     Box(
         modifier = modifier
             .onGloballyPositioned { coordinates ->
                 containerWidth = coordinates.size.width.toFloat()
             }
+            .fillMaxWidth()
+            .height((totalRows * cellHeight).dp)
     ) {
-        // Calculate total rows needed - limit height to avoid overflow
-        val totalRows = ((cardPositions.values.maxOfOrNull { it.second } ?: 0) + 1).coerceAtMost(10)
-
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(max = (totalRows * cellHeight).dp)
-                .verticalScroll(rememberScrollState())
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height((totalRows * cellHeight).dp)
-            ) {
                 cards.forEach { card ->
                     val position = cardPositions[card.instanceId] ?: Pair(0, 0)
                     val (col, row) = position
@@ -183,16 +174,18 @@ fun DraggableBattlefieldGrid(
                                             },
                                             onDragEnd = {
                                                 // Calculate new grid position based on final position
-                                                val finalX = xPos + dragOffset.x
-                                                val finalY = yPos + dragOffset.y
+                                                // Use the card's center point for more accurate targeting
+                                                val cardCenterX = xPos + dragOffset.x + (cardWidth.value / 2)
+                                                val cardCenterY = yPos + dragOffset.y + (cardHeight.value / 2)
 
-                                                // Calculate target grid cell (center of card)
-                                                val newCol = ((finalX + (cardWidth.value / 2)) / cellWidth)
-                                                    .roundToInt()
+                                                // Calculate target grid cell from center point
+                                                val newCol = (cardCenterX / cellWidth)
+                                                    .toInt()
                                                     .coerceIn(0, columns - 1)
-                                                val newRow = ((finalY + (cardHeight.value / 2)) / cellHeight)
-                                                    .roundToInt()
+                                                val newRow = (cardCenterY / cellHeight)
+                                                    .toInt()
                                                     .coerceAtLeast(0)
+                                                    .coerceAtMost(9) // Max 10 rows (0-9)
 
                                                 // Check if target position is occupied
                                                 val targetPosition = Pair(newCol, newRow)
@@ -224,8 +217,6 @@ fun DraggableBattlefieldGrid(
                             onContextAction = onContextAction
                         )
                     }
-                }
-            }
         }
     }
 }

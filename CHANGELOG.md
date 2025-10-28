@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.9.8] - 2025-10-28
+
+### Fixed
+- **Drag-and-Drop Positioning Accuracy** - Cards now drop to correct grid position
+  - Changed from roundToInt() to toInt() for more predictable rounding
+  - Calculate target cell using card center point consistently
+  - Added max row constraint (0-9) to match 10-row limit
+- **Drag Gesture UI Barrier** - Removed nested scroll container interfering with drag
+  - Removed intermediate Box with verticalScroll that competed with drag gestures
+  - Simplified layout structure to single Box container
+  - Drag gestures no longer blocked by scroll detection
+
+### Technical Details
+- Removed nested Box structure with verticalScroll
+- Changed grid position calculation to use toInt() instead of roundToInt()
+- Added coerceAtMost(9) for row constraint
+- Simplified from 3-level Box nesting to single Box
+
 ## [2.9.7] - 2025-10-28
 
 ### Fixed
