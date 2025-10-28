@@ -7,6 +7,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.5.0] - 2025-10-28
+
+### Added
+- **Local Hotseat Mode** for testing and playing with multiple players on one computer
+  - New game mode selector: "Network" vs "Local Hotseat"
+  - Each player can load their own deck in hotseat mode
+  - Support for 2-4 players with individual decks
+  - HotseatDeckLoader UI component for loading multiple decks
+  - Players named "Player 1", "Player 2", etc. in hotseat mode
+  - All players get their own deck, commander, and starting hand
+
+### Changed
+- **MenuUiState** extended to support hotseat mode
+  - Added `hotseatMode: Boolean` flag
+  - Added `hotseatDecks: Map<Int, Deck>` for storing multiple decks
+  - Legacy `loadedDeck` field maintained for network mode compatibility
+- **MenuViewModel** enhanced with hotseat functionality
+  - Added `setHotseatMode(enabled: Boolean)` method
+  - Added `loadHotseatDeck(playerIndex: Int, filePath: String)` method
+  - Added `startHotseatGame()` method with validation
+  - Validates all players have loaded decks before starting
+- **GameScreen** updated to support both modes
+  - Added `hotseatDecks` and `isHotseatMode` parameters
+  - Different initialization logic for hotseat vs network mode
+  - Loads individual decks for each player in hotseat mode
+  - Legacy network mode behavior preserved
+- **GameViewModel** extended with multi-player deck loading
+  - Added `loadDeckForPlayer(playerId: String, deck: Deck)` method
+  - Can load decks for any player, not just local player
+  - Properly initializes library and command zone for each player
+
+### Technical Details
+- Hotseat mode uses player indices (0-3) as keys for deck storage
+- Each player's deck is loaded and shuffled independently
+- Starting hands drawn automatically for all players
+- Game initialization creates appropriate player names based on mode
+- All existing network mode functionality preserved
+- Build successful with all 44 tests passing
+
+### Use Cases
+- **Testing**: Quickly test multiplayer scenarios without network setup
+- **Development**: Verify game logic with multiple real decks
+- **Local Play**: Play Commander with friends on one computer (hotseat style)
+
 ## [2.4.0] - 2025-10-27
 
 ### Changed

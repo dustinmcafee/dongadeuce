@@ -19,7 +19,9 @@ import java.io.File
 data class MenuUiState(
     val playerName: String = "Player 1",
     val playerCount: Int = 2, // Total players for hotseat: 2, 3, or 4
-    val loadedDeck: Deck? = null,
+    val loadedDeck: Deck? = null, // Legacy single deck (for Host/Join modes)
+    val hotseatMode: Boolean = false, // True = local hotseat, False = network game
+    val hotseatDecks: Map<Int, Deck> = emptyMap(), // Map of player index (0-3) to their deck
     val isHosting: Boolean = false,
     val connectedPlayers: List<String> = emptyList(),
     val serverAddress: String = "",
@@ -56,6 +58,18 @@ class MenuViewModel {
      */
     fun setPlayerCount(count: Int) {
         _uiState.update { it.copy(playerCount = count.coerceIn(2, 4)) }
+    }
+
+    /**
+     * Toggle hotseat mode
+     */
+    fun setHotseatMode(enabled: Boolean) {
+        _uiState.update {
+            it.copy(
+                hotseatMode = enabled,
+                hotseatDecks = if (!enabled) emptyMap() else it.hotseatDecks
+            )
+        }
     }
 
     /**
@@ -130,6 +144,97 @@ class MenuViewModel {
                 }
             }
         }
+    }
+
+    /**
+     * Load a deck for a specific player in hotseat mode
+     */
+    fun loadHotseatDeck(playerIndex: Int, filePath: String) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, loadingProgress = "Parsing deck for Player ${playerIndex + 1}...", error = null) }
+
+            try {
+                // Parse the deck file
+                val parsedDeck = try {
+                    DeckParser.parseTextFile(filePath)
+                } catch (e: IllegalArgumentException) {
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            loadingProgress = "",
+                            error = "Invalid deck file for Player ${playerIndex + 1}: ${e.message}"
+                        )
+                    }
+                    return@launch
+                } catch (e: Exception) {
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            loadingProgress = "",
+                            error = "Failed to read deck file for Player ${playerIndex + 1}: ${e.message}"
+                        )
+                    }
+                    return@launch
+                }
+
+                _uiState.update { it.copy(loadingProgress = "Fetching card data from Scryfall...") }
+
+                // Fetch commander data
+                val commanderWithData = scryfallApi.getCardByName(parsedDeck.commander.name)
+                    ?: parsedDeck.commander
+
+                // Fetch card data for all cards in deck
+                val cardsWithData = mutableListOf<Card>()
+                parsedDeck.cards.forEachIndexed { index, card ->
+                    val progress = "Loading Player ${playerIndex + 1} cards... (${index + 1}/${parsedDeck.cards.size})"
+                    _uiState.update { it.copy(loadingProgress = progress) }
+
+                    val cardWithData = scryfallApi.getCardByName(card.name) ?: card
+                    cardsWithData.add(cardWithData)
+                }
+
+                // Create deck with fetched data
+                val deckWithData = Deck(
+                    name = "Player ${playerIndex + 1} Deck",
+                    commander = commanderWithData,
+                    cards = cardsWithData
+                )
+
+                _uiState.update {
+                    it.copy(
+                        hotseatDecks = it.hotseatDecks + (playerIndex to deckWithData),
+                        isLoading = false,
+                        loadingProgress = "",
+                        error = null
+                    )
+                }
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        loadingProgress = "",
+                        error = "Failed to load deck for Player ${playerIndex + 1}: ${e.message}"
+                    )
+                }
+            }
+        }
+    }
+
+    /**
+     * Start a local hotseat game
+     */
+    fun startHotseatGame() {
+        val requiredDeckCount = _uiState.value.playerCount
+        val loadedDeckCount = _uiState.value.hotseatDecks.size
+
+        if (loadedDeckCount < requiredDeckCount) {
+            _uiState.update {
+                it.copy(error = "Please load decks for all $requiredDeckCount players (currently $loadedDeckCount loaded)")
+            }
+            return
+        }
+
+        _uiState.update { it.copy(currentScreen = Screen.Game) }
     }
 
     /**

@@ -107,6 +107,70 @@ class GameViewModel {
     }
 
     /**
+     * Load a deck for a specific player (for hotseat mode)
+     */
+    fun loadDeckForPlayer(playerId: String, deck: Deck) {
+        val currentState = _uiState.value
+        val gameState = currentState.gameState ?: return
+
+        // Create card instances for all cards in the deck
+        val cardInstances = mutableListOf<CardInstance>()
+
+        // Commander goes to command zone
+        cardInstances.add(
+            CardInstance(
+                card = deck.commander,
+                ownerId = playerId,
+                zone = Zone.COMMAND_ZONE
+            )
+        )
+
+        // All other cards start in library
+        deck.cards.forEach { card ->
+            cardInstances.add(
+                CardInstance(
+                    card = card,
+                    ownerId = playerId,
+                    zone = Zone.LIBRARY
+                )
+            )
+        }
+
+        // Shuffle library (simple random shuffle)
+        val shuffledInstances = cardInstances.shuffled()
+
+        // Replace existing cards for this player to avoid duplicates
+        val otherPlayerCards = gameState.cardInstances.filter { it.ownerId != playerId }
+
+        val updatedGameState = gameState.copy(
+            cardInstances = otherPlayerCards + shuffledInstances
+        )
+
+        // Update the player objects in UI state
+        val updatedLocalPlayer = if (currentState.localPlayer?.id == playerId) {
+            updatedGameState.players.find { it.id == playerId }
+        } else {
+            currentState.localPlayer
+        }
+
+        val updatedOpponents = currentState.opponents.map { opponent ->
+            if (opponent.id == playerId) {
+                updatedGameState.players.find { it.id == playerId } ?: opponent
+            } else {
+                opponent
+            }
+        }
+
+        _uiState.update {
+            it.copy(
+                gameState = updatedGameState,
+                localPlayer = updatedLocalPlayer,
+                opponents = updatedOpponents
+            )
+        }
+    }
+
+    /**
      * Draw starting hand (7 cards by default)
      */
     fun drawStartingHand(playerId: String, cardCount: Int = GameConstants.STARTING_HAND_SIZE) {

@@ -22,7 +22,9 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 @Composable
 fun GameScreen(
     loadedDeck: com.commandermtg.models.Deck? = null,
+    hotseatDecks: Map<Int, com.commandermtg.models.Deck> = emptyMap(),
     playerCount: Int = 2, // Total players (including local player): 2, 3, or 4
+    isHotseatMode: Boolean = false,
     viewModel: GameViewModel = remember { GameViewModel() }
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -31,31 +33,59 @@ fun GameScreen(
     LaunchedEffect(Unit) {
         // Initialize game if not already done
         if (uiState.localPlayer == null) {
-            // Generate opponent names based on player count
-            val opponentCount = (playerCount - 1).coerceIn(1, 3)
-            val opponentNames = List(opponentCount) { index ->
-                "Opponent ${index + 1}"
+            // Generate player names based on mode
+            val playerNames = if (isHotseatMode) {
+                List(playerCount) { index -> "Player ${index + 1}" }
+            } else {
+                val opponentCount = (playerCount - 1).coerceIn(1, 3)
+                val opponentNames = List(opponentCount) { index ->
+                    "Opponent ${index + 1}"
+                }
+                listOf("You") + opponentNames
             }
 
             viewModel.initializeGame(
-                localPlayerName = "You",
-                opponentNames = opponentNames
+                localPlayerName = playerNames[0],
+                opponentNames = playerNames.drop(1)
             )
         }
     }
 
-    // Load deck when it becomes available and game is initialized
-    LaunchedEffect(loadedDeck, uiState.gameState, uiState.localPlayer) {
-        val localPlayer = uiState.localPlayer
-        if (loadedDeck != null && uiState.gameState != null && localPlayer != null) {
-            val currentHandCount = viewModel.getCardCount(localPlayer.id, Zone.HAND)
+    // Load decks for hotseat mode
+    LaunchedEffect(hotseatDecks, uiState.gameState, uiState.allPlayers) {
+        if (isHotseatMode && hotseatDecks.isNotEmpty() && uiState.gameState != null) {
+            val allPlayers = uiState.allPlayers
 
-            // Only load deck if we haven't already loaded it (hand is empty and library is empty)
-            val libraryCount = viewModel.getCardCount(localPlayer.id, Zone.LIBRARY)
-            if (currentHandCount == 0 && libraryCount == 0) {
-                viewModel.loadDeck(loadedDeck)
-                // Draw starting hand for local player (opponents will load their own decks in multiplayer)
-                viewModel.drawStartingHand(localPlayer.id, 7)
+            // Load deck for each player
+            hotseatDecks.forEach { (playerIndex, deck) ->
+                if (playerIndex < allPlayers.size) {
+                    val player = allPlayers[playerIndex]
+                    val libraryCount = viewModel.getCardCount(player.id, Zone.LIBRARY)
+                    val handCount = viewModel.getCardCount(player.id, Zone.HAND)
+
+                    // Only load if not already loaded
+                    if (libraryCount == 0 && handCount == 0) {
+                        viewModel.loadDeckForPlayer(player.id, deck)
+                        viewModel.drawStartingHand(player.id, 7)
+                    }
+                }
+            }
+        }
+    }
+
+    // Load deck for network mode (single deck for local player)
+    LaunchedEffect(loadedDeck, uiState.gameState, uiState.localPlayer) {
+        if (!isHotseatMode) {
+            val localPlayer = uiState.localPlayer
+            if (loadedDeck != null && uiState.gameState != null && localPlayer != null) {
+                val currentHandCount = viewModel.getCardCount(localPlayer.id, Zone.HAND)
+                val libraryCount = viewModel.getCardCount(localPlayer.id, Zone.LIBRARY)
+
+                // Only load deck if we haven't already loaded it
+                if (currentHandCount == 0 && libraryCount == 0) {
+                    viewModel.loadDeck(loadedDeck)
+                    viewModel.drawStartingHand(localPlayer.id, 7)
+                }
             }
         }
     }
