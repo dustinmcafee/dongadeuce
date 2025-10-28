@@ -7,6 +7,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.0] - 2025-10-27
+
+### Added
+- Commander Damage Tracking System
+  - CommanderDamageDialog displays damage matrix for all commanders vs all players
+  - Shows card image thumbnail for each commander
+  - Click +/- buttons to adjust damage dealt to each player
+  - Highlights lethal damage (21+) with red background and border
+  - Displays "LETHAL DAMAGE!" warning for 21+ damage
+  - Shows commander owner information
+  - Scrollable dialog for games with many commanders
+- Commander Damage button in player area
+  - Opens commander damage tracking dialog
+  - Positioned below Draw and Hand buttons
+- Loss condition visual indicators
+  - Player/opponent cards turn red when hasLost is true
+  - "DEFEATED" label displayed for eliminated players
+  - Automatic loss detection when commander damage reaches 21+
+- Added getAllCommanders() function to GameViewModel
+  - Returns all commanders in command zone or on battlefield
+  - Filters for Legendary Creatures on battlefield
+- Added updateCommanderDamage() function to GameViewModel
+  - Updates commander damage for a specific player
+  - Handles both increment and decrement of damage
+  - Automatically checks and updates hasLost flag
+  - Syncs player state across localPlayer and opponents
+
+### Changed
+- Player model's takeCommanderDamage already supported automatic loss detection
+- Player info cards now show red background when player has lost
+- Life total displays now indicate defeated players
+
+### Technical Details
+- Created `CommanderDamageDialog.kt` with damage tracking UI
+- Added commander damage management to GameViewModel
+- Commander damage stored as Map<String, Int> in Player model
+- Loss condition automatically checked when damage >= 21
+- Visual feedback throughout UI for eliminated players
+
 ## [1.4.0] - 2025-10-27
 
 ### Added
@@ -312,16 +351,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### 🟢 MEDIUM PRIORITY - Enhanced Features (v1.3.0)
 
 #### Commander Damage
-- [ ] Create `CommanderDamageDialog.kt`
-  - [ ] Matrix of all commanders vs all players
-  - [ ] Click to add/subtract damage
-  - [ ] Highlight 21+ damage
-  - [ ] Button to open from player area
-- [ ] Add commander damage tracking
-  - [ ] Update Player model (already has field)
-  - [ ] `takeCommanderDamage()` function
-  - [ ] UI indicator when damaged by commander
-  - [ ] Loss condition check (21+ damage)
+- [x] Create `CommanderDamageDialog.kt`
+  - [x] Matrix of all commanders vs all players
+  - [x] Click to add/subtract damage
+  - [x] Highlight 21+ damage
+  - [x] Button to open from player area
+- [x] Add commander damage tracking
+  - [x] Update Player model (already has field)
+  - [x] `takeCommanderDamage()` function
+  - [x] UI indicator when damaged by commander
+  - [x] Loss condition check (21+ damage)
 
 #### Card Context Menu
 - [ ] Create `CardContextMenu.kt`
@@ -447,7 +486,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Current Progress
 
-**Overall Completion:** ~60% for full 2+ player Cockatrice-like experience
+**Overall Completion:** ~65% for full 2+ player Cockatrice-like experience
 
 **By Category:**
 - ✅ Core Architecture: 100%
@@ -459,9 +498,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - ✅ Zone Interactions: 70% (graveyard and exile viewers complete, missing library search)
 - ✅ Turn System: 90% (missing network sync)
 - ✅ Card Images: 95% (loading and caching complete, missing hover preview)
-- ❌ Commander Damage UI: 0%
-- 🟡 Game Actions: 55%
+- ✅ Commander Damage UI: 100%
+- 🟡 Game Actions: 60%
 
-**Estimated Time to MVP (v1.4.0):**
+**Estimated Time to MVP (v1.5.0):**
 - With networking: 2-3 weeks
-- Without networking (local hotseat): 3-5 days
+- Without networking (local hotseat): 2-3 days

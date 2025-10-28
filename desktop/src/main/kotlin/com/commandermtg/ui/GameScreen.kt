@@ -99,6 +99,7 @@ fun GameScreen(
                 PlayerArea(
                     player = localPlayer,
                     viewModel = viewModel,
+                    allPlayers = uiState.allPlayers,
                     modifier = Modifier
                         .fillMaxWidth()
                         .weight(0.3f)
@@ -202,7 +203,13 @@ fun OpponentArea(
 
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                colors = CardDefaults.cardColors(
+                    containerColor = if (player.hasLost) {
+                        MaterialTheme.colorScheme.errorContainer
+                    } else {
+                        MaterialTheme.colorScheme.surfaceVariant
+                    }
+                )
             ) {
                 Column(
                     modifier = Modifier.padding(16.dp),
@@ -210,6 +217,13 @@ fun OpponentArea(
                 ) {
                     Text(player.name, style = MaterialTheme.typography.titleMedium)
                     Text("Life: ${player.life}", style = MaterialTheme.typography.headlineMedium)
+                    if (player.hasLost) {
+                        Text(
+                            "DEFEATED",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
                 }
             }
         }
@@ -280,11 +294,13 @@ fun BattlefieldArea(
 fun PlayerArea(
     player: Player,
     viewModel: GameViewModel,
+    allPlayers: List<Player>,
     modifier: Modifier = Modifier
 ) {
     var showHandDialog by remember { mutableStateOf(false) }
     var showGraveyardDialog by remember { mutableStateOf(false) }
     var showExileDialog by remember { mutableStateOf(false) }
+    var showCommanderDamageDialog by remember { mutableStateOf(false) }
 
     val libraryCount = viewModel.getCardCount(player.id, Zone.LIBRARY)
     val handCount = viewModel.getCardCount(player.id, Zone.HAND)
@@ -334,6 +350,18 @@ fun PlayerArea(
         )
     }
 
+    // Show commander damage dialog if requested
+    if (showCommanderDamageDialog) {
+        CommanderDamageDialog(
+            players = allPlayers,
+            commanders = viewModel.getAllCommanders(),
+            onDismiss = { showCommanderDamageDialog = false },
+            onDamageChange = { playerId, commanderId, newDamage ->
+                viewModel.updateCommanderDamage(playerId, commanderId, newDamage)
+            }
+        )
+    }
+
     Row(modifier = modifier) {
         // Commander zone
         ZoneCard("Commander", Zone.COMMAND_ZONE, commanderCount, Modifier.width(120.dp))
@@ -347,7 +375,13 @@ fun PlayerArea(
         ) {
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+                colors = CardDefaults.cardColors(
+                    containerColor = if (player.hasLost) {
+                        MaterialTheme.colorScheme.errorContainer
+                    } else {
+                        MaterialTheme.colorScheme.primaryContainer
+                    }
+                )
             ) {
                 Row(
                     modifier = Modifier.padding(16.dp),
@@ -365,26 +399,45 @@ fun PlayerArea(
                                 Text("+", style = MaterialTheme.typography.headlineSmall)
                             }
                         }
+                        if (player.hasLost) {
+                            Text(
+                                "DEFEATED",
+                                style = MaterialTheme.typography.labelLarge,
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        }
                     }
                 }
             }
 
-            Row(
+            Column(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Button(
-                    onClick = { viewModel.drawCard(player.id) },
-                    modifier = Modifier.weight(1f)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Text("Draw")
+                    Button(
+                        onClick = { viewModel.drawCard(player.id) },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("Draw")
+                    }
+
+                    OutlinedButton(
+                        onClick = { showHandDialog = true },
+                        modifier = Modifier.weight(2f)
+                    ) {
+                        Text("Hand ($handCount)")
+                    }
                 }
 
                 OutlinedButton(
-                    onClick = { showHandDialog = true },
-                    modifier = Modifier.weight(2f)
+                    onClick = { showCommanderDamageDialog = true },
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Hand ($handCount)")
+                    Text("Commander Damage")
                 }
             }
         }

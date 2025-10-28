@@ -304,4 +304,60 @@ class GameViewModel {
             it.copy(selectedCardId = cardInstanceId)
         }
     }
+
+    /**
+     * Get all commanders in the game (cards in command zone or battlefield)
+     */
+    fun getAllCommanders(): List<CardInstance> {
+        val gameState = _uiState.value.gameState ?: return emptyList()
+        return gameState.cardInstances.filter {
+            it.zone == Zone.COMMAND_ZONE ||
+            (it.zone == Zone.BATTLEFIELD && it.card.type?.contains("Legendary Creature", ignoreCase = true) == true)
+        }
+    }
+
+    /**
+     * Update commander damage dealt to a player
+     */
+    fun updateCommanderDamage(playerId: String, commanderId: String, newDamage: Int) {
+        val currentState = _uiState.value
+        val gameState = currentState.gameState ?: return
+
+        val updatedGameState = gameState.updatePlayer(playerId) { player ->
+            val currentDamage = player.commanderDamage[commanderId] ?: 0
+            val damageChange = newDamage - currentDamage
+
+            if (damageChange > 0) {
+                player.takeCommanderDamage(commanderId, damageChange)
+            } else if (damageChange < 0) {
+                // Manual decrease - update the map directly
+                player.copy(
+                    commanderDamage = player.commanderDamage + (commanderId to newDamage),
+                    hasLost = player.commanderDamage.any { (id, damage) ->
+                        if (id == commanderId) newDamage >= 21 else damage >= 21
+                    }
+                )
+            } else {
+                player
+            }
+        }
+
+        _uiState.update {
+            it.copy(
+                gameState = updatedGameState,
+                localPlayer = if (currentState.localPlayer?.id == playerId) {
+                    updatedGameState.players.find { p -> p.id == playerId }
+                } else {
+                    currentState.localPlayer
+                },
+                opponents = currentState.opponents.map { opponent ->
+                    if (opponent.id == playerId) {
+                        updatedGameState.players.find { p -> p.id == playerId } ?: opponent
+                    } else {
+                        opponent
+                    }
+                }
+            )
+        }
+    }
 }
