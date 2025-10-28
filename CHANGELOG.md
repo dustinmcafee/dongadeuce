@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.6.0] - 2025-10-27
+
+### Added
+- Complete set of missing GameViewModel functions for enhanced gameplay
+  - `shuffleLibrary(playerId)` - Shuffle a player's library
+  - `getPlayerBattlefieldCards(playerId)` - Get all battlefield cards for a specific player
+  - `addCounter(cardId, type, amount)` - Add counters to cards (+1/+1, charge counters, etc.)
+  - `removeCounter(cardId, type, amount)` - Remove counters from cards
+  - `attachCard(sourceId, targetId)` - Attach auras/equipment to target cards
+  - `detachCard(cardId)` - Remove card attachments
+  - `flipCard(cardId)` - Flip cards (for morph, flip cards, etc.)
+  - `millCards(playerId, count)` - Mill cards from top of library to graveyard
+  - `mulligan(playerId)` - Return hand to library, shuffle, and draw new hand
+
+### Changed
+- GameViewModel now has 24 total functions (up from 16)
+- All essential Commander gameplay mechanics now supported
+- Counter management fully functional (already had addCounter in CardInstance model)
+
+### Technical Details
+- All functions follow existing StateFlow update patterns
+- Functions integrate with existing GameState update methods
+- Mulligan uses shuffleLibrary and drawStartingHand internally
+- MillCards uses moveCard internally for each card
+
 ## [1.5.0] - 2025-10-27
 
 ### Added
@@ -379,18 +404,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - [ ] Attach/detach
 
 #### Missing GameViewModel Functions
-- [ ] `shuffleLibrary(playerId)`
-- [ ] `searchLibrary(playerId, predicate)`
-- [ ] `millCards(playerId, count)`
-- [ ] `mulligan(playerId)`
-- [ ] `addCounter(cardId, type, amount)`
-- [ ] `removeCounter(cardId, type, amount)`
-- [ ] `flipCard(cardId)`
-- [ ] `attachCard(sourceId, targetId)`
-- [ ] `detachCard(cardId)`
-- [ ] `untapAll(playerId)`
-- [ ] `getBattlefieldCards()`
-- [ ] `getPlayerBattlefieldCards(playerId)`
+- [x] `shuffleLibrary(playerId)`
+- [ ] `searchLibrary(playerId, predicate)` - requires Library Search Dialog
+- [x] `millCards(playerId, count)`
+- [x] `mulligan(playerId)`
+- [x] `addCounter(cardId, type, amount)`
+- [x] `removeCounter(cardId, type, amount)`
+- [x] `flipCard(cardId)`
+- [x] `attachCard(sourceId, targetId)`
+- [x] `detachCard(cardId)`
+- [x] `untapAll(playerId)` - already implemented in v1.1.0
+- [x] `getBattlefieldCards()` - already implemented in v1.2.0
+- [x] `getPlayerBattlefieldCards(playerId)`
 
 #### Enhanced Hand UI
 - [ ] Multiple action buttons per card
@@ -486,7 +511,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Current Progress
 
-**Overall Completion:** ~65% for full 2+ player Cockatrice-like experience
+**Overall Completion:** ~70% for full 2+ player Cockatrice-like experience
 
 **By Category:**
 - ✅ Core Architecture: 100%
@@ -499,8 +524,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - ✅ Turn System: 90% (missing network sync)
 - ✅ Card Images: 95% (loading and caching complete, missing hover preview)
 - ✅ Commander Damage UI: 100%
-- 🟡 Game Actions: 60%
+- ✅ Game Actions: 95% (all essential functions implemented, only searchLibrary needs UI component)
 
-**Estimated Time to MVP (v1.5.0):**
+**Estimated Time to MVP (v1.6.0):**
 - With networking: 2-3 weeks
-- Without networking (local hotseat): 2-3 days
+- Without networking (local hotseat): 1-2 days

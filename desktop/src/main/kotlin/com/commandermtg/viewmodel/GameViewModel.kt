@@ -360,4 +360,168 @@ class GameViewModel {
             )
         }
     }
+
+    /**
+     * Shuffle a player's library
+     */
+    fun shuffleLibrary(playerId: String) {
+        val currentState = _uiState.value
+        val gameState = currentState.gameState ?: return
+
+        // Get all library cards for this player
+        val libraryCards = gameState.cardInstances
+            .filter { it.ownerId == playerId && it.zone == Zone.LIBRARY }
+            .shuffled()
+
+        // Get all non-library cards
+        val otherCards = gameState.cardInstances
+            .filter { !(it.ownerId == playerId && it.zone == Zone.LIBRARY) }
+
+        // Update game state with shuffled library
+        _uiState.update {
+            it.copy(
+                gameState = gameState.copy(cardInstances = otherCards + libraryCards)
+            )
+        }
+    }
+
+    /**
+     * Get all battlefield cards for a specific player
+     */
+    fun getPlayerBattlefieldCards(playerId: String): List<CardInstance> {
+        val gameState = _uiState.value.gameState ?: return emptyList()
+        return gameState.cardInstances.filter {
+            it.ownerId == playerId && it.zone == Zone.BATTLEFIELD
+        }
+    }
+
+    /**
+     * Add counter(s) to a card
+     */
+    fun addCounter(cardId: String, type: String, amount: Int = 1) {
+        val currentState = _uiState.value
+        val gameState = currentState.gameState ?: return
+
+        val updatedGameState = gameState.updateCardInstance(cardId) {
+            it.addCounter(type, amount)
+        }
+
+        _uiState.update {
+            it.copy(gameState = updatedGameState)
+        }
+    }
+
+    /**
+     * Remove counter(s) from a card
+     */
+    fun removeCounter(cardId: String, type: String, amount: Int = 1) {
+        val currentState = _uiState.value
+        val gameState = currentState.gameState ?: return
+
+        val updatedGameState = gameState.updateCardInstance(cardId) { card ->
+            val current = card.counters[type] ?: 0
+            val newAmount = (current - amount).coerceAtLeast(0)
+            card.copy(
+                counters = if (newAmount > 0) {
+                    card.counters + (type to newAmount)
+                } else {
+                    card.counters - type
+                }
+            )
+        }
+
+        _uiState.update {
+            it.copy(gameState = updatedGameState)
+        }
+    }
+
+    /**
+     * Attach a card (aura/equipment) to another card
+     */
+    fun attachCard(sourceId: String, targetId: String) {
+        val currentState = _uiState.value
+        val gameState = currentState.gameState ?: return
+
+        val updatedGameState = gameState.updateCardInstance(sourceId) {
+            it.copy(attachedTo = targetId)
+        }
+
+        _uiState.update {
+            it.copy(gameState = updatedGameState)
+        }
+    }
+
+    /**
+     * Detach a card (remove attachment)
+     */
+    fun detachCard(cardId: String) {
+        val currentState = _uiState.value
+        val gameState = currentState.gameState ?: return
+
+        val updatedGameState = gameState.updateCardInstance(cardId) {
+            it.copy(attachedTo = null)
+        }
+
+        _uiState.update {
+            it.copy(gameState = updatedGameState)
+        }
+    }
+
+    /**
+     * Flip a card (for flip cards, morph, etc.)
+     */
+    fun flipCard(cardId: String) {
+        val currentState = _uiState.value
+        val gameState = currentState.gameState ?: return
+
+        val updatedGameState = gameState.updateCardInstance(cardId) {
+            it.flip()
+        }
+
+        _uiState.update {
+            it.copy(gameState = updatedGameState)
+        }
+    }
+
+    /**
+     * Mill cards from top of library to graveyard
+     */
+    fun millCards(playerId: String, count: Int) {
+        repeat(count) {
+            val currentState = _uiState.value
+            val gameState = currentState.gameState ?: return@repeat
+
+            // Get top card of library
+            val topCard = gameState.cardInstances
+                .filter { it.ownerId == playerId && it.zone == Zone.LIBRARY }
+                .firstOrNull()
+
+            if (topCard != null) {
+                moveCard(topCard.instanceId, Zone.GRAVEYARD)
+            }
+        }
+    }
+
+    /**
+     * Mulligan - return hand to library, shuffle, and draw new hand
+     */
+    fun mulligan(playerId: String) {
+        val currentState = _uiState.value
+        val gameState = currentState.gameState ?: return
+
+        // Get all cards in hand
+        val handCards = gameState.cardInstances
+            .filter { it.ownerId == playerId && it.zone == Zone.HAND }
+
+        // Move all hand cards to library
+        handCards.forEach { card ->
+            moveCard(card.instanceId, Zone.LIBRARY)
+        }
+
+        // Shuffle library
+        shuffleLibrary(playerId)
+
+        // Draw 7 cards
+        drawStartingHand(playerId, 7)
+    }
 }
