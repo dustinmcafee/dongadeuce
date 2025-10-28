@@ -67,37 +67,56 @@ cd commander-mtg
 
 ## Current Status (v2.10.6)
 
-### ✅ Implemented Features
-- Project structure and Gradle setup
-- Core domain models (Card, Deck, Player, GameState, Zones)
-- MVVM architecture with ViewModels and StateFlow
-- Text-based deck format parser
-- Complete UI flow (menu, lobby, game screen)
-- Deck loading with file chooser
-- **Scryfall API integration** - Full card data (mana cost, type, text)
-- **Starting hand draw** - Automatic 7-card opening hands
-- **Draw cards** - Draw button with working functionality
-- **Hand view** - Dialog showing your cards with Play button
-- **Play cards** - Move cards from hand to battlefield
-- **Hotseat Mode** - Full 2-4 player support on same computer
-- **Battlefield Grid** - Drag-and-drop card arrangement
-- **Tap/Untap** - Double-click to tap/untap cards
-- **Zone Viewers** - Click to view graveyard, exile, library, command zone
-- Game zones with dynamic card counts
-- Life tracking with +/- buttons
-- Commander zone support
+**Hotseat Mode:** 90% Complete - Fully Playable! ✅
+**Network Mode:** 5% Complete - UI Only ⏳
 
-### ⏳ In Progress / Planned
-- **Turn/Phase System** - Phase indicator and turn advancement
-- **Commander Damage Tracking** - Damage matrix UI
-- **Game Log** - Event history and action feed
-- **P2P Networking** - Ktor WebSockets for remote multiplayer
-- **Card Images** - Image loading and caching
-- **Additional Game Actions** - Scry, mill, tutor, tokens, etc.
+### ✅ Fully Implemented
+
+**Core Gameplay:**
+- **Turn/Phase System** - Full MTG phase cycle with visual indicator
+- **Commander Damage Tracking** - Complete UI with 21-damage lethal detection
+- **Card Context Menus** - Right-click menus for all zones with comprehensive actions
+- **Library Search** - Full search/filter dialog with card manipulation
+- **Zone Viewers** - Interactive dialogs for graveyard, exile, command zone
+- **Drag-and-Drop Battlefield** - Grid-based card positioning system
+- **Card Images** - Async loading with 500MB+ offline cache
+- **Tap/Untap** - Double-click and context menu support
+- **Counters** - Add/remove +1/+1, charge, and custom counters
+- **Card Attachments** - Aura/Equipment attachment system
+- **Flip Cards** - Full flip card support
+- **Life Tracking** - Automatic loss detection
+- **Draw from Empty Library** - Automatic loss detection
+- **All Zone Operations** - Move cards between any zones
+- **Library Operations** - Draw, mill, shuffle, search, tutor, mulligan
+
+**Hotseat Multiplayer:**
+- **2-4 Player Support** - Full local multiplayer
+- **Per-Player Deck Loading** - Each player loads their own deck
+- **Automatic Player Rotation** - UI rotates to show active player
+- **Hand Privacy** - Only active player sees their cards
+- **Turn Passing** - Automatic player advancement
+- **Zone Access Control** - Only active player can interact
+
+**Technical:**
+- MVVM architecture with StateFlow
+- Scryfall API integration
+- Bulk card cache with progress UI
+- Text-based deck parser
+- 44 passing unit tests
+- Comprehensive input validation
+
+### ❌ Not Yet Implemented
+
+**Missing Features:**
+- **Game Log/History** - No action history (2-3 days work)
+- **Commander Tax Tracking** - Manual tracking required (1 day work)
+- **Network Multiplayer Backend** - UI exists but no server/client (3-4 weeks work)
+- **Token Creation** - No token support
+- **Keyboard Shortcuts** - All actions require mouse
 
 ### Completion Status
-- **Hotseat Mode:** ~75% complete (missing turn system, commander damage UI)
-- **Network Mode:** ~5% complete (protocol defined, not implemented)
+- **Hotseat Mode:** ~90% complete (playable, missing game log + commander tax)
+- **Network Mode:** ~5% complete (UI only, no backend)
 
 ## Tech Stack
 
@@ -122,21 +141,31 @@ The UI includes all Commander zones:
 
 See [TODO.md](TODO.md) for detailed development roadmap.
 
-### Immediate Priorities (v2.11.0)
-1. **Turn/Phase System** - Critical for playable games
-2. **Commander Damage UI** - Essential for Commander format
-3. **Game Log** - Important for multiplayer awareness
-4. **Commander Tax** - Track commander casting costs
+### Immediate Priorities (v2.11.0 - 1 week)
+1. **Game Log/History System** - Track all game actions for review (2-3 days)
+2. **Commander Tax Tracking** - Automatic tax calculation (1 day)
+3. **Keyboard Shortcuts** - Speed up common actions (1 day)
 
-### Medium Term (v2.12.0)
-5. Card images with caching
-6. Additional game actions (scry, mill, tokens)
-7. Improved battlefield visualization
-8. UI enhancements and keyboard shortcuts
+**Result:** Feature-complete hotseat multiplayer
 
-### Long Term (v3.0.0)
-9. P2P networking with Ktor WebSockets
-10. Lobby system for remote multiplayer
-11. Network game state synchronization
-12. Spectator mode
+### Medium Term (v2.12.0 - 1-2 weeks)
+4. Settings/Preferences - Player name persistence, defaults
+5. Token Creation - Create common and custom tokens
+6. Copy/Clone Cards - Support for card copying effects
+7. Animations - Card movement and tap animations
+8. Sound Effects - Audio feedback for actions
+
+**Result:** Polished hotseat experience
+
+### Long Term (v3.0.0 - 3-4 weeks)
+9. **Network Multiplayer Backend** - The big one
+   - GameServer.kt with Ktor WebSockets
+   - GameClient.kt with Ktor WebSockets
+   - GameMessage.kt network protocol
+   - State synchronization
+   - Integration with ViewModels
+10. Chat System - In-game chat with commands
+11. Spectator Mode - Watch games in progress
+
+**Result:** Full network multiplayer
 

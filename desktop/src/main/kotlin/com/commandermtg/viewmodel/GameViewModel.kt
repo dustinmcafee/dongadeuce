@@ -342,15 +342,11 @@ class GameViewModel {
         val currentState = _uiState.value
         val gameState = currentState.gameState ?: return
 
-        println("[ViewModel] passTurn called - current activePlayerIndex: ${gameState.activePlayerIndex}")
-
         // Keep advancing phases until we reach the next UNTAP phase (new turn)
         var updatedState = gameState
         do {
             updatedState = updatedState.nextPhase()
         } while (updatedState.phase != com.commandermtg.models.GamePhase.UNTAP)
-
-        println("[ViewModel] After nextPhase loop - new activePlayerIndex: ${updatedState.activePlayerIndex}, activePlayer: ${updatedState.activePlayer.name}")
 
         // Don't automatically untap - player must click "Untap All" button
         val finalGameState = updatedState
@@ -362,8 +358,6 @@ class GameViewModel {
             val newLocalPlayer = allPlayers[activePlayerIndex]
             val newOpponents = allPlayers.filterIndexed { index, _ -> index != activePlayerIndex }
 
-            println("[ViewModel] Hotseat mode - updating to activePlayer: ${newLocalPlayer.name}")
-
             _uiState.update {
                 it.copy(
                     gameState = finalGameState,
@@ -371,8 +365,6 @@ class GameViewModel {
                     opponents = newOpponents
                 )
             }
-
-            println("[ViewModel] State updated - new localPlayer: ${_uiState.value.localPlayer?.name}")
         } else {
             _uiState.update {
                 it.copy(
