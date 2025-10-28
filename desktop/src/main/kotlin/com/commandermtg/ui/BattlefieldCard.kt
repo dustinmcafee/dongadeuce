@@ -76,64 +76,73 @@ fun BattlefieldCard(
             elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
         ) {
             Box(modifier = Modifier.fillMaxSize()) {
-                // Card image as background
+                // Card image as background (show card back if flipped)
+                val imageUrl = if (cardInstance.isFlipped) {
+                    // Magic card back image from Scryfall
+                    "https://cards.scryfall.io/large/back/0/0/0aeebaf5-8c7d-4636-9e82-8c27447861f7.jpg"
+                } else {
+                    cardInstance.card.imageUri
+                }
+
                 CardImage(
-                    imageUrl = cardInstance.card.imageUri,
-                    contentDescription = cardInstance.card.name,
+                    imageUrl = imageUrl,
+                    contentDescription = if (cardInstance.isFlipped) "Card Back" else cardInstance.card.name,
                     modifier = Modifier.fillMaxSize()
                 )
 
-                // Overlay for counters and controller info
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(4.dp),
-                    verticalArrangement = Arrangement.SpaceBetween
-                ) {
-                    // Counters (top)
-                    if (cardInstance.counters.isNotEmpty()) {
-                        Surface(
-                            color = Color.Black.copy(alpha = 0.7f),
-                            shape = RoundedCornerShape(4.dp)
-                        ) {
-                            Column(
-                                modifier = Modifier.padding(4.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.spacedBy(2.dp)
-                            ) {
-                                cardInstance.counters.forEach { (counterType, count) ->
-                                    Text(
-                                        text = "$count $counterType",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = Color.White
-                                    )
-                                }
-                            }
-                        }
-                    } else {
-                        Spacer(modifier = Modifier.height(1.dp))
-                    }
-
-                    Spacer(modifier = Modifier.weight(1f))
-
-                    // Power/Toughness indicator (bottom right for creatures)
-                    val power = cardInstance.card.power
-                    val toughness = cardInstance.card.toughness
-                    if (power != null && toughness != null) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.End
-                        ) {
+                // Overlay for counters and controller info (only show when not flipped)
+                if (!cardInstance.isFlipped) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(4.dp),
+                        verticalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        // Counters (top)
+                        if (cardInstance.counters.isNotEmpty()) {
                             Surface(
                                 color = Color.Black.copy(alpha = 0.7f),
                                 shape = RoundedCornerShape(4.dp)
                             ) {
-                                Text(
-                                    text = "$power/$toughness",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = Color.White,
-                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                )
+                                Column(
+                                    modifier = Modifier.padding(4.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                                ) {
+                                    cardInstance.counters.forEach { (counterType, count) ->
+                                        Text(
+                                            text = "$count $counterType",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = Color.White
+                                        )
+                                    }
+                                }
+                            }
+                        } else {
+                            Spacer(modifier = Modifier.height(1.dp))
+                        }
+
+                        Spacer(modifier = Modifier.weight(1f))
+
+                        // Power/Toughness indicator (bottom right for creatures)
+                        val power = cardInstance.card.power
+                        val toughness = cardInstance.card.toughness
+                        if (power != null && toughness != null) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.End
+                            ) {
+                                Surface(
+                                    color = Color.Black.copy(alpha = 0.7f),
+                                    shape = RoundedCornerShape(4.dp)
+                                ) {
+                                    Text(
+                                        text = "$power/$toughness",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = Color.White,
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                    )
+                                }
                             }
                         }
                     }
