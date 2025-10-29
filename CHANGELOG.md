@@ -7,6 +7,123 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.16.0] - 2025-10-28
+
+### Fixed
+- **Right-Click Selection Preservation** - Fixed right-click deselecting other cards
+  - Right-clicking now properly consumes both press and release events
+  - Selection state preserved when opening context menu on selected cards
+  - Works in both hand and battlefield zones
+  - Context menu actions apply to all selected cards as intended
+
+### Added
+- **Multi-Card Drag Animation** - Visual feedback when dragging multiple selected cards
+  - All selected cards now show drag animation (50% transparency and movement)
+  - Visual feedback matches the number of cards being dragged
+  - Works when dragging from hand to battlefield
+  - Smooth synchronized movement for all selected cards
+  - Matches Cockatrice's visual behavior for multi-card drag
+
+## [2.15.0] - 2025-10-28
+
+### Fixed
+- **Single-Click Selection Behavior** - Clicking any card now properly clears other selections
+  - Single-clicking a selected card now deselects others (as in Cockatrice)
+  - Shift+click still toggles individual cards in/out of selection
+  - Works consistently in both hand and battlefield
+  - Makes it easy to switch focus between card groups
+
+- **Context Menu Batch Operations** - Right-click now applies to all selected cards
+  - Right-clicking any selected card shows menu that applies to ALL selected cards
+  - Move multiple cards to graveyard, exile, hand, etc. with one action
+  - Tap/untap, flip, and add/remove counters work on all selected cards
+  - Matches Cockatrice multi-selection context menu behavior
+
+- **Stack Overflow Prevention** - Multiple stacks created when dropping too many cards
+  - When dropping cards on a stack that would exceed 3 cards, overflow goes to next position
+  - Automatically finds available positions for cards that don't fit
+  - No more hidden cards behind stacks
+  - Preserves intended drop location for as many cards as possible
+
+- **Drag-Drop from Hand** - Dragging hand cards now plays them to battlefield
+  - Drag any card from hand up/down to play it to battlefield
+  - Visual feedback with 50% transparency during drag
+  - Works alongside double-click and context menu methods
+  - Threshold of 20px prevents accidental plays
+
+### Changed
+- **Hand Zone Rendering** - Improved card visibility when moved to hand
+  - Hand cards render in dedicated zone with proper layering
+  - No z-index conflicts with battlefield
+  - Smooth transitions between zones
+
+## [2.14.0] - 2025-10-28
+
+### Fixed
+- **Stack Separation** - Single cards can now be moved individually from stacks
+  - By default, dragging one card moves just that card
+  - Selecting multiple cards and dragging any of them moves all selected cards together
+  - Enables proper stack management like Cockatrice
+
+- **Balanced Stack Offsets** - Improved visual stacking appearance
+  - Changed horizontal offset from 33% to 25% of card width (56dp to 42dp)
+  - Changed vertical offset to 25% of card height (2.6dp to 42dp)
+  - Equal horizontal and vertical offsets for better visual clarity
+  - Cards in stacks are now easier to distinguish and click
+
+- **Right-Click Selection Behavior** - Fixed selection preservation with context menu
+  - Right-clicking a selected card no longer deselects other cards
+  - Context menu actions can be applied to multiple selected cards
+  - Left-click vs right-click now properly distinguished
+  - Clicking an already-selected card doesn't clear the selection
+
+- **Restored Drag-and-Drop from Hand** - Hand cards can be dragged again
+  - Drag cards from hand to move them
+  - Visual feedback during drag (50% transparency)
+  - Compatible with multi-select and context menu
+  - Works alongside shift-click selection
+
+### Removed
+- **Batch Action Bottom Menu** - Removed auto-popup batch action buttons
+  - No more bottom menu with "To Battlefield", "To Graveyard", "To Exile" buttons
+  - All zone movement now done via right-click context menu only
+  - Cleaner interface matching Cockatrice design
+  - Reduces UI clutter and interruptions
+
+## [2.13.0] - 2025-10-28
+
+### Added
+- **Cockatrice-Style Battlefield Card Stacking** - Visual card stacking in battlefield grid
+  - Up to 3 cards can stack at the same grid position
+  - Stacked cards render with visual offset (horizontal: 33% card width, vertical: 33% padding)
+  - Proper z-index layering for stacked cards (bottom to top)
+  - Automatic stack detection and positioning
+
+- **Stack Dragging Support** - Drag entire stacks of battlefield cards together
+  - When dragging a card in a stack, all cards at that position move together
+  - Visual feedback shows all cards in stack moving during drag
+  - All cards in stack update to new position on drop
+  - Only owned cards can be dragged in stacks
+
+- **Shift-Click Multi-Select on Battlefield** - Select multiple battlefield cards
+  - Shift+click to toggle cards in/out of selection
+  - Regular click clears selection and selects clicked card
+  - Double-click to tap/untap card
+  - Green border (5dp) indicates selected cards
+  - Works for both local player and opponents in all game modes
+
+### Changed
+- **Hand Card Multi-Select Interaction** - Improved selection behavior
+  - Shift+click now required for multi-select (was regular click)
+  - Regular click clears selection and selects that card
+  - Double-click plays card to battlefield (clears selection)
+  - More intuitive desktop-style interaction pattern
+
+- **Removed Auto-Popup Zone Selection Dialog** - Cleaner drag-drop workflow
+  - Zone selection dialog no longer appears automatically after drag
+  - Use right-click context menu or drag-drop gesture for zone selection
+  - Reduces interruptions during gameplay
+
 ## [2.12.0] - 2025-10-28
 
 ### Added

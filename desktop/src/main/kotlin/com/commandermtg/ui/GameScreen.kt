@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class)
+
 package com.commandermtg.ui
 
 import androidx.compose.foundation.background
@@ -15,7 +17,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.isShiftPressed
 import androidx.compose.ui.input.pointer.PointerEventType
@@ -68,24 +72,76 @@ fun GameScreen(
                     else -> null
                 }
 
+                // Check if this card is part of a multi-selection
+                val cardsToAct = if (cardInstance != null &&
+                                     selectionState?.isSelected(cardInstance.instanceId) == true &&
+                                     selectionState.selectedCards.size > 1) {
+                    // Apply action to all selected cards
+                    val allCards = uiState.allPlayers.flatMap { player ->
+                        listOf(
+                            viewModel.getCards(player.id, Zone.HAND),
+                            viewModel.getCards(player.id, Zone.BATTLEFIELD),
+                            viewModel.getCards(player.id, Zone.GRAVEYARD),
+                            viewModel.getCards(player.id, Zone.EXILE)
+                        ).flatten()
+                    }
+                    allCards.filter { selectionState.isSelected(it.instanceId) }
+                } else if (cardInstance != null) {
+                    listOf(cardInstance)
+                } else {
+                    emptyList()
+                }
+
                 if (isHotseatMode) {
                     // In hotseat mode, current active player can interact with their cards
                     val activePlayer = uiState.gameState?.activePlayer
-                    if (activePlayer != null && cardInstance != null) {
-                        if (cardInstance.ownerId == activePlayer.id) {
-                            handleCardAction(action, viewModel)
-                        } else {
-                            println("Cannot interact with other player's card: ${cardInstance.card.name}")
+                    if (activePlayer != null) {
+                        cardsToAct.forEach { card ->
+                            if (card.ownerId == activePlayer.id) {
+                                // Create a new action for this specific card
+                                val cardAction = when (action) {
+                                    is CardAction.Tap -> CardAction.Tap(card)
+                                    is CardAction.Untap -> CardAction.Untap(card)
+                                    is CardAction.FlipCard -> CardAction.FlipCard(card)
+                                    is CardAction.ToHand -> CardAction.ToHand(card)
+                                    is CardAction.ToBattlefield -> CardAction.ToBattlefield(card)
+                                    is CardAction.ToGraveyard -> CardAction.ToGraveyard(card)
+                                    is CardAction.ToExile -> CardAction.ToExile(card)
+                                    is CardAction.ToLibrary -> CardAction.ToLibrary(card)
+                                    is CardAction.ToTop -> CardAction.ToTop(card)
+                                    is CardAction.ToCommandZone -> CardAction.ToCommandZone(card)
+                                    is CardAction.AddCounter -> CardAction.AddCounter(card, action.counterType)
+                                    is CardAction.RemoveCounter -> CardAction.RemoveCounter(card, action.counterType)
+                                    else -> action
+                                }
+                                handleCardAction(cardAction, viewModel)
+                            }
                         }
                     }
                 } else {
                     // In network mode, you can only interact with your cards
                     val localPlayer = uiState.localPlayer
-                    if (localPlayer != null && cardInstance != null) {
-                        if (cardInstance.ownerId == localPlayer.id) {
-                            handleCardAction(action, viewModel)
-                        } else {
-                            println("Cannot interact with opponent's card: ${cardInstance.card.name}")
+                    if (localPlayer != null) {
+                        cardsToAct.forEach { card ->
+                            if (card.ownerId == localPlayer.id) {
+                                // Create a new action for this specific card
+                                val cardAction = when (action) {
+                                    is CardAction.Tap -> CardAction.Tap(card)
+                                    is CardAction.Untap -> CardAction.Untap(card)
+                                    is CardAction.FlipCard -> CardAction.FlipCard(card)
+                                    is CardAction.ToHand -> CardAction.ToHand(card)
+                                    is CardAction.ToBattlefield -> CardAction.ToBattlefield(card)
+                                    is CardAction.ToGraveyard -> CardAction.ToGraveyard(card)
+                                    is CardAction.ToExile -> CardAction.ToExile(card)
+                                    is CardAction.ToLibrary -> CardAction.ToLibrary(card)
+                                    is CardAction.ToTop -> CardAction.ToTop(card)
+                                    is CardAction.ToCommandZone -> CardAction.ToCommandZone(card)
+                                    is CardAction.AddCounter -> CardAction.AddCounter(card, action.counterType)
+                                    is CardAction.RemoveCounter -> CardAction.RemoveCounter(card, action.counterType)
+                                    else -> action
+                                }
+                                handleCardAction(cardAction, viewModel)
+                            }
                         }
                     }
                 }
@@ -305,7 +361,8 @@ fun GameScreen(
                         onCardAction = handleAction,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .weight(0.4f)
+                            .weight(0.4f),
+                        selectionState = selectionState
                     )
                 }
 
@@ -500,6 +557,7 @@ fun HotseatPlayerSection(
                             viewModel.updateCardGridPosition(cardId, gridX, gridY)
                         },
                         modifier = Modifier.fillMaxSize(),
+                        selectionState = selectionState,
                         currentPlayerId = if (isActivePlayer) player.id else null
                     )
                 }
@@ -625,6 +683,10 @@ fun CompactHandStrip(
                     modifier = Modifier.width(120.dp)
                 )
 
+                // Shared drag state for hand cards
+                var draggedHandCardIds by remember { mutableStateOf<Set<String>>(emptySet()) }
+                var handDragOffset by remember { mutableStateOf(Offset.Zero) }
+
                 if (!showCards) {
                     // For non-active players, just show card count, not actual cards
                     Text(
@@ -654,75 +716,19 @@ fun CompactHandStrip(
                                 },
                                 onContextAction = onCardAction,
                                 dragDropState = dragDropState,
-                                selectionState = selectionState
+                                selectionState = selectionState,
+                                sharedDraggedCardIds = draggedHandCardIds,
+                                sharedDragOffset = handDragOffset,
+                                onDragStateChange = { draggedIds, offset ->
+                                    draggedHandCardIds = draggedIds
+                                    handDragOffset = offset
+                                }
                             )
                         }
                     }
                 }
             }
 
-            // Batch actions row (only show when cards are selected)
-            if (selectionState?.hasSelection == true) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(MaterialTheme.colorScheme.primaryContainer)
-                        .padding(4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        "${selectionState.selectionCount} selected",
-                        style = MaterialTheme.typography.labelSmall,
-                        modifier = Modifier.width(120.dp)
-                    )
-                    Button(
-                        onClick = {
-                            selectionState.selectedCards.forEach { cardId ->
-                                handCards.find { it.instanceId == cardId }?.let {
-                                    onCardAction(CardAction.ToBattlefield(it))
-                                }
-                            }
-                            selectionState.clearSelection()
-                        },
-                        modifier = Modifier.weight(1f).height(32.dp)
-                    ) {
-                        Text("To Battlefield", style = MaterialTheme.typography.labelSmall)
-                    }
-                    Button(
-                        onClick = {
-                            selectionState.selectedCards.forEach { cardId ->
-                                handCards.find { it.instanceId == cardId }?.let {
-                                    onCardAction(CardAction.ToGraveyard(it))
-                                }
-                            }
-                            selectionState.clearSelection()
-                        },
-                        modifier = Modifier.weight(1f).height(32.dp)
-                    ) {
-                        Text("To Graveyard", style = MaterialTheme.typography.labelSmall)
-                    }
-                    Button(
-                        onClick = {
-                            selectionState.selectedCards.forEach { cardId ->
-                                handCards.find { it.instanceId == cardId }?.let {
-                                    onCardAction(CardAction.ToExile(it))
-                                }
-                            }
-                            selectionState.clearSelection()
-                        },
-                        modifier = Modifier.weight(1f).height(32.dp)
-                    ) {
-                        Text("To Exile", style = MaterialTheme.typography.labelSmall)
-                    }
-                    OutlinedButton(
-                        onClick = { selectionState.clearSelection() },
-                        modifier = Modifier.width(80.dp).height(32.dp)
-                    ) {
-                        Text("Clear", style = MaterialTheme.typography.labelSmall)
-                    }
-                }
-            }
         }
     }
 }
@@ -735,7 +741,8 @@ fun OpponentsArea(
     opponents: List<Player>,
     viewModel: GameViewModel,
     onCardAction: (CardAction) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    selectionState: SelectionState? = null
 ) {
     when (opponents.size) {
         1 -> {
@@ -744,7 +751,8 @@ fun OpponentsArea(
                 player = opponents[0],
                 viewModel = viewModel,
                 onCardAction = onCardAction,
-                modifier = modifier
+                modifier = modifier,
+                selectionState = selectionState
             )
         }
         2 -> {
@@ -757,13 +765,15 @@ fun OpponentsArea(
                     player = opponents[0],
                     viewModel = viewModel,
                     onCardAction = onCardAction,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
+                    selectionState = selectionState
                 )
                 OpponentArea(
                     player = opponents[1],
                     viewModel = viewModel,
                     onCardAction = onCardAction,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
+                    selectionState = selectionState
                 )
             }
         }
@@ -778,7 +788,8 @@ fun OpponentsArea(
                         player = opponent,
                         viewModel = viewModel,
                         onCardAction = onCardAction,
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
+                        selectionState = selectionState
                     )
                 }
             }
@@ -795,7 +806,8 @@ fun OpponentsArea(
                         player = opponent,
                         viewModel = viewModel,
                         onCardAction = onCardAction,
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
+                        selectionState = selectionState
                     )
                 }
             }
@@ -809,7 +821,8 @@ fun OpponentArea(
     player: Player,
     viewModel: GameViewModel,
     onCardAction: (CardAction) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    selectionState: SelectionState? = null
 ) {
     var showGraveyardDialog by remember { mutableStateOf(false) }
     var showExileDialog by remember { mutableStateOf(false) }
@@ -936,6 +949,7 @@ fun OpponentArea(
                     viewModel.updateCardGridPosition(cardId, gridX, gridY)
                 },
                 modifier = Modifier.fillMaxSize().padding(8.dp),
+                selectionState = selectionState,
                 currentPlayerId = null // Opponent cards cannot be dragged
             )
         }
@@ -1104,6 +1118,7 @@ fun PlayerArea(
                     viewModel.updateCardGridPosition(cardId, gridX, gridY)
                 },
                 modifier = Modifier.fillMaxSize().padding(8.dp),
+                selectionState = selectionState,
                 currentPlayerId = player.id // Only this player can drag their cards
             )
         }
@@ -1263,6 +1278,10 @@ fun PlayerArea(
 
                     Spacer(modifier = Modifier.height(4.dp))
 
+                    // Shared drag state for hand cards
+                    var draggedHandCardIds by remember { mutableStateOf<Set<String>>(emptySet()) }
+                    var handDragOffset by remember { mutableStateOf(Offset.Zero) }
+
                     if (handCards.isEmpty()) {
                         Box(
                             modifier = Modifier.fillMaxSize(),
@@ -1292,7 +1311,13 @@ fun PlayerArea(
                                     },
                                     onContextAction = onCardAction,
                                     dragDropState = dragDropState,
-                                    selectionState = selectionState
+                                    selectionState = selectionState,
+                                    sharedDraggedCardIds = draggedHandCardIds,
+                                    sharedDragOffset = handDragOffset,
+                                    onDragStateChange = { draggedIds, offset ->
+                                        draggedHandCardIds = draggedIds
+                                        handDragOffset = offset
+                                    }
                                 )
                             }
                         }
@@ -1527,61 +1552,115 @@ fun HandCardDisplay(
     onDoubleClick: () -> Unit = {},
     onContextAction: (CardAction) -> Unit,
     dragDropState: DragDropState? = null,
-    selectionState: SelectionState? = null
+    selectionState: SelectionState? = null,
+    sharedDraggedCardIds: Set<String> = emptySet(),
+    sharedDragOffset: Offset = Offset.Zero,
+    onDragStateChange: (Set<String>, Offset) -> Unit = { _, _ -> }
 ) {
     var lastClickTime by remember { mutableStateOf(0L) }
     val isSelected = selectionState?.isSelected(cardInstance.instanceId) == true
+    val isDragged = sharedDraggedCardIds.contains(cardInstance.instanceId)
 
     CardWithContextMenu(
         cardInstance = cardInstance,
         onAction = onContextAction
     ) {
-        Card(
-            modifier = Modifier
-                .width(60.dp)
-                .height(84.dp)
-                // Click gesture support with shift-key detection
-                .pointerInput(cardInstance.instanceId) {
-                    awaitPointerEventScope {
-                        while (true) {
-                            val event = awaitPointerEvent()
+        Box {
+            Card(
+                modifier = Modifier
+                    .width(60.dp)
+                    .height(84.dp)
+                    .graphicsLayer {
+                        if (isDragged) {
+                            alpha = 0.5f
+                            translationX = sharedDragOffset.x
+                            translationY = sharedDragOffset.y
+                        }
+                    }
+                    // Drag gesture support
+                    .pointerInput(cardInstance.instanceId) {
+                        detectDragGestures(
+                            onDragStart = {
+                                // Determine which cards to drag
+                                val cardsToDrag = if (selectionState?.isSelected(cardInstance.instanceId) == true &&
+                                                       selectionState.selectedCards.size > 1) {
+                                    // Drag all selected cards
+                                    selectionState.selectedCards.toSet()
+                                } else {
+                                    // Drag just this card
+                                    setOf(cardInstance.instanceId)
+                                }
+                                onDragStateChange(cardsToDrag, Offset.Zero)
+                            },
+                            onDrag = { change, dragAmount ->
+                                change.consume()
+                                onDragStateChange(sharedDraggedCardIds, sharedDragOffset + dragAmount)
+                            },
+                            onDragEnd = {
+                                // If dragged a significant distance, play to battlefield
+                                if (sharedDragOffset.getDistance() > 20f) {
+                                    // User dragged the card(s) - play them to battlefield
+                                    // The handleAction will apply to all selected cards if multi-selected
+                                    onContextAction(CardAction.ToBattlefield(cardInstance))
+                                }
+                                onDragStateChange(emptySet(), Offset.Zero)
+                            },
+                            onDragCancel = {
+                                onDragStateChange(emptySet(), Offset.Zero)
+                            }
+                        )
+                    }
+                    // Click gesture support with shift-key detection
+                    .pointerInput(cardInstance.instanceId) {
+                        awaitPointerEventScope {
+                            while (true) {
+                                val event = awaitPointerEvent()
 
-                            if (event.type == PointerEventType.Press) {
-                                val isShiftPressed = event.keyboardModifiers.isShiftPressed
+                                if (event.type == PointerEventType.Press) {
+                                    // Skip right-clicks (they trigger context menu)
+                                    val isRightClick = event.button != null && event.button.toString().contains("Secondary")
 
-                                // Wait for release
-                                val releaseEvent = awaitPointerEvent()
+                                    if (isRightClick) {
+                                        // Right-click detected - consume the release event and skip selection logic
+                                        awaitPointerEvent()
+                                        continue
+                                    }
 
-                                if (releaseEvent.type == PointerEventType.Release) {
-                                    // Check for double-click by tracking time
-                                    val clickTime = System.currentTimeMillis()
-                                    val timeSinceLastClick = clickTime - lastClickTime
-                                    lastClickTime = clickTime
+                                    val isShiftPressed = event.keyboardModifiers.isShiftPressed
 
-                                    if (timeSinceLastClick < 300) {
-                                        // Double-click - clear selection and play card
-                                        selectionState?.clearSelection()
-                                        onDoubleClick()
-                                    } else if (isShiftPressed && selectionState != null) {
-                                        // Shift+click - toggle selection
-                                        selectionState.toggleSelection(cardInstance.instanceId)
-                                    } else {
-                                        // Regular click - clear selection and select this card
-                                        if (selectionState != null) {
-                                            selectionState.clearSelection()
-                                            selectionState.select(cardInstance.instanceId)
+                                    // Wait for release
+                                    val releaseEvent = awaitPointerEvent()
+
+                                    if (releaseEvent.type == PointerEventType.Release) {
+                                        // Check for double-click by tracking time
+                                        val clickTime = System.currentTimeMillis()
+                                        val timeSinceLastClick = clickTime - lastClickTime
+                                        lastClickTime = clickTime
+
+                                        if (timeSinceLastClick < 300) {
+                                            // Double-click - clear selection and play card
+                                            selectionState?.clearSelection()
+                                            onDoubleClick()
+                                        } else if (isShiftPressed && selectionState != null) {
+                                            // Shift+click - toggle selection
+                                            selectionState.toggleSelection(cardInstance.instanceId)
                                         } else {
-                                            onCardClick(cardInstance)
+                                            // Regular click - always clear and select only this card
+                                            if (selectionState != null) {
+                                                selectionState.clearSelection()
+                                                selectionState.select(cardInstance.instanceId)
+                                            } else {
+                                                onCardClick(cardInstance)
+                                            }
                                         }
                                     }
                                 }
                             }
                         }
                     }
-                }
-                .then(
-                    if (isSelected) Modifier.border(3.dp, Color(0xFF00FF00), RoundedCornerShape(8.dp)) else Modifier
-                ),
+                    .then(
+                        if (isSelected) Modifier.border(3.dp, Color(0xFF00FF00), RoundedCornerShape(8.dp)) else Modifier
+                    ),
             colors = CardDefaults.cardColors(
                 containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer
                                 else MaterialTheme.colorScheme.secondaryContainer
@@ -1608,6 +1687,7 @@ fun HandCardDisplay(
                     )
                 }
             }
+        }
         }
     }
 }

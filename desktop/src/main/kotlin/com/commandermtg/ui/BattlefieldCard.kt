@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class)
+
 package com.commandermtg.ui
 
 import androidx.compose.foundation.BorderStroke
@@ -12,6 +14,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.isShiftPressed
+import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.unit.dp
 import com.commandermtg.models.CardInstance
 
@@ -21,15 +26,19 @@ fun BattlefieldCard(
     isLocalPlayer: Boolean,
     onCardClick: (CardInstance) -> Unit,
     onContextAction: (CardAction) -> Unit = {},
+    selectionState: SelectionState? = null,
     modifier: Modifier = Modifier
 ) {
     var lastClickTime by remember { mutableStateOf(0L) }
+    val isSelected = selectionState?.isSelected(cardInstance.instanceId) == true
 
-    val borderColor = if (isLocalPlayer) {
-        MaterialTheme.colorScheme.primary
-    } else {
-        MaterialTheme.colorScheme.error
+    val borderColor = when {
+        isSelected -> Color(0xFF00FF00) // Green border for selected
+        isLocalPlayer -> MaterialTheme.colorScheme.primary
+        else -> MaterialTheme.colorScheme.error
     }
+
+    val borderWidth = if (isSelected) 5.dp else 3.dp
 
     val rotation = if (cardInstance.isTapped) 90f else 0f
 
@@ -55,15 +64,46 @@ fun BattlefieldCard(
                     .rotate(rotation)
                     .then(
                         if (isLocalPlayer) {
-                            Modifier.clickable {
-                                val currentTime = System.currentTimeMillis()
-                                if (currentTime - lastClickTime < 300) {
-                                    // Double-click detected - tap/untap
-                                    onCardClick(cardInstance)
-                                    lastClickTime = 0L
-                                } else {
-                                    // Single click - do nothing or could show details
-                                    lastClickTime = currentTime
+                            Modifier.pointerInput(cardInstance.instanceId) {
+                                awaitPointerEventScope {
+                                    while (true) {
+                                        val event = awaitPointerEvent()
+
+                                        if (event.type == PointerEventType.Press) {
+                                            // Skip right-clicks (they trigger context menu)
+                                            val isRightClick = event.button != null && event.button.toString().contains("Secondary")
+
+                                            if (isRightClick) {
+                                                // Right-click detected - consume the release event and skip selection logic
+                                                awaitPointerEvent()
+                                                continue
+                                            }
+
+                                            val isShiftPressed = event.keyboardModifiers.isShiftPressed
+
+                                            // Wait for release
+                                            val releaseEvent = awaitPointerEvent()
+
+                                            if (releaseEvent.type == PointerEventType.Release) {
+                                                // Check for double-click
+                                                val clickTime = System.currentTimeMillis()
+                                                val timeSinceLastClick = clickTime - lastClickTime
+                                                lastClickTime = clickTime
+
+                                                if (timeSinceLastClick < 300) {
+                                                    // Double-click - tap/untap
+                                                    onCardClick(cardInstance)
+                                                } else if (isShiftPressed && selectionState != null) {
+                                                    // Shift+click - toggle selection
+                                                    selectionState.toggleSelection(cardInstance.instanceId)
+                                                } else if (selectionState != null) {
+                                                    // Regular click - always clear and select only this card
+                                                    selectionState.clearSelection()
+                                                    selectionState.select(cardInstance.instanceId)
+                                                }
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         } else {
@@ -72,7 +112,7 @@ fun BattlefieldCard(
                     ),
             colors = CardDefaults.cardColors(containerColor = Color.Transparent),
             shape = RoundedCornerShape(8.dp),
-            border = BorderStroke(3.dp, borderColor),
+            border = BorderStroke(borderWidth, borderColor),
             elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
         ) {
             Box(modifier = Modifier.fillMaxSize()) {

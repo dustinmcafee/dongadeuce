@@ -32,7 +32,8 @@ fun DraggableBattlefieldGrid(
     onContextAction: (CardAction) -> Unit,
     onCardPositionChanged: (String, Int, Int) -> Unit,
     modifier: Modifier = Modifier,
-    currentPlayerId: String? = null // ID of the player who can drag cards
+    currentPlayerId: String? = null, // ID of the player who can drag cards
+    selectionState: SelectionState? = null
 ) {
     if (cards.isEmpty()) {
         Box(
@@ -56,7 +57,7 @@ fun DraggableBattlefieldGrid(
     val cellHeight = cardHeight.value + gridSpacing.value
 
     // Track dragging state
-    var draggedCardId by remember { mutableStateOf<String?>(null) }
+    var draggedCardIds by remember { mutableStateOf<Set<String>>(emptySet()) }
     var dragOffset by remember { mutableStateOf(Offset.Zero) }
     var dragStartPixelPos by remember { mutableStateOf(Offset.Zero) }
 
@@ -79,8 +80,8 @@ fun DraggableBattlefieldGrid(
     }
 
     // Card stacking offsets (Cockatrice-style)
-    val stackOffsetX = (cardWidth.value * 0.33f).dp // CARD_WIDTH / 3
-    val stackOffsetY = (gridSpacing.value * 0.33f).dp // PADDING_Y / 3
+    val stackOffsetX = (cardWidth.value * 0.25f).dp // CARD_WIDTH / 4
+    val stackOffsetY = (cardHeight.value * 0.25f).dp // CARD_HEIGHT / 4
 
     data class CardStackInfo(
         val gridPos: Pair<Int, Int>,
@@ -161,7 +162,7 @@ fun DraggableBattlefieldGrid(
                     val (col, row) = position
                     val stackInfo = stackInfoMap[card.instanceId]
 
-                    val isDragged = draggedCardId == card.instanceId
+                    val isDragged = draggedCardIds.contains(card.instanceId)
                     val canDrag = currentPlayerId != null && card.ownerId == currentPlayerId
 
                     // Base position
@@ -192,7 +193,6 @@ fun DraggableBattlefieldGrid(
                                     Modifier.pointerInput(card.instanceId, gridPositions) {
                                         detectDragGestures(
                                             onDragStart = { _ ->
-                                                draggedCardId = card.instanceId
                                                 dragOffset = Offset.Zero
                                                 // Look up current position from map and calculate pixel position
                                                 val currentPos = gridPositions[card.instanceId] ?: Pair(0, 0)
@@ -200,6 +200,20 @@ fun DraggableBattlefieldGrid(
                                                 val startX = currentPos.first * cellWidth + (currentStack?.stackIndex ?: 0) * stackOffsetX.value
                                                 val startY = currentPos.second * cellHeight + (currentStack?.stackIndex ?: 0) * stackOffsetY.value
                                                 dragStartPixelPos = Offset(startX, startY)
+
+                                                // Determine which cards to drag:
+                                                // 1. If this card is selected and multiple cards are selected, drag all selected cards
+                                                // 2. Otherwise, drag just this card
+                                                draggedCardIds = if (selectionState?.isSelected(card.instanceId) == true &&
+                                                                     selectionState.selectedCards.size > 1) {
+                                                    // Drag all selected cards that are owned by current player
+                                                    selectionState.selectedCards.filter { cardId ->
+                                                        cards.find { it.instanceId == cardId }?.ownerId == currentPlayerId
+                                                    }.toSet()
+                                                } else {
+                                                    // Drag just this card
+                                                    setOf(card.instanceId)
+                                                }
                                             },
                                             onDrag = { change, dragAmount ->
                                                 change.consume()
@@ -211,24 +225,72 @@ fun DraggableBattlefieldGrid(
                                                 val finalY = dragStartPixelPos.y + dragOffset.y + (cardHeight.value / 2)
 
                                                 // Calculate target grid cell from center point
-                                                val newCol = (finalX / cellWidth)
+                                                var targetCol = (finalX / cellWidth)
                                                     .toInt()
                                                     .coerceIn(0, columns - 1)
-                                                val newRow = (finalY / cellHeight)
+                                                var targetRow = (finalY / cellHeight)
                                                     .toInt()
                                                     .coerceAtLeast(0)
                                                     .coerceAtMost(9)
 
-                                                // Update position
-                                                onCardPositionChanged(card.instanceId, newCol, newRow)
+                                                // Count existing cards at target position (excluding cards being dragged)
+                                                val cardsAtTarget = cards.filter { c ->
+                                                    !draggedCardIds.contains(c.instanceId) &&
+                                                    c.gridX == targetCol && c.gridY == targetRow
+                                                }.size
+
+                                                // Distribute cards to avoid exceeding stack limit of 3
+                                                val cardsList = draggedCardIds.toList()
+                                                cardsList.forEachIndexed { index, cardId ->
+                                                    val currentStackSize = cardsAtTarget + index
+
+                                                    if (currentStackSize < 3) {
+                                                        // Still room in current stack
+                                                        onCardPositionChanged(cardId, targetCol, targetRow)
+                                                    } else {
+                                                        // Find next available position
+                                                        var searchCol = targetCol
+                                                        var searchRow = targetRow
+                                                        var found = false
+
+                                                        while (!found && searchRow < 10) {
+                                                            searchCol++
+                                                            if (searchCol >= columns) {
+                                                                searchCol = 0
+                                                                searchRow++
+                                                            }
+
+                                                            if (searchRow >= 10) break
+
+                                                            // Count cards at this search position (including already-placed dragged cards)
+                                                            val cardsAtSearch = cards.filter { c ->
+                                                                !draggedCardIds.contains(c.instanceId) &&
+                                                                c.gridX == searchCol && c.gridY == searchRow
+                                                            }.size + cardsList.take(index).count { placedId ->
+                                                                // Check if we already placed a dragged card here
+                                                                cards.find { it.instanceId == placedId }?.let {
+                                                                    it.gridX == searchCol && it.gridY == searchRow
+                                                                } ?: false
+                                                            }
+
+                                                            if (cardsAtSearch < 3) {
+                                                                targetCol = searchCol
+                                                                targetRow = searchRow
+                                                                found = true
+                                                            }
+                                                        }
+
+                                                        onCardPositionChanged(cardId, targetCol, targetRow)
+                                                    }
+                                                }
 
                                                 // Reset drag state
-                                                draggedCardId = null
+                                                draggedCardIds = emptySet()
                                                 dragOffset = Offset.Zero
                                                 dragStartPixelPos = Offset.Zero
                                             },
                                             onDragCancel = {
-                                                draggedCardId = null
+                                                draggedCardIds = emptySet()
                                                 dragOffset = Offset.Zero
                                                 dragStartPixelPos = Offset.Zero
                                             }
@@ -243,7 +305,8 @@ fun DraggableBattlefieldGrid(
                             cardInstance = card,
                             isLocalPlayer = isLocalPlayer,
                             onCardClick = onCardClick,
-                            onContextAction = onContextAction
+                            onContextAction = onContextAction,
+                            selectionState = selectionState
                         )
                     }
         }
