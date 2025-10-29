@@ -149,44 +149,55 @@ class GameViewModel {
      * Load a deck for a specific player (for hotseat mode)
      */
     fun loadDeckForPlayer(playerId: String, deck: Deck) {
-        val currentState = _uiState.value
-        val gameState = currentState.gameState ?: return
+        _uiState.update { currentState ->
+            val gameState = currentState.gameState ?: return@update currentState
 
-        // Create card instances for all cards in the deck
-        val cardInstances = mutableListOf<CardInstance>()
+            // Create card instances for all cards in the deck
+            val cardInstances = mutableListOf<CardInstance>()
 
-        // Commander goes to command zone
-        cardInstances.add(
-            CardInstance(
-                card = deck.commander,
-                ownerId = playerId,
-                zone = Zone.COMMAND_ZONE
-            )
-        )
-
-        // All other cards start in library
-        deck.cards.forEach { card ->
+            // Commander goes to command zone
             cardInstances.add(
                 CardInstance(
-                    card = card,
+                    card = deck.commander,
                     ownerId = playerId,
-                    zone = Zone.LIBRARY
+                    zone = Zone.COMMAND_ZONE
                 )
             )
+
+            // All other cards start in library
+            deck.cards.forEach { card ->
+                cardInstances.add(
+                    CardInstance(
+                        card = card,
+                        ownerId = playerId,
+                        zone = Zone.LIBRARY
+                    )
+                )
+            }
+
+            // Shuffle library (simple random shuffle)
+            val shuffledInstances = cardInstances.shuffled()
+
+            // Replace existing cards for this player to avoid duplicates
+            val otherPlayerCards = gameState.cardInstances.filter { it.ownerId != playerId }
+
+            val updatedGameState = gameState.copy(
+                cardInstances = otherPlayerCards + shuffledInstances
+            )
+
+            // Sync player references within the same update
+            currentState.copy(
+                gameState = updatedGameState,
+                localPlayer = if (currentState.localPlayer?.id != null) {
+                    updatedGameState.players.find { it.id == currentState.localPlayer.id }
+                } else {
+                    currentState.localPlayer
+                },
+                opponents = currentState.opponents.map { opponent ->
+                    updatedGameState.players.find { it.id == opponent.id } ?: opponent
+                }
+            )
         }
-
-        // Shuffle library (simple random shuffle)
-        val shuffledInstances = cardInstances.shuffled()
-
-        // Replace existing cards for this player to avoid duplicates
-        val otherPlayerCards = gameState.cardInstances.filter { it.ownerId != playerId }
-
-        val updatedGameState = gameState.copy(
-            cardInstances = otherPlayerCards + shuffledInstances
-        )
-
-        // Sync player references
-        syncPlayerReferences(updatedGameState)
     }
 
     /**
@@ -202,15 +213,14 @@ class GameViewModel {
      * Update life total for a player
      */
     fun updateLife(playerId: String, newLife: Int) {
-        val currentState = _uiState.value
-        val gameState = currentState.gameState ?: return
+        _uiState.update { currentState ->
+            val gameState = currentState.gameState ?: return@update currentState
 
-        val updatedGameState = gameState.updatePlayer(playerId) { player ->
-            player.setLife(newLife)
-        }
+            val updatedGameState = gameState.updatePlayer(playerId) { player ->
+                player.setLife(newLife)
+            }
 
-        _uiState.update {
-            it.copy(
+            currentState.copy(
                 gameState = updatedGameState,
                 localPlayer = if (currentState.localPlayer?.id == playerId) {
                     updatedGameState.players.find { p -> p.id == playerId }
@@ -235,15 +245,14 @@ class GameViewModel {
      * Mark a player as having lost (they left the game or were defeated)
      */
     fun markPlayerAsLost(playerId: String) {
-        val currentState = _uiState.value
-        val gameState = currentState.gameState ?: return
+        _uiState.update { currentState ->
+            val gameState = currentState.gameState ?: return@update currentState
 
-        val updatedGameState = gameState.updatePlayer(playerId) { player ->
-            player.copy(hasLost = true)
-        }
+            val updatedGameState = gameState.updatePlayer(playerId) { player ->
+                player.copy(hasLost = true)
+            }
 
-        _uiState.update {
-            it.copy(
+            currentState.copy(
                 gameState = updatedGameState,
                 localPlayer = if (currentState.localPlayer?.id == playerId) {
                     updatedGameState.players.find { p -> p.id == playerId }
@@ -286,22 +295,21 @@ class GameViewModel {
      * If library is empty, player loses the game
      */
     fun drawCard(playerId: String) {
-        val currentState = _uiState.value
-        val gameState = currentState.gameState ?: return
+        _uiState.update { currentState ->
+            val gameState = currentState.gameState ?: return@update currentState
 
-        // Find the top card of player's library
-        val topCard = gameState.cardInstances
-            .filter { it.ownerId == playerId && it.zone == Zone.LIBRARY }
-            .lastOrNull() // Last card in list = top of library (stack-based)
+            // Find the top card of player's library
+            val topCard = gameState.cardInstances
+                .filter { it.ownerId == playerId && it.zone == Zone.LIBRARY }
+                .lastOrNull() // Last card in list = top of library (stack-based)
 
-        if (topCard == null) {
-            // Player loses when trying to draw from empty library
-            val updatedGameState = gameState.updatePlayer(playerId) { player ->
-                player.copy(hasLost = true)
-            }
+            if (topCard == null) {
+                // Player loses when trying to draw from empty library
+                val updatedGameState = gameState.updatePlayer(playerId) { player ->
+                    player.copy(hasLost = true)
+                }
 
-            _uiState.update {
-                it.copy(
+                return@update currentState.copy(
                     gameState = updatedGameState,
                     localPlayer = if (currentState.localPlayer?.id == playerId) {
                         updatedGameState.players.find { p -> p.id == playerId }
@@ -317,15 +325,12 @@ class GameViewModel {
                     }
                 )
             }
-            return
-        }
 
-        val updatedGameState = gameState.updateCardInstance(topCard.instanceId) {
-            it.moveToZone(Zone.HAND)
-        }
+            val updatedGameState = gameState.updateCardInstance(topCard.instanceId) {
+                it.moveToZone(Zone.HAND)
+            }
 
-        _uiState.update {
-            it.copy(gameState = updatedGameState)
+            currentState.copy(gameState = updatedGameState)
         }
     }
 
@@ -333,15 +338,14 @@ class GameViewModel {
      * Move a card between zones
      */
     fun moveCard(cardInstanceId: String, targetZone: Zone) {
-        val currentState = _uiState.value
-        val gameState = currentState.gameState ?: return
+        _uiState.update { currentState ->
+            val gameState = currentState.gameState ?: return@update currentState
 
-        val updatedGameState = gameState.updateCardInstance(cardInstanceId) {
-            it.moveToZone(targetZone)
-        }
+            val updatedGameState = gameState.updateCardInstance(cardInstanceId) {
+                it.moveToZone(targetZone)
+            }
 
-        _uiState.update {
-            it.copy(gameState = updatedGameState)
+            currentState.copy(gameState = updatedGameState)
         }
     }
 
@@ -350,15 +354,14 @@ class GameViewModel {
      * Moves the card to their battlefield
      */
     fun giveControlTo(cardInstanceId: String, newControllerId: String) {
-        val currentState = _uiState.value
-        val gameState = currentState.gameState ?: return
+        _uiState.update { currentState ->
+            val gameState = currentState.gameState ?: return@update currentState
 
-        val updatedGameState = gameState.updateCardInstance(cardInstanceId) {
-            it.changeController(newControllerId).moveToZone(Zone.BATTLEFIELD)
-        }
+            val updatedGameState = gameState.updateCardInstance(cardInstanceId) {
+                it.changeController(newControllerId).moveToZone(Zone.BATTLEFIELD)
+            }
 
-        _uiState.update {
-            it.copy(gameState = updatedGameState)
+            currentState.copy(gameState = updatedGameState)
         }
     }
 
@@ -366,32 +369,43 @@ class GameViewModel {
      * Tap/untap a card
      */
     fun toggleTap(cardInstanceId: String) {
-        val currentState = _uiState.value
-        val gameState = currentState.gameState ?: return
+        _uiState.update { currentState ->
+            val gameState = currentState.gameState ?: return@update currentState
 
-        val updatedGameState = gameState.updateCardInstance(cardInstanceId) {
-            if (it.isTapped) it.untap() else it.tap()
-        }
+            val updatedGameState = gameState.updateCardInstance(cardInstanceId) {
+                if (it.isTapped) it.untap() else it.tap()
+            }
 
-        _uiState.update {
-            it.copy(gameState = updatedGameState)
+            currentState.copy(gameState = updatedGameState)
         }
     }
 
     /**
      * Get card count in a specific zone for a player
+     * For battlefield, this counts cards controlled by the player
+     * For other zones, this counts cards owned by the player
      */
     fun getCardCount(playerId: String, zone: Zone): Int {
         val gameState = _uiState.value.gameState ?: return 0
-        return gameState.getPlayerCards(playerId, zone).size
+        return if (zone == Zone.BATTLEFIELD) {
+            gameState.getPlayerBattlefield(playerId).size
+        } else {
+            gameState.getPlayerCards(playerId, zone).size
+        }
     }
 
     /**
      * Get card instances in a specific zone for a player
+     * For battlefield, this returns cards controlled by the player
+     * For other zones, this returns cards owned by the player
      */
     fun getCards(playerId: String, zone: Zone): List<CardInstance> {
         val gameState = _uiState.value.gameState ?: return emptyList()
-        return gameState.getPlayerCards(playerId, zone)
+        return if (zone == Zone.BATTLEFIELD) {
+            gameState.getPlayerBattlefield(playerId)
+        } else {
+            gameState.getPlayerCards(playerId, zone)
+        }
     }
 
     /**
@@ -406,18 +420,26 @@ class GameViewModel {
      * Advance to next phase
      */
     fun nextPhase() {
-        val currentState = _uiState.value
-        val gameState = currentState.gameState ?: return
+        _uiState.update { currentState ->
+            val gameState = currentState.gameState ?: return@update currentState
 
-        val updatedGameState = gameState.nextPhase()
+            val updatedGameState = gameState.nextPhase()
 
-        // If we just moved to UNTAP phase (new turn), untap all cards for the active player
-        if (updatedGameState.phase == com.commandermtg.models.GamePhase.UNTAP) {
-            val activePlayerId = updatedGameState.activePlayer.id
-            untapAll(activePlayerId)
-        } else {
-            _uiState.update {
-                it.copy(gameState = updatedGameState)
+            // If we just moved to UNTAP phase (new turn), untap all cards for the active player
+            // We'll let untapAll handle its own state update instead
+            if (updatedGameState.phase == com.commandermtg.models.GamePhase.UNTAP) {
+                // Store updated game state and let untapAll handle the actual untapping
+                currentState.copy(gameState = updatedGameState)
+            } else {
+                currentState.copy(gameState = updatedGameState)
+            }
+        }
+
+        // Call untapAll after state update if needed
+        _uiState.value.gameState?.let { gameState ->
+            if (gameState.phase == com.commandermtg.models.GamePhase.UNTAP) {
+                val activePlayerId = gameState.activePlayer.id
+                untapAll(activePlayerId)
             }
         }
     }
@@ -426,35 +448,32 @@ class GameViewModel {
      * Pass turn (advance through all phases to next player's untap)
      */
     fun passTurn() {
-        val currentState = _uiState.value
-        val gameState = currentState.gameState ?: return
+        _uiState.update { currentState ->
+            val gameState = currentState.gameState ?: return@update currentState
 
-        // Keep advancing phases until we reach the next UNTAP phase (new turn)
-        var updatedState = gameState
-        do {
-            updatedState = updatedState.nextPhase()
-        } while (updatedState.phase != com.commandermtg.models.GamePhase.UNTAP)
+            // Keep advancing phases until we reach the next UNTAP phase (new turn)
+            var updatedState = gameState
+            do {
+                updatedState = updatedState.nextPhase()
+            } while (updatedState.phase != com.commandermtg.models.GamePhase.UNTAP)
 
-        // Don't automatically untap - player must click "Untap All" button
-        val finalGameState = updatedState
+            // Don't automatically untap - player must click "Untap All" button
+            val finalGameState = updatedState
 
-        // In hotseat mode, rotate the local player to match the active player
-        if (currentState.isHotseatMode) {
-            val allPlayers = finalGameState.players
-            val activePlayerIndex = finalGameState.activePlayerIndex
-            val newLocalPlayer = allPlayers[activePlayerIndex]
-            val newOpponents = allPlayers.filterIndexed { index, _ -> index != activePlayerIndex }
+            // In hotseat mode, rotate the local player to match the active player
+            if (currentState.isHotseatMode) {
+                val allPlayers = finalGameState.players
+                val activePlayerIndex = finalGameState.activePlayerIndex
+                val newLocalPlayer = allPlayers[activePlayerIndex]
+                val newOpponents = allPlayers.filterIndexed { index, _ -> index != activePlayerIndex }
 
-            _uiState.update {
-                it.copy(
+                currentState.copy(
                     gameState = finalGameState,
                     localPlayer = newLocalPlayer,
                     opponents = newOpponents
                 )
-            }
-        } else {
-            _uiState.update {
-                it.copy(
+            } else {
+                currentState.copy(
                     gameState = finalGameState
                 )
             }
@@ -468,19 +487,18 @@ class GameViewModel {
      * Untap all permanents for a player
      */
     fun untapAll(playerId: String) {
-        val currentState = _uiState.value
-        val gameState = currentState.gameState ?: return
+        _uiState.update { currentState ->
+            val gameState = currentState.gameState ?: return@update currentState
 
-        val untappedCards = gameState.cardInstances.map { card ->
-            if (card.controllerId == playerId && card.zone == com.commandermtg.models.Zone.BATTLEFIELD) {
-                card.untap()
-            } else {
-                card
+            val untappedCards = gameState.cardInstances.map { card ->
+                if (card.controllerId == playerId && card.zone == com.commandermtg.models.Zone.BATTLEFIELD) {
+                    card.untap()
+                } else {
+                    card
+                }
             }
-        }
 
-        _uiState.update {
-            it.copy(
+            currentState.copy(
                 gameState = gameState.copy(cardInstances = untappedCards)
             )
         }
@@ -512,69 +530,77 @@ class GameViewModel {
     fun updateCommanderDamage(playerId: String, commanderId: String, newDamage: Int) {
         require(newDamage >= 0) { "Commander damage cannot be negative, got $newDamage" }
 
-        val currentState = _uiState.value
-        val gameState = currentState.gameState ?: return
+        _uiState.update { currentState ->
+            val gameState = currentState.gameState ?: return@update currentState
 
-        val updatedGameState = gameState.updatePlayer(playerId) { player ->
-            val currentDamage = player.commanderDamage[commanderId] ?: 0
-            val damageChange = newDamage - currentDamage
+            val updatedGameState = gameState.updatePlayer(playerId) { player ->
+                val currentDamage = player.commanderDamage[commanderId] ?: 0
+                val damageChange = newDamage - currentDamage
 
-            if (damageChange > 0) {
-                player.takeCommanderDamage(commanderId, damageChange)
-            } else if (damageChange < 0) {
-                // Manual decrease - update the map directly
-                // IMPORTANT: Preserve existing loss state - once lost, always lost
-                player.copy(
-                    commanderDamage = player.commanderDamage + (commanderId to newDamage),
-                    hasLost = player.hasLost || player.commanderDamage.any { (id, damage) ->
-                        if (id == commanderId) {
-                            newDamage >= GameConstants.COMMANDER_DAMAGE_THRESHOLD
-                        } else {
-                            damage >= GameConstants.COMMANDER_DAMAGE_THRESHOLD
+                if (damageChange > 0) {
+                    player.takeCommanderDamage(commanderId, damageChange)
+                } else if (damageChange < 0) {
+                    // Manual decrease - update the map directly
+                    // IMPORTANT: Preserve existing loss state - once lost, always lost
+                    player.copy(
+                        commanderDamage = player.commanderDamage + (commanderId to newDamage),
+                        hasLost = player.hasLost || player.commanderDamage.any { (id, damage) ->
+                            if (id == commanderId) {
+                                newDamage >= GameConstants.COMMANDER_DAMAGE_THRESHOLD
+                            } else {
+                                damage >= GameConstants.COMMANDER_DAMAGE_THRESHOLD
+                            }
                         }
-                    }
-                )
-            } else {
-                player
+                    )
+                } else {
+                    player
+                }
             }
-        }
 
-        // Sync player references
-        syncPlayerReferences(updatedGameState)
+            // Sync player references within the same update
+            currentState.copy(
+                gameState = updatedGameState,
+                localPlayer = if (currentState.localPlayer?.id != null) {
+                    updatedGameState.players.find { it.id == currentState.localPlayer.id }
+                } else {
+                    currentState.localPlayer
+                },
+                opponents = currentState.opponents.map { opponent ->
+                    updatedGameState.players.find { it.id == opponent.id } ?: opponent
+                }
+            )
+        }
     }
 
     /**
      * Shuffle a player's library
      */
     fun shuffleLibrary(playerId: String) {
-        val currentState = _uiState.value
-        val gameState = currentState.gameState ?: return
+        _uiState.update { currentState ->
+            val gameState = currentState.gameState ?: return@update currentState
 
-        // Get all library cards for this player
-        val libraryCards = gameState.cardInstances
-            .filter { it.ownerId == playerId && it.zone == Zone.LIBRARY }
-            .shuffled()
+            // Get all library cards for this player
+            val libraryCards = gameState.cardInstances
+                .filter { it.ownerId == playerId && it.zone == Zone.LIBRARY }
+                .shuffled()
 
-        // Get all non-library cards
-        val otherCards = gameState.cardInstances
-            .filter { !(it.ownerId == playerId && it.zone == Zone.LIBRARY) }
+            // Get all non-library cards
+            val otherCards = gameState.cardInstances
+                .filter { !(it.ownerId == playerId && it.zone == Zone.LIBRARY) }
 
-        // Update game state with shuffled library
-        _uiState.update {
-            it.copy(
+            // Update game state with shuffled library
+            currentState.copy(
                 gameState = gameState.copy(cardInstances = otherCards + libraryCards)
             )
         }
     }
 
     /**
-     * Get all battlefield cards for a specific player
+     * Get all battlefield cards for a specific player (by controller)
      */
     fun getPlayerBattlefieldCards(playerId: String): List<CardInstance> {
         val gameState = _uiState.value.gameState ?: return emptyList()
-        return gameState.cardInstances.filter {
-            it.ownerId == playerId && it.zone == Zone.BATTLEFIELD
-        }
+        return gameState.getPlayerBattlefield(playerId)
     }
 
     /**
@@ -584,15 +610,14 @@ class GameViewModel {
         require(type.isNotBlank()) { "Counter type cannot be blank" }
         require(amount > 0) { "Counter amount must be positive, got $amount" }
 
-        val currentState = _uiState.value
-        val gameState = currentState.gameState ?: return
+        _uiState.update { currentState ->
+            val gameState = currentState.gameState ?: return@update currentState
 
-        val updatedGameState = gameState.updateCardInstance(cardId) {
-            it.addCounter(type, amount)
-        }
+            val updatedGameState = gameState.updateCardInstance(cardId) {
+                it.addCounter(type, amount)
+            }
 
-        _uiState.update {
-            it.copy(gameState = updatedGameState)
+            currentState.copy(gameState = updatedGameState)
         }
     }
 
@@ -603,23 +628,22 @@ class GameViewModel {
         require(type.isNotBlank()) { "Counter type cannot be blank" }
         require(amount > 0) { "Counter amount must be positive, got $amount" }
 
-        val currentState = _uiState.value
-        val gameState = currentState.gameState ?: return
+        _uiState.update { currentState ->
+            val gameState = currentState.gameState ?: return@update currentState
 
-        val updatedGameState = gameState.updateCardInstance(cardId) { card ->
-            val current = card.counters[type] ?: 0
-            val newAmount = (current - amount).coerceAtLeast(0)
-            card.copy(
-                counters = if (newAmount > 0) {
-                    card.counters + (type to newAmount)
-                } else {
-                    card.counters - type
-                }
-            )
-        }
+            val updatedGameState = gameState.updateCardInstance(cardId) { card ->
+                val current = card.counters[type] ?: 0
+                val newAmount = (current - amount).coerceAtLeast(0)
+                card.copy(
+                    counters = if (newAmount > 0) {
+                        card.counters + (type to newAmount)
+                    } else {
+                        card.counters - type
+                    }
+                )
+            }
 
-        _uiState.update {
-            it.copy(gameState = updatedGameState)
+            currentState.copy(gameState = updatedGameState)
         }
     }
 
@@ -627,15 +651,14 @@ class GameViewModel {
      * Attach a card (aura/equipment) to another card
      */
     fun attachCard(sourceId: String, targetId: String) {
-        val currentState = _uiState.value
-        val gameState = currentState.gameState ?: return
+        _uiState.update { currentState ->
+            val gameState = currentState.gameState ?: return@update currentState
 
-        val updatedGameState = gameState.updateCardInstance(sourceId) {
-            it.copy(attachedTo = targetId)
-        }
+            val updatedGameState = gameState.updateCardInstance(sourceId) {
+                it.copy(attachedTo = targetId)
+            }
 
-        _uiState.update {
-            it.copy(gameState = updatedGameState)
+            currentState.copy(gameState = updatedGameState)
         }
     }
 
@@ -643,15 +666,14 @@ class GameViewModel {
      * Detach a card (remove attachment)
      */
     fun detachCard(cardId: String) {
-        val currentState = _uiState.value
-        val gameState = currentState.gameState ?: return
+        _uiState.update { currentState ->
+            val gameState = currentState.gameState ?: return@update currentState
 
-        val updatedGameState = gameState.updateCardInstance(cardId) {
-            it.copy(attachedTo = null)
-        }
+            val updatedGameState = gameState.updateCardInstance(cardId) {
+                it.copy(attachedTo = null)
+            }
 
-        _uiState.update {
-            it.copy(gameState = updatedGameState)
+            currentState.copy(gameState = updatedGameState)
         }
     }
 
@@ -659,15 +681,14 @@ class GameViewModel {
      * Flip a card (for flip cards, morph, etc.)
      */
     fun flipCard(cardId: String) {
-        val currentState = _uiState.value
-        val gameState = currentState.gameState ?: return
+        _uiState.update { currentState ->
+            val gameState = currentState.gameState ?: return@update currentState
 
-        val updatedGameState = gameState.updateCardInstance(cardId) {
-            it.flip()
-        }
+            val updatedGameState = gameState.updateCardInstance(cardId) {
+                it.flip()
+            }
 
-        _uiState.update {
-            it.copy(gameState = updatedGameState)
+            currentState.copy(gameState = updatedGameState)
         }
     }
 
@@ -675,31 +696,52 @@ class GameViewModel {
      * Mill cards from top of library to graveyard
      */
     fun millCards(playerId: String, count: Int) {
-        repeat(count) {
-            val currentState = _uiState.value
-            val gameState = currentState.gameState ?: return@repeat
+        _uiState.update { currentState ->
+            val gameState = currentState.gameState ?: return@update currentState
 
-            // Get top card of library (last in list)
-            val topCard = gameState.cardInstances
+            // Get cards from library (last cards = top of library)
+            val libraryCards = gameState.cardInstances
                 .filter { it.ownerId == playerId && it.zone == Zone.LIBRARY }
-                .lastOrNull()
 
-            if (topCard != null) {
-                moveCard(topCard.instanceId, Zone.GRAVEYARD)
-            }
+            // Take up to 'count' cards from top of library
+            val cardsToMill = libraryCards.takeLast(count.coerceAtMost(libraryCards.size))
+
+            // If we tried to mill more cards than exist, player loses
+            val playerLost = count > libraryCards.size && libraryCards.isNotEmpty()
+
+            // Move milled cards to graveyard
+            val updatedGameState = gameState.copy(
+                cardInstances = gameState.cardInstances.map { card ->
+                    if (card.instanceId in cardsToMill.map { it.instanceId }) {
+                        card.moveToZone(Zone.GRAVEYARD)
+                    } else {
+                        card
+                    }
+                },
+                players = if (playerLost) {
+                    gameState.players.map { player ->
+                        if (player.id == playerId) player.copy(hasLost = true) else player
+                    }
+                } else {
+                    gameState.players
+                }
+            )
+
+            currentState.copy(gameState = updatedGameState)
         }
+
+        // Check if game should end after milling
+        checkGameEnd()
     }
 
     /**
      * Mulligan - return hand to library, shuffle, and draw new hand
      */
     fun mulligan(playerId: String) {
-        val currentState = _uiState.value
-        val gameState = currentState.gameState ?: return
-
-        // Get all cards in hand
-        val handCards = gameState.cardInstances
-            .filter { it.ownerId == playerId && it.zone == Zone.HAND }
+        // Get hand cards atomically
+        val handCards = _uiState.value.gameState?.cardInstances
+            ?.filter { it.ownerId == playerId && it.zone == Zone.HAND }
+            ?: return
 
         // Move all hand cards to library
         handCards.forEach { card ->
@@ -718,30 +760,29 @@ class GameViewModel {
      * Convention: Last card in library list = top of library (stack-based)
      */
     fun moveCardToTopOfLibrary(cardId: String) {
-        val currentState = _uiState.value
-        val gameState = currentState.gameState ?: return
+        _uiState.update { currentState ->
+            val gameState = currentState.gameState ?: return@update currentState
 
-        // Find the card
-        val card = gameState.cardInstances.find { it.instanceId == cardId } ?: return
-        val ownerId = card.ownerId
+            // Find the card
+            val card = gameState.cardInstances.find { it.instanceId == cardId } ?: return@update currentState
+            val ownerId = card.ownerId
 
-        // Move card to library first
-        val updatedCard = card.moveToZone(Zone.LIBRARY)
+            // Move card to library first
+            val updatedCard = card.moveToZone(Zone.LIBRARY)
 
-        // Get all cards except the target card
-        val otherCards = gameState.cardInstances.filter { it.instanceId != cardId }
+            // Get all cards except the target card
+            val otherCards = gameState.cardInstances.filter { it.instanceId != cardId }
 
-        // Get all library cards for this player (excluding the moved card)
-        val libraryCards = otherCards.filter { it.ownerId == ownerId && it.zone == Zone.LIBRARY }
+            // Get all library cards for this player (excluding the moved card)
+            val libraryCards = otherCards.filter { it.ownerId == ownerId && it.zone == Zone.LIBRARY }
 
-        // Get all non-library cards
-        val nonLibraryCards = otherCards.filter { !(it.ownerId == ownerId && it.zone == Zone.LIBRARY) }
+            // Get all non-library cards
+            val nonLibraryCards = otherCards.filter { !(it.ownerId == ownerId && it.zone == Zone.LIBRARY) }
 
-        // Rebuild card list: non-library cards + rest of library + target card (top = last)
-        val reorderedCards = nonLibraryCards + libraryCards + listOf(updatedCard)
+            // Rebuild card list: non-library cards + rest of library + target card (top = last)
+            val reorderedCards = nonLibraryCards + libraryCards + listOf(updatedCard)
 
-        _uiState.update {
-            it.copy(
+            currentState.copy(
                 gameState = gameState.copy(cardInstances = reorderedCards)
             )
         }
@@ -760,36 +801,35 @@ class GameViewModel {
         imageUri: String? = null,
         quantity: Int = 1
     ) {
-        val currentState = _uiState.value
-        val gameState = currentState.gameState ?: return
+        _uiState.update { currentState ->
+            val gameState = currentState.gameState ?: return@update currentState
 
-        // Create a Card object for the token
-        val tokenCard = Card(
-            name = tokenName,
-            type = tokenType,
-            power = power,
-            toughness = toughness,
-            colors = if (color.isNotBlank()) listOf(color) else emptyList(),
-            imageUri = imageUri,
-            scryfallId = null
-        )
-
-        // Create the specified number of token instances
-        val tokenInstances = List(quantity) {
-            CardInstance(
-                card = tokenCard,
-                ownerId = playerId,
-                zone = Zone.BATTLEFIELD
+            // Create a Card object for the token
+            val tokenCard = Card(
+                name = tokenName,
+                type = tokenType,
+                power = power,
+                toughness = toughness,
+                colors = if (color.isNotBlank()) listOf(color) else emptyList(),
+                imageUri = imageUri,
+                scryfallId = null
             )
-        }
 
-        // Add tokens to the game state
-        val updatedGameState = gameState.copy(
-            cardInstances = gameState.cardInstances + tokenInstances
-        )
+            // Create the specified number of token instances
+            val tokenInstances = List(quantity) {
+                CardInstance(
+                    card = tokenCard,
+                    ownerId = playerId,
+                    zone = Zone.BATTLEFIELD
+                )
+            }
 
-        _uiState.update {
-            it.copy(gameState = updatedGameState)
+            // Add tokens to the game state
+            val updatedGameState = gameState.copy(
+                cardInstances = gameState.cardInstances + tokenInstances
+            )
+
+            currentState.copy(gameState = updatedGameState)
         }
     }
 
@@ -797,15 +837,14 @@ class GameViewModel {
      * Update a card's grid position on the battlefield
      */
     fun updateCardGridPosition(cardId: String, gridX: Int, gridY: Int) {
-        val currentState = _uiState.value
-        val gameState = currentState.gameState ?: return
+        _uiState.update { currentState ->
+            val gameState = currentState.gameState ?: return@update currentState
 
-        val updatedGameState = gameState.updateCardInstance(cardId) {
-            it.setGridPosition(gridX, gridY)
-        }
+            val updatedGameState = gameState.updateCardInstance(cardId) {
+                it.setGridPosition(gridX, gridY)
+            }
 
-        _uiState.update {
-            it.copy(gameState = updatedGameState)
+            currentState.copy(gameState = updatedGameState)
         }
     }
 
@@ -852,5 +891,92 @@ class GameViewModel {
                 isSearchingTokens = false
             )
         }
+    }
+
+    /**
+     * Handle a card action with ownership validation and multi-card support
+     * This encapsulates the business logic for:
+     * - Checking ownership (hotseat mode vs network mode)
+     * - Applying actions to multiple selected cards
+     * - Enforcing player permissions
+     *
+     * @param action The card action to perform
+     * @param selectedCardIds Optional set of selected card IDs for batch operations
+     * @return Number of cards successfully acted upon
+     */
+    fun handleBatchCardAction(
+        action: com.commandermtg.ui.CardAction,
+        selectedCardIds: Set<String> = emptySet()
+    ): Int {
+        // ViewDetails doesn't require ownership check
+        if (action is com.commandermtg.ui.CardAction.ViewDetails) {
+            return 1 // Handled separately in UI
+        }
+
+        val currentState = _uiState.value
+        val gameState = currentState.gameState ?: return 0
+
+        // Get the primary card instance from the action
+        val primaryCard = when (action) {
+            is com.commandermtg.ui.CardAction.Tap -> action.cardInstance
+            is com.commandermtg.ui.CardAction.Untap -> action.cardInstance
+            is com.commandermtg.ui.CardAction.FlipCard -> action.cardInstance
+            is com.commandermtg.ui.CardAction.ToHand -> action.cardInstance
+            is com.commandermtg.ui.CardAction.ToBattlefield -> action.cardInstance
+            is com.commandermtg.ui.CardAction.ToGraveyard -> action.cardInstance
+            is com.commandermtg.ui.CardAction.ToExile -> action.cardInstance
+            is com.commandermtg.ui.CardAction.ToLibrary -> action.cardInstance
+            is com.commandermtg.ui.CardAction.ToTop -> action.cardInstance
+            is com.commandermtg.ui.CardAction.ToCommandZone -> action.cardInstance
+            is com.commandermtg.ui.CardAction.AddCounter -> action.cardInstance
+            is com.commandermtg.ui.CardAction.RemoveCounter -> action.cardInstance
+            is com.commandermtg.ui.CardAction.GiveControlTo -> action.cardInstance
+            else -> return 0
+        }
+
+        // Determine which player can perform actions
+        val authorizedPlayerId = if (currentState.isHotseatMode) {
+            gameState.activePlayer.id
+        } else {
+            currentState.localPlayer?.id
+        }
+
+        if (authorizedPlayerId == null) return 0
+
+        // Determine which cards to act on
+        val cardsToAct = if (selectedCardIds.contains(primaryCard.instanceId) && selectedCardIds.size > 1) {
+            // Multi-card action: get all selected cards
+            gameState.cardInstances.filter { it.instanceId in selectedCardIds }
+        } else {
+            // Single card action
+            listOf(primaryCard)
+        }
+
+        // Filter to only cards owned by authorized player and perform action
+        var actionCount = 0
+        cardsToAct.forEach { card ->
+            if (card.ownerId == authorizedPlayerId) {
+                // Dispatch to appropriate ViewModel method
+                when (action) {
+                    is com.commandermtg.ui.CardAction.Tap -> toggleTap(card.instanceId)
+                    is com.commandermtg.ui.CardAction.Untap -> toggleTap(card.instanceId)
+                    is com.commandermtg.ui.CardAction.FlipCard -> flipCard(card.instanceId)
+                    is com.commandermtg.ui.CardAction.ToHand -> moveCard(card.instanceId, Zone.HAND)
+                    is com.commandermtg.ui.CardAction.ToBattlefield -> moveCard(card.instanceId, Zone.BATTLEFIELD)
+                    is com.commandermtg.ui.CardAction.ToGraveyard -> moveCard(card.instanceId, Zone.GRAVEYARD)
+                    is com.commandermtg.ui.CardAction.ToExile -> moveCard(card.instanceId, Zone.EXILE)
+                    is com.commandermtg.ui.CardAction.ToLibrary -> moveCard(card.instanceId, Zone.LIBRARY)
+                    is com.commandermtg.ui.CardAction.ToTop -> moveCardToTopOfLibrary(card.instanceId)
+                    is com.commandermtg.ui.CardAction.ToCommandZone -> moveCard(card.instanceId, Zone.COMMAND_ZONE)
+                    is com.commandermtg.ui.CardAction.AddCounter -> addCounter(card.instanceId, action.counterType, 1)
+                    is com.commandermtg.ui.CardAction.RemoveCounter -> removeCounter(card.instanceId, action.counterType, 1)
+                    is com.commandermtg.ui.CardAction.GiveControlTo -> giveControlTo(card.instanceId, action.newControllerId)
+                    else -> {}
+                }
+                actionCount++
+            }
+        }
+
+        return actionCount
     }
 }

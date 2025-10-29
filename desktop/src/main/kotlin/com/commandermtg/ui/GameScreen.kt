@@ -20,9 +20,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.input.pointer.isShiftPressed
-import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.*
 import androidx.compose.ui.unit.dp
 import com.commandermtg.models.Player
 import com.commandermtg.models.Zone
@@ -47,104 +45,19 @@ fun GameScreen(
     val uiState by viewModel.uiState.collectAsState()
     var cardDetailsToShow by remember { mutableStateOf<com.commandermtg.models.CardInstance?>(null) }
 
-    // Handler for card actions that shows details dialog when needed
-    // and enforces ownership restrictions
+    // Handler for card actions - delegates business logic to ViewModel
     val handleAction: (CardAction) -> Unit = { action ->
         when (action) {
             is CardAction.ViewDetails -> {
-                // Anyone can view card details
+                // Anyone can view card details - handle in UI
                 cardDetailsToShow = action.cardInstance
             }
             else -> {
-                val cardInstance = when (action) {
-                    is CardAction.Tap -> action.cardInstance
-                    is CardAction.Untap -> action.cardInstance
-                    is CardAction.FlipCard -> action.cardInstance
-                    is CardAction.ToHand -> action.cardInstance
-                    is CardAction.ToBattlefield -> action.cardInstance
-                    is CardAction.ToGraveyard -> action.cardInstance
-                    is CardAction.ToExile -> action.cardInstance
-                    is CardAction.ToLibrary -> action.cardInstance
-                    is CardAction.ToTop -> action.cardInstance
-                    is CardAction.ToCommandZone -> action.cardInstance
-                    is CardAction.AddCounter -> action.cardInstance
-                    is CardAction.RemoveCounter -> action.cardInstance
-                    else -> null
-                }
-
-                // Check if this card is part of a multi-selection
-                val cardsToAct = if (cardInstance != null &&
-                                     selectionState?.isSelected(cardInstance.instanceId) == true &&
-                                     selectionState.selectedCards.size > 1) {
-                    // Apply action to all selected cards
-                    val allCards = uiState.allPlayers.flatMap { player ->
-                        listOf(
-                            viewModel.getCards(player.id, Zone.HAND),
-                            viewModel.getCards(player.id, Zone.BATTLEFIELD),
-                            viewModel.getCards(player.id, Zone.GRAVEYARD),
-                            viewModel.getCards(player.id, Zone.EXILE)
-                        ).flatten()
-                    }
-                    allCards.filter { selectionState.isSelected(it.instanceId) }
-                } else if (cardInstance != null) {
-                    listOf(cardInstance)
-                } else {
-                    emptyList()
-                }
-
-                if (isHotseatMode) {
-                    // In hotseat mode, current active player can interact with their cards
-                    val activePlayer = uiState.gameState?.activePlayer
-                    if (activePlayer != null) {
-                        cardsToAct.forEach { card ->
-                            if (card.ownerId == activePlayer.id) {
-                                // Create a new action for this specific card
-                                val cardAction = when (action) {
-                                    is CardAction.Tap -> CardAction.Tap(card)
-                                    is CardAction.Untap -> CardAction.Untap(card)
-                                    is CardAction.FlipCard -> CardAction.FlipCard(card)
-                                    is CardAction.ToHand -> CardAction.ToHand(card)
-                                    is CardAction.ToBattlefield -> CardAction.ToBattlefield(card)
-                                    is CardAction.ToGraveyard -> CardAction.ToGraveyard(card)
-                                    is CardAction.ToExile -> CardAction.ToExile(card)
-                                    is CardAction.ToLibrary -> CardAction.ToLibrary(card)
-                                    is CardAction.ToTop -> CardAction.ToTop(card)
-                                    is CardAction.ToCommandZone -> CardAction.ToCommandZone(card)
-                                    is CardAction.AddCounter -> CardAction.AddCounter(card, action.counterType)
-                                    is CardAction.RemoveCounter -> CardAction.RemoveCounter(card, action.counterType)
-                                    else -> action
-                                }
-                                handleCardAction(cardAction, viewModel)
-                            }
-                        }
-                    }
-                } else {
-                    // In network mode, you can only interact with your cards
-                    val localPlayer = uiState.localPlayer
-                    if (localPlayer != null) {
-                        cardsToAct.forEach { card ->
-                            if (card.ownerId == localPlayer.id) {
-                                // Create a new action for this specific card
-                                val cardAction = when (action) {
-                                    is CardAction.Tap -> CardAction.Tap(card)
-                                    is CardAction.Untap -> CardAction.Untap(card)
-                                    is CardAction.FlipCard -> CardAction.FlipCard(card)
-                                    is CardAction.ToHand -> CardAction.ToHand(card)
-                                    is CardAction.ToBattlefield -> CardAction.ToBattlefield(card)
-                                    is CardAction.ToGraveyard -> CardAction.ToGraveyard(card)
-                                    is CardAction.ToExile -> CardAction.ToExile(card)
-                                    is CardAction.ToLibrary -> CardAction.ToLibrary(card)
-                                    is CardAction.ToTop -> CardAction.ToTop(card)
-                                    is CardAction.ToCommandZone -> CardAction.ToCommandZone(card)
-                                    is CardAction.AddCounter -> CardAction.AddCounter(card, action.counterType)
-                                    is CardAction.RemoveCounter -> CardAction.RemoveCounter(card, action.counterType)
-                                    else -> action
-                                }
-                                handleCardAction(cardAction, viewModel)
-                            }
-                        }
-                    }
-                }
+                // Delegate to ViewModel with multi-selection support
+                viewModel.handleBatchCardAction(
+                    action = action,
+                    selectedCardIds = selectionState.selectedCards.toSet()
+                )
             }
         }
     }
@@ -566,21 +479,51 @@ fun HotseatPlayerSection(
                         Zone.LIBRARY,
                         libraryCount,
                         Modifier.fillMaxWidth().height(50.dp),
-                        onClick = if (isActivePlayer) ({ showLibrarySearchDialog = true }) else null
+                        onClick = if (isActivePlayer) ({ showLibrarySearchDialog = true }) else null,
+                        dragDropState = if (isActivePlayer) dragDropState else null,
+                        onDropCards = if (isActivePlayer) {
+                            { cardIds ->
+                                cardIds.forEach { cardId ->
+                                    viewModel.moveCardToTopOfLibrary(cardId)
+                                }
+                                // Clear drag state after handling drop
+                                dragDropState?.endDrag()
+                            }
+                        } else null
                     )
                     ZoneCard(
                         "Graveyard",
                         Zone.GRAVEYARD,
                         graveyardCount,
                         Modifier.fillMaxWidth().height(50.dp),
-                        onClick = if (isActivePlayer) ({ showGraveyardDialog = true }) else null
+                        onClick = if (isActivePlayer) ({ showGraveyardDialog = true }) else null,
+                        dragDropState = if (isActivePlayer) dragDropState else null,
+                        onDropCards = if (isActivePlayer) {
+                            { cardIds ->
+                                cardIds.forEach { cardId ->
+                                    viewModel.moveCard(cardId, Zone.GRAVEYARD)
+                                }
+                                // Clear drag state after handling drop
+                                dragDropState?.endDrag()
+                            }
+                        } else null
                     )
                     ZoneCard(
                         "Exile",
                         Zone.EXILE,
                         exileCount,
                         Modifier.fillMaxWidth().height(50.dp),
-                        onClick = if (isActivePlayer) ({ showExileDialog = true }) else null
+                        onClick = if (isActivePlayer) ({ showExileDialog = true }) else null,
+                        dragDropState = if (isActivePlayer) dragDropState else null,
+                        onDropCards = if (isActivePlayer) {
+                            { cardIds ->
+                                cardIds.forEach { cardId ->
+                                    viewModel.moveCard(cardId, Zone.EXILE)
+                                }
+                                // Clear drag state after handling drop
+                                dragDropState?.endDrag()
+                            }
+                        } else null
                     )
 
                     // Token creation button (only for active player)
@@ -609,7 +552,8 @@ fun HotseatPlayerSection(
                         selectionState = selectionState,
                         currentPlayerId = if (isActivePlayer) player.id else null,
                         otherPlayers = otherPlayers,
-                        allPlayers = otherPlayers + listOf(player)
+                        allPlayers = otherPlayers + listOf(player),
+                        dragDropState = if (isActivePlayer) dragDropState else null
                     )
                 }
             }
@@ -1192,7 +1136,8 @@ fun PlayerArea(
                 selectionState = selectionState,
                 currentPlayerId = player.id, // Only this player can drag their cards
                 otherPlayers = allPlayers.filter { it.id != player.id },
-                allPlayers = allPlayers
+                allPlayers = allPlayers,
+                dragDropState = dragDropState
             )
         }
 
@@ -1306,7 +1251,15 @@ fun PlayerArea(
                     Zone.LIBRARY,
                     libraryCount,
                     Modifier.weight(1f).fillMaxWidth(),
-                    onClick = { showLibrarySearchDialog = true }
+                    onClick = { showLibrarySearchDialog = true },
+                    dragDropState = dragDropState,
+                    onDropCards = { cardIds ->
+                        cardIds.forEach { cardId ->
+                            viewModel.moveCardToTopOfLibrary(cardId)
+                        }
+                        // Clear drag state after handling drop
+                        dragDropState?.endDrag()
+                    }
                 )
                 Row(
                     modifier = Modifier.fillMaxWidth().weight(1f),
@@ -1317,14 +1270,30 @@ fun PlayerArea(
                         Zone.GRAVEYARD,
                         graveyardCount,
                         Modifier.weight(1f).fillMaxHeight(),
-                        onClick = { showGraveyardDialog = true }
+                        onClick = { showGraveyardDialog = true },
+                        dragDropState = dragDropState,
+                        onDropCards = { cardIds ->
+                            cardIds.forEach { cardId ->
+                                viewModel.moveCard(cardId, Zone.GRAVEYARD)
+                            }
+                            // Clear drag state after handling drop
+                            dragDropState?.endDrag()
+                        }
                     )
                     ZoneCard(
                         "Exile",
                         Zone.EXILE,
                         exileCount,
                         Modifier.weight(1f).fillMaxHeight(),
-                        onClick = { showExileDialog = true }
+                        onClick = { showExileDialog = true },
+                        dragDropState = dragDropState,
+                        onDropCards = { cardIds ->
+                            cardIds.forEach { cardId ->
+                                viewModel.moveCard(cardId, Zone.EXILE)
+                            }
+                            // Clear drag state after handling drop
+                            dragDropState?.endDrag()
+                        }
                     )
                 }
             }
@@ -1476,19 +1445,68 @@ fun ZoneCard(
     zone: Zone,
     cardCount: Int,
     modifier: Modifier = Modifier,
-    onClick: (() -> Unit)? = null
+    onClick: (() -> Unit)? = null,
+    dragDropState: DragDropState? = null,
+    onDropCards: ((List<String>) -> Unit)? = null
 ) {
+    var isHovering by remember { mutableStateOf(false) }
+
+    // Check if cards are being dragged over this zone
+    val isDraggingOver = dragDropState != null &&
+                        dragDropState.draggedCardIds.isNotEmpty() &&
+                        isHovering
+
     Card(
         modifier = modifier
-            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp))
+            .border(
+                width = if (isDraggingOver) 3.dp else 1.dp,
+                color = if (isDraggingOver) Color(0xFF00FF00) else MaterialTheme.colorScheme.outline,
+                shape = RoundedCornerShape(8.dp)
+            )
             .then(
                 if (onClick != null) {
                     Modifier.clickableWithRipple { onClick() }
                 } else {
                     Modifier
                 }
+            )
+            .then(
+                if (onDropCards != null && dragDropState != null) {
+                    Modifier.pointerInput(zone) {
+                        awaitPointerEventScope {
+                            while (true) {
+                                val event = awaitPointerEvent()
+                                when (event.type) {
+                                    PointerEventType.Enter -> {
+                                        if (dragDropState.draggedCardIds.isNotEmpty()) {
+                                            isHovering = true
+                                        }
+                                    }
+                                    PointerEventType.Exit -> {
+                                        isHovering = false
+                                    }
+                                    PointerEventType.Release -> {
+                                        // Only handle drop if we're hovering AND cards are being dragged
+                                        // Don't consume the event - let battlefield handle its own drops
+                                        if (isHovering && dragDropState.draggedCardIds.isNotEmpty()) {
+                                            onDropCards(dragDropState.draggedCardIds.toList())
+                                            isHovering = false
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    Modifier
+                }
             ),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        colors = CardDefaults.cardColors(
+            containerColor = if (isDraggingOver)
+                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+            else
+                MaterialTheme.colorScheme.surface
+        )
     ) {
         Box(
             modifier = Modifier
@@ -1500,6 +1518,13 @@ fun ZoneCard(
                 Text(label, style = MaterialTheme.typography.labelLarge)
                 if (cardCount > 0) {
                     Text("($cardCount)", style = MaterialTheme.typography.bodySmall)
+                }
+                if (isDraggingOver) {
+                    Text(
+                        "Drop here",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
                 }
             }
         }
@@ -1657,8 +1682,8 @@ fun HandCardDisplay(
         Box {
             Card(
                 modifier = Modifier
-                    .width(60.dp)
-                    .height(84.dp)
+                    .width(UIConstants.HAND_CARD_WIDTH)
+                    .height(UIConstants.HAND_CARD_HEIGHT)
                     .graphicsLayer {
                         if (isDragged) {
                             alpha = 0.5f
@@ -1673,8 +1698,10 @@ fun HandCardDisplay(
                                 val event = awaitPointerEvent()
 
                                 if (event.type == PointerEventType.Press) {
-                                    // Check button type
-                                    val isRightClick = event.button != null && event.button.toString().contains("Secondary")
+                                    // Skip right-clicks (they trigger context menu)
+                                    // Check if this is NOT a primary (left) button press
+                                    val isPrimaryClick = event.button == PointerButton.Primary
+                                    val isRightClick = !isPrimaryClick && event.button != null
 
                                     if (isRightClick) {
                                         // Right-click detected - consume the release event and skip all logic
@@ -1697,7 +1724,7 @@ fun HandCardDisplay(
                                             totalDrag += dragAmount
 
                                             // Start drag if moved more than threshold
-                                            if (!isDragging && totalDrag.getDistance() > 5f) {
+                                            if (!isDragging && totalDrag.getDistance() > UIConstants.DRAG_THRESHOLD_PX) {
                                                 isDragging = true
                                                 // Determine which cards to drag
                                                 val cardsToDrag = if (selectionState?.isSelected(cardInstance.instanceId) == true &&
@@ -1718,8 +1745,9 @@ fun HandCardDisplay(
                                         } else if (moveEvent.type == PointerEventType.Release) {
                                             if (isDragging) {
                                                 // Drag ended
-                                                if (sharedDragOffset.getDistance() > 20f) {
-                                                    // User dragged the card(s) - play them to battlefield
+                                                if (sharedDragOffset.getDistance() > UIConstants.DRAG_DISTANCE_THRESHOLD_PX) {
+                                                    // User dragged the card(s) - play to battlefield
+                                                    // The action will be applied to all selected cards via handleBatchCardAction
                                                     onContextAction(CardAction.ToBattlefield(cardInstance))
                                                 }
                                                 onDragStateChange(emptySet(), Offset.Zero)
@@ -1729,7 +1757,7 @@ fun HandCardDisplay(
                                                 val timeSinceLastClick = clickTime - lastClickTime
                                                 lastClickTime = clickTime
 
-                                                if (timeSinceLastClick < 300) {
+                                                if (timeSinceLastClick < UIConstants.DOUBLE_CLICK_DELAY_MS) {
                                                     // Double-click - clear selection and play card
                                                     selectionState?.clearSelection()
                                                     onDoubleClick()

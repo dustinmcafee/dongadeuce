@@ -25,6 +25,17 @@ data class GameState(
         }
     }
 
+    /**
+     * Get cards controlled by a player on the battlefield
+     * For battlefield, we filter by controllerId (not ownerId) because control can change
+     * For other zones, use getPlayerCards() which filters by ownerId
+     */
+    fun getPlayerBattlefield(playerId: String): List<CardInstance> {
+        return cardInstances.filter {
+            it.controllerId == playerId && it.zone == Zone.BATTLEFIELD
+        }
+    }
+
     fun updateCardInstance(instanceId: String, update: (CardInstance) -> CardInstance): GameState {
         return copy(
             cardInstances = cardInstances.map {

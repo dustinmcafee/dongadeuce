@@ -14,11 +14,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.input.pointer.isShiftPressed
-import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.*
 import androidx.compose.ui.unit.dp
 import com.commandermtg.models.CardInstance
+import com.commandermtg.ui.UIConstants.BATTLEFIELD_CARD_HEIGHT
+import com.commandermtg.ui.UIConstants.BATTLEFIELD_CARD_TAPPED_SIZE
+import com.commandermtg.ui.UIConstants.BATTLEFIELD_CARD_WIDTH
+import com.commandermtg.ui.UIConstants.CARD_CORNER_RADIUS
+import com.commandermtg.ui.UIConstants.CARD_ELEVATION
+import com.commandermtg.ui.UIConstants.DOUBLE_CLICK_DELAY_MS
+import com.commandermtg.ui.UIConstants.SELECTED_BORDER_WIDTH
+import com.commandermtg.ui.UIConstants.SELECTION_BORDER_WIDTH
 
 @Composable
 fun BattlefieldCard(
@@ -40,16 +46,16 @@ fun BattlefieldCard(
         else -> MaterialTheme.colorScheme.error
     }
 
-    val borderWidth = if (isSelected) 5.dp else 3.dp
+    val borderWidth = if (isSelected) SELECTED_BORDER_WIDTH else SELECTION_BORDER_WIDTH
 
     val rotation = if (cardInstance.isTapped) 90f else 0f
 
     // When tapped, card rotates so width and height swap
     // Reserve enough space to prevent overlap
     val containerSize = if (cardInstance.isTapped) {
-        Modifier.size(width = 168.dp, height = 168.dp) // Reserve square space for rotated card
+        Modifier.size(width = BATTLEFIELD_CARD_TAPPED_SIZE, height = BATTLEFIELD_CARD_TAPPED_SIZE) // Reserve square space for rotated card
     } else {
-        Modifier.size(width = 120.dp, height = 168.dp)
+        Modifier.size(width = BATTLEFIELD_CARD_WIDTH, height = BATTLEFIELD_CARD_HEIGHT)
     }
 
     // Check if owner != controller
@@ -66,7 +72,7 @@ fun BattlefieldCard(
         ) {
             Card(
                 modifier = Modifier
-                    .size(width = 120.dp, height = 168.dp)
+                    .size(width = BATTLEFIELD_CARD_WIDTH, height = BATTLEFIELD_CARD_HEIGHT)
                     .rotate(rotation)
                     .then(
                         if (isLocalPlayer) {
@@ -77,7 +83,9 @@ fun BattlefieldCard(
 
                                         if (event.type == PointerEventType.Press) {
                                             // Skip right-clicks (they trigger context menu)
-                                            val isRightClick = event.button != null && event.button.toString().contains("Secondary")
+                                            // Check if this is NOT a primary (left) button press
+                                            val isPrimaryClick = event.button == PointerButton.Primary
+                                            val isRightClick = !isPrimaryClick && event.button != null
 
                                             if (isRightClick) {
                                                 // Right-click detected - consume the release event and skip selection logic
@@ -96,7 +104,7 @@ fun BattlefieldCard(
                                                 val timeSinceLastClick = clickTime - lastClickTime
                                                 lastClickTime = clickTime
 
-                                                if (timeSinceLastClick < 300) {
+                                                if (timeSinceLastClick < DOUBLE_CLICK_DELAY_MS) {
                                                     // Double-click - tap/untap
                                                     onCardClick(cardInstance)
                                                 } else if (isShiftPressed && selectionState != null) {
@@ -117,9 +125,9 @@ fun BattlefieldCard(
                         }
                     ),
             colors = CardDefaults.cardColors(containerColor = Color.Transparent),
-            shape = RoundedCornerShape(8.dp),
+            shape = RoundedCornerShape(CARD_CORNER_RADIUS),
             border = BorderStroke(borderWidth, borderColor),
-            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+            elevation = CardDefaults.cardElevation(defaultElevation = CARD_ELEVATION)
         ) {
             Box(modifier = Modifier.fillMaxSize()) {
                 // Card image as background (show card back if flipped)

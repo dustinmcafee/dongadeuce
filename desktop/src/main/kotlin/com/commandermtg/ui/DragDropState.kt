@@ -7,10 +7,15 @@ import com.commandermtg.models.Zone
 
 /**
  * State holder for drag and drop operations
+ * Supports both single and multi-card dragging
  */
 @Stable
 class DragDropState {
     var draggedCard by mutableStateOf<CardInstance?>(null)
+        private set
+
+    // Track multiple dragged cards for multi-select drag operations
+    var draggedCardIds by mutableStateOf<Set<String>>(emptySet())
         private set
 
     var dragOffset by mutableStateOf(Offset.Zero)
@@ -21,6 +26,14 @@ class DragDropState {
 
     fun startDrag(card: CardInstance, offset: Offset = Offset.Zero) {
         draggedCard = card
+        draggedCardIds = setOf(card.instanceId)
+        dragOffset = offset
+        isDragging = true
+    }
+
+    fun startDragMultiple(cardIds: Set<String>, offset: Offset = Offset.Zero) {
+        draggedCardIds = cardIds
+        draggedCard = null // Not tracking single card in multi-drag
         dragOffset = offset
         isDragging = true
     }
@@ -31,6 +44,7 @@ class DragDropState {
 
     fun endDrag() {
         draggedCard = null
+        draggedCardIds = emptySet()
         dragOffset = Offset.Zero
         isDragging = false
     }
