@@ -12,8 +12,12 @@ data class GameState(
     val phase: GamePhase = GamePhase.UNTAP
 ) {
     val activePlayer: Player
-        get() = players.getOrNull(activePlayerIndex)
-            ?: throw IllegalStateException("No active player at index $activePlayerIndex (total players: ${players.size})")
+        get() {
+            // Coerce activePlayerIndex to valid range to prevent crashes
+            val validIndex = activePlayerIndex.coerceIn(0, players.size - 1)
+            return players.getOrNull(validIndex)
+                ?: throw IllegalStateException("No players in game (empty players list)")
+        }
 
     fun getPlayerCards(playerId: String, zone: Zone? = null): List<CardInstance> {
         return cardInstances.filter {

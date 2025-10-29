@@ -443,6 +443,9 @@ class GameViewModel {
                 )
             }
         }
+
+        // Check if game should end after turn change
+        checkGameEnd()
     }
 
     /**
@@ -504,9 +507,10 @@ class GameViewModel {
                 player.takeCommanderDamage(commanderId, damageChange)
             } else if (damageChange < 0) {
                 // Manual decrease - update the map directly
+                // IMPORTANT: Preserve existing loss state - once lost, always lost
                 player.copy(
                     commanderDamage = player.commanderDamage + (commanderId to newDamage),
-                    hasLost = player.commanderDamage.any { (id, damage) ->
+                    hasLost = player.hasLost || player.commanderDamage.any { (id, damage) ->
                         if (id == commanderId) {
                             newDamage >= GameConstants.COMMANDER_DAMAGE_THRESHOLD
                         } else {
@@ -519,23 +523,8 @@ class GameViewModel {
             }
         }
 
-        _uiState.update {
-            it.copy(
-                gameState = updatedGameState,
-                localPlayer = if (currentState.localPlayer?.id == playerId) {
-                    updatedGameState.players.find { p -> p.id == playerId }
-                } else {
-                    currentState.localPlayer
-                },
-                opponents = currentState.opponents.map { opponent ->
-                    if (opponent.id == playerId) {
-                        updatedGameState.players.find { p -> p.id == playerId } ?: opponent
-                    } else {
-                        opponent
-                    }
-                }
-            )
-        }
+        // Sync player references
+        syncPlayerReferences(updatedGameState)
     }
 
     /**

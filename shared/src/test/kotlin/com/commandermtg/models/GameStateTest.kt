@@ -22,33 +22,32 @@ class GameStateTest {
     }
 
     @Test
-    fun `activePlayer throws exception for out of bounds index`() {
+    fun `activePlayer coerces out of bounds index to valid range`() {
         val player1 = Player(id = "1", name = "Player 1")
+        val player2 = Player(id = "2", name = "Player 2")
         val gameState = GameState(
             gameId = "game1",
-            players = listOf(player1),
+            players = listOf(player1, player2),
             cardInstances = emptyList(),
-            activePlayerIndex = 5 // Out of bounds
+            activePlayerIndex = 5 // Out of bounds - should coerce to valid range
         )
 
-        assertFailsWith<IllegalStateException> {
-            gameState.activePlayer
-        }
+        // Should return last player instead of throwing
+        assertEquals(player2, gameState.activePlayer)
     }
 
     @Test
-    fun `activePlayer throws exception for negative index`() {
+    fun `activePlayer coerces negative index to first player`() {
         val player1 = Player(id = "1", name = "Player 1")
         val gameState = GameState(
             gameId = "game1",
             players = listOf(player1),
             cardInstances = emptyList(),
-            activePlayerIndex = -1 // Negative index
+            activePlayerIndex = -1 // Negative index - should coerce to 0
         )
 
-        assertFailsWith<IllegalStateException> {
-            gameState.activePlayer
-        }
+        // Should return first player instead of throwing
+        assertEquals(player1, gameState.activePlayer)
     }
 
     @Test
