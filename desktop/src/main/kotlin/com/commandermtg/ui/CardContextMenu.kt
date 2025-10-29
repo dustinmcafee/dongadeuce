@@ -5,6 +5,7 @@ import androidx.compose.foundation.ContextMenuItem
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import com.commandermtg.models.CardInstance
+import com.commandermtg.models.Player
 import com.commandermtg.models.Zone
 
 /**
@@ -52,7 +53,8 @@ fun CardWithContextMenu(
  */
 private fun buildContextMenuItems(
     cardInstance: CardInstance,
-    onAction: (CardAction) -> Unit
+    onAction: (CardAction) -> Unit,
+    otherPlayers: List<Player> = emptyList()
 ): List<ContextMenuItem> {
     val items = mutableListOf<ContextMenuItem>()
 
@@ -84,6 +86,13 @@ private fun buildContextMenuItems(
                 }
             }
 
+            // Give control to other players
+            otherPlayers.forEach { player: Player ->
+                items.add(ContextMenuItem("Give Control to ${player.name}") {
+                    onAction(CardAction.GiveControlTo(cardInstance, player.id, player.name))
+                })
+            }
+
             // Move to zones
             items.add(ContextMenuItem("Return to Hand") { onAction(CardAction.ToHand(cardInstance)) })
             items.add(ContextMenuItem("To Graveyard") { onAction(CardAction.ToGraveyard(cardInstance)) })
@@ -103,6 +112,13 @@ private fun buildContextMenuItems(
             items.add(ContextMenuItem("To Library") { onAction(CardAction.ToLibrary(cardInstance)) })
             items.add(ContextMenuItem("To Top of Library") { onAction(CardAction.ToTop(cardInstance)) })
 
+            // Give control to other players
+            otherPlayers.forEach { player: Player ->
+                items.add(ContextMenuItem("Give to ${player.name}'s Battlefield") {
+                    onAction(CardAction.GiveControlTo(cardInstance, player.id, player.name))
+                })
+            }
+
             // Commander-specific: can go to command zone from anywhere
             if (cardInstance.card.isLegendary && cardInstance.card.isCreature) {
                 items.add(ContextMenuItem("To Command Zone") { onAction(CardAction.ToCommandZone(cardInstance)) })
@@ -116,6 +132,13 @@ private fun buildContextMenuItems(
             items.add(ContextMenuItem("To Library") { onAction(CardAction.ToLibrary(cardInstance)) })
             items.add(ContextMenuItem("To Top of Library") { onAction(CardAction.ToTop(cardInstance)) })
 
+            // Give control to other players
+            otherPlayers.forEach { player: Player ->
+                items.add(ContextMenuItem("Give to ${player.name}'s Battlefield") {
+                    onAction(CardAction.GiveControlTo(cardInstance, player.id, player.name))
+                })
+            }
+
             // Commander-specific: can go to command zone from anywhere
             if (cardInstance.card.isLegendary && cardInstance.card.isCreature) {
                 items.add(ContextMenuItem("To Command Zone") { onAction(CardAction.ToCommandZone(cardInstance)) })
@@ -128,6 +151,13 @@ private fun buildContextMenuItems(
             items.add(ContextMenuItem("To Graveyard") { onAction(CardAction.ToGraveyard(cardInstance)) })
             items.add(ContextMenuItem("To Library") { onAction(CardAction.ToLibrary(cardInstance)) })
 
+            // Give control to other players
+            otherPlayers.forEach { player: Player ->
+                items.add(ContextMenuItem("Give to ${player.name}'s Battlefield") {
+                    onAction(CardAction.GiveControlTo(cardInstance, player.id, player.name))
+                })
+            }
+
             // Commander-specific: can go to command zone from anywhere
             if (cardInstance.card.isLegendary && cardInstance.card.isCreature) {
                 items.add(ContextMenuItem("To Command Zone") { onAction(CardAction.ToCommandZone(cardInstance)) })
@@ -138,6 +168,13 @@ private fun buildContextMenuItems(
             items.add(ContextMenuItem("To Hand") { onAction(CardAction.ToHand(cardInstance)) })
             items.add(ContextMenuItem("To Battlefield") { onAction(CardAction.ToBattlefield(cardInstance)) })
             items.add(ContextMenuItem("To Top of Library") { onAction(CardAction.ToTop(cardInstance)) })
+
+            // Give control to other players
+            otherPlayers.forEach { player: Player ->
+                items.add(ContextMenuItem("Give to ${player.name}'s Battlefield") {
+                    onAction(CardAction.GiveControlTo(cardInstance, player.id, player.name))
+                })
+            }
         }
 
         Zone.COMMAND_ZONE -> {
@@ -178,6 +215,7 @@ fun handleCardAction(
         is CardAction.ToCommandZone -> viewModel.moveCard(action.cardInstance.instanceId, Zone.COMMAND_ZONE)
         is CardAction.AddCounter -> viewModel.addCounter(action.cardInstance.instanceId, action.counterType, 1)
         is CardAction.RemoveCounter -> viewModel.removeCounter(action.cardInstance.instanceId, action.counterType, 1)
+        is CardAction.GiveControlTo -> viewModel.giveControlTo(action.cardInstance.instanceId, action.newControllerId)
         is CardAction.ViewDetails -> {
             // TODO: Implement card details dialog
             println("View details for: ${action.cardInstance.card.name}")

@@ -22,13 +22,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Visual feedback matches the number of cards being dragged
   - Works when dragging from hand to battlefield
   - Smooth synchronized movement for all selected cards
-  - Matches Cockatrice's visual behavior for multi-card drag
+  - Professional visual feedback for multi-card operations
 
 ## [2.15.0] - 2025-10-28
 
 ### Fixed
 - **Single-Click Selection Behavior** - Clicking any card now properly clears other selections
-  - Single-clicking a selected card now deselects others (as in Cockatrice)
+  - Single-clicking a selected card now deselects others
   - Shift+click still toggles individual cards in/out of selection
   - Works consistently in both hand and battlefield
   - Makes it easy to switch focus between card groups
@@ -37,7 +37,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Right-clicking any selected card shows menu that applies to ALL selected cards
   - Move multiple cards to graveyard, exile, hand, etc. with one action
   - Tap/untap, flip, and add/remove counters work on all selected cards
-  - Matches Cockatrice multi-selection context menu behavior
+  - Professional multi-selection context menu behavior
 
 - **Stack Overflow Prevention** - Multiple stacks created when dropping too many cards
   - When dropping cards on a stack that would exceed 3 cards, overflow goes to next position
@@ -63,7 +63,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Stack Separation** - Single cards can now be moved individually from stacks
   - By default, dragging one card moves just that card
   - Selecting multiple cards and dragging any of them moves all selected cards together
-  - Enables proper stack management like Cockatrice
+  - Enables proper stack management for organized battlefields
 
 - **Balanced Stack Offsets** - Improved visual stacking appearance
   - Changed horizontal offset from 33% to 25% of card width (56dp to 42dp)
@@ -87,13 +87,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Batch Action Bottom Menu** - Removed auto-popup batch action buttons
   - No more bottom menu with "To Battlefield", "To Graveyard", "To Exile" buttons
   - All zone movement now done via right-click context menu only
-  - Cleaner interface matching Cockatrice design
+  - Cleaner interface with streamlined design
   - Reduces UI clutter and interruptions
 
 ## [2.13.0] - 2025-10-28
 
 ### Added
-- **Cockatrice-Style Battlefield Card Stacking** - Visual card stacking in battlefield grid
+- **Battlefield Card Stacking** - Visual card stacking in battlefield grid
   - Up to 3 cards can stack at the same grid position
   - Stacked cards render with visual offset (horizontal: 33% card width, vertical: 33% padding)
   - Proper z-index layering for stacked cards (bottom to top)
@@ -138,7 +138,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Works in both hotseat mode and network mode
   - Only active player can select cards in hotseat mode
 
-- **Token Creation Feature** - Create custom tokens similar to Cockatrice
+- **Token Creation Feature** - Create custom tokens for gameplay
   - Search Scryfall's token database with real-time lookup
   - Click search results to auto-fill token properties
   - Manual custom token creation with full customization:

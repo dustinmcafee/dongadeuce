@@ -27,7 +27,9 @@ fun BattlefieldCard(
     onCardClick: (CardInstance) -> Unit,
     onContextAction: (CardAction) -> Unit = {},
     selectionState: SelectionState? = null,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    otherPlayers: List<com.commandermtg.models.Player> = emptyList(),
+    ownerName: String = ""
 ) {
     var lastClickTime by remember { mutableStateOf(0L) }
     val isSelected = selectionState?.isSelected(cardInstance.instanceId) == true
@@ -50,13 +52,17 @@ fun BattlefieldCard(
         Modifier.size(width = 120.dp, height = 168.dp)
     }
 
+    // Check if owner != controller
+    val showOwnerTag = cardInstance.ownerId != cardInstance.controllerId && ownerName.isNotEmpty()
+
     Box(
         modifier = modifier.then(containerSize),
         contentAlignment = Alignment.Center
     ) {
         CardWithContextMenu(
             cardInstance = cardInstance,
-            onAction = onContextAction
+            onAction = onContextAction,
+            otherPlayers = otherPlayers
         ) {
             Card(
                 modifier = Modifier
@@ -118,8 +124,8 @@ fun BattlefieldCard(
             Box(modifier = Modifier.fillMaxSize()) {
                 // Card image as background (show card back if flipped)
                 val imageUrl = if (cardInstance.isFlipped) {
-                    // Magic card back image from Scryfall
-                    "https://cards.scryfall.io/large/back/0/0/0aeebaf5-8c7d-4636-9e82-8c27447861f7.jpg"
+                    // Standard Magic card back image from Scryfall
+                    "https://cards.scryfall.io/back.png"
                 } else {
                     cardInstance.card.imageUri
                 }
@@ -138,28 +144,47 @@ fun BattlefieldCard(
                             .padding(4.dp),
                         verticalArrangement = Arrangement.SpaceBetween
                     ) {
-                        // Counters (top)
-                        if (cardInstance.counters.isNotEmpty()) {
-                            Surface(
-                                color = Color.Black.copy(alpha = 0.7f),
-                                shape = RoundedCornerShape(4.dp)
-                            ) {
-                                Column(
-                                    modifier = Modifier.padding(4.dp),
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                        // Owner tag and counters (top)
+                        Column(
+                            horizontalAlignment = Alignment.Start,
+                            verticalArrangement = Arrangement.spacedBy(2.dp)
+                        ) {
+                            // Owner tag (only show if controller != owner)
+                            if (showOwnerTag) {
+                                Surface(
+                                    color = Color.Blue.copy(alpha = 0.8f),
+                                    shape = RoundedCornerShape(4.dp)
                                 ) {
-                                    cardInstance.counters.forEach { (counterType, count) ->
-                                        Text(
-                                            text = "$count $counterType",
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = Color.White
-                                        )
+                                    Text(
+                                        text = "Owner: $ownerName",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = Color.White,
+                                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                                    )
+                                }
+                            }
+
+                            // Counters
+                            if (cardInstance.counters.isNotEmpty()) {
+                                Surface(
+                                    color = Color.Black.copy(alpha = 0.7f),
+                                    shape = RoundedCornerShape(4.dp)
+                                ) {
+                                    Column(
+                                        modifier = Modifier.padding(4.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                                    ) {
+                                        cardInstance.counters.forEach { (counterType, count) ->
+                                            Text(
+                                                text = "$count $counterType",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = Color.White
+                                            )
+                                        }
                                     }
                                 }
                             }
-                        } else {
-                            Spacer(modifier = Modifier.height(1.dp))
                         }
 
                         Spacer(modifier = Modifier.weight(1f))

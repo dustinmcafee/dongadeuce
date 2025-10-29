@@ -250,6 +250,7 @@ fun GameScreen(
                                 onCardAction = handleAction,
                                 dragDropState = dragDropState,
                                 selectionState = selectionState,
+                                otherPlayers = rotatedPlayers.filter { it.id != rotatedPlayers[1].id },
                                 modifier = Modifier.fillMaxWidth().weight(1f)
                             )
                             HotseatPlayerSection(
@@ -259,6 +260,7 @@ fun GameScreen(
                                 onCardAction = handleAction,
                                 dragDropState = dragDropState,
                                 selectionState = selectionState,
+                                otherPlayers = rotatedPlayers.filter { it.id != rotatedPlayers[0].id },
                                 modifier = Modifier.fillMaxWidth().weight(1f),
                                 inverted = true
                             )
@@ -273,6 +275,7 @@ fun GameScreen(
                                     onCardAction = handleAction,
                                     dragDropState = dragDropState,
                                     selectionState = selectionState,
+                                    otherPlayers = rotatedPlayers.filter { it.id != rotatedPlayers[1].id },
                                     modifier = Modifier.weight(1f)
                                 )
                                 HotseatPlayerSection(
@@ -282,6 +285,7 @@ fun GameScreen(
                                     onCardAction = handleAction,
                                     dragDropState = dragDropState,
                                     selectionState = selectionState,
+                                    otherPlayers = rotatedPlayers.filter { it.id != rotatedPlayers[2].id },
                                     modifier = Modifier.weight(1f)
                                 )
                             }
@@ -293,6 +297,7 @@ fun GameScreen(
                                     onCardAction = handleAction,
                                     dragDropState = dragDropState,
                                     selectionState = selectionState,
+                                    otherPlayers = rotatedPlayers.filter { it.id != rotatedPlayers[0].id },
                                     modifier = Modifier.weight(1f),
                                     inverted = true
                                 )
@@ -310,6 +315,7 @@ fun GameScreen(
                                     onCardAction = handleAction,
                                     dragDropState = dragDropState,
                                     selectionState = selectionState,
+                                    otherPlayers = rotatedPlayers.filter { it.id != rotatedPlayers[2].id },
                                     modifier = Modifier.weight(1f)
                                 )
                                 HotseatPlayerSection(
@@ -319,6 +325,7 @@ fun GameScreen(
                                     onCardAction = handleAction,
                                     dragDropState = dragDropState,
                                     selectionState = selectionState,
+                                    otherPlayers = rotatedPlayers.filter { it.id != rotatedPlayers[3].id },
                                     modifier = Modifier.weight(1f)
                                 )
                             }
@@ -330,6 +337,7 @@ fun GameScreen(
                                     onCardAction = handleAction,
                                     dragDropState = dragDropState,
                                     selectionState = selectionState,
+                                    otherPlayers = rotatedPlayers.filter { it.id != rotatedPlayers[0].id },
                                     modifier = Modifier.weight(1f),
                                     inverted = true
                                 )
@@ -340,6 +348,7 @@ fun GameScreen(
                                     onCardAction = handleAction,
                                     dragDropState = dragDropState,
                                     selectionState = selectionState,
+                                    otherPlayers = rotatedPlayers.filter { it.id != rotatedPlayers[1].id },
                                     modifier = Modifier.weight(1f),
                                     inverted = true
                                 )
@@ -362,7 +371,8 @@ fun GameScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .weight(0.4f),
-                        selectionState = selectionState
+                        selectionState = selectionState,
+                        allPlayers = opponents + listOfNotNull(localPlayer)
                     )
                 }
 
@@ -463,6 +473,7 @@ fun HotseatPlayerSection(
     onCardAction: (CardAction) -> Unit,
     dragDropState: DragDropState? = null,
     selectionState: SelectionState? = null,
+    otherPlayers: List<Player> = emptyList(),
     modifier: Modifier = Modifier,
     inverted: Boolean = false // If true, hand at bottom; if false, hand at top
 ) {
@@ -497,6 +508,7 @@ fun HotseatPlayerSection(
                 onCardAction = onCardAction,
                 dragDropState = dragDropState,
                 selectionState = if (isActivePlayer) selectionState else null,
+                otherPlayers = otherPlayers,
                 modifier = Modifier.fillMaxWidth().height(100.dp)
             )
         }
@@ -598,7 +610,9 @@ fun HotseatPlayerSection(
                         },
                         modifier = Modifier.fillMaxSize(),
                         selectionState = selectionState,
-                        currentPlayerId = if (isActivePlayer) player.id else null
+                        currentPlayerId = if (isActivePlayer) player.id else null,
+                        otherPlayers = otherPlayers,
+                        allPlayers = otherPlayers + listOf(player)
                     )
                 }
             }
@@ -614,6 +628,7 @@ fun HotseatPlayerSection(
                 onCardAction = onCardAction,
                 dragDropState = dragDropState,
                 selectionState = if (isActivePlayer) selectionState else null,
+                otherPlayers = otherPlayers,
                 modifier = Modifier.fillMaxWidth().height(100.dp)
             )
         }
@@ -705,6 +720,7 @@ fun CompactHandStrip(
     onCardAction: (CardAction) -> Unit,
     dragDropState: DragDropState? = null,
     selectionState: SelectionState? = null,
+    otherPlayers: List<Player> = emptyList(),
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -762,7 +778,8 @@ fun CompactHandStrip(
                                 onDragStateChange = { draggedIds, offset ->
                                     draggedHandCardIds = draggedIds
                                     handDragOffset = offset
-                                }
+                                },
+                                otherPlayers = otherPlayers
                             )
                         }
                     }
@@ -782,7 +799,8 @@ fun OpponentsArea(
     viewModel: GameViewModel,
     onCardAction: (CardAction) -> Unit,
     modifier: Modifier = Modifier,
-    selectionState: SelectionState? = null
+    selectionState: SelectionState? = null,
+    allPlayers: List<Player> = emptyList()
 ) {
     when (opponents.size) {
         1 -> {
@@ -792,7 +810,9 @@ fun OpponentsArea(
                 viewModel = viewModel,
                 onCardAction = onCardAction,
                 modifier = modifier,
-                selectionState = selectionState
+                selectionState = selectionState,
+                otherPlayers = allPlayers.filter { it.id != opponents[0].id },
+                allPlayers = allPlayers
             )
         }
         2 -> {
@@ -806,14 +826,18 @@ fun OpponentsArea(
                     viewModel = viewModel,
                     onCardAction = onCardAction,
                     modifier = Modifier.weight(1f),
-                    selectionState = selectionState
+                    selectionState = selectionState,
+                    otherPlayers = allPlayers.filter { it.id != opponents[0].id },
+                    allPlayers = allPlayers
                 )
                 OpponentArea(
                     player = opponents[1],
                     viewModel = viewModel,
                     onCardAction = onCardAction,
                     modifier = Modifier.weight(1f),
-                    selectionState = selectionState
+                    selectionState = selectionState,
+                    otherPlayers = allPlayers.filter { it.id != opponents[1].id },
+                    allPlayers = allPlayers
                 )
             }
         }
@@ -829,7 +853,9 @@ fun OpponentsArea(
                         viewModel = viewModel,
                         onCardAction = onCardAction,
                         modifier = Modifier.weight(1f),
-                        selectionState = selectionState
+                        selectionState = selectionState,
+                        otherPlayers = allPlayers.filter { it.id != opponent.id },
+                        allPlayers = allPlayers
                     )
                 }
             }
@@ -847,7 +873,9 @@ fun OpponentsArea(
                         viewModel = viewModel,
                         onCardAction = onCardAction,
                         modifier = Modifier.weight(1f),
-                        selectionState = selectionState
+                        selectionState = selectionState,
+                        otherPlayers = allPlayers.filter { it.id != opponent.id },
+                        allPlayers = allPlayers
                     )
                 }
             }
@@ -862,7 +890,9 @@ fun OpponentArea(
     viewModel: GameViewModel,
     onCardAction: (CardAction) -> Unit,
     modifier: Modifier = Modifier,
-    selectionState: SelectionState? = null
+    selectionState: SelectionState? = null,
+    otherPlayers: List<Player> = emptyList(),
+    allPlayers: List<Player> = emptyList()
 ) {
     var showGraveyardDialog by remember { mutableStateOf(false) }
     var showExileDialog by remember { mutableStateOf(false) }
@@ -990,7 +1020,9 @@ fun OpponentArea(
                 },
                 modifier = Modifier.fillMaxSize().padding(8.dp),
                 selectionState = selectionState,
-                currentPlayerId = null // Opponent cards cannot be dragged
+                currentPlayerId = null, // Opponent cards cannot be dragged
+                otherPlayers = otherPlayers,
+                allPlayers = allPlayers
             )
         }
     }
@@ -1159,7 +1191,9 @@ fun PlayerArea(
                 },
                 modifier = Modifier.fillMaxSize().padding(8.dp),
                 selectionState = selectionState,
-                currentPlayerId = player.id // Only this player can drag their cards
+                currentPlayerId = player.id, // Only this player can drag their cards
+                otherPlayers = allPlayers.filter { it.id != player.id },
+                allPlayers = allPlayers
             )
         }
 
@@ -1370,7 +1404,8 @@ fun PlayerArea(
                                     onDragStateChange = { draggedIds, offset ->
                                         draggedHandCardIds = draggedIds
                                         handDragOffset = offset
-                                    }
+                                    },
+                                    otherPlayers = allPlayers.filter { it.id != player.id }
                                 )
                             }
                         }
@@ -1608,7 +1643,8 @@ fun HandCardDisplay(
     selectionState: SelectionState? = null,
     sharedDraggedCardIds: Set<String> = emptySet(),
     sharedDragOffset: Offset = Offset.Zero,
-    onDragStateChange: (Set<String>, Offset) -> Unit = { _, _ -> }
+    onDragStateChange: (Set<String>, Offset) -> Unit = { _, _ -> },
+    otherPlayers: List<com.commandermtg.models.Player> = emptyList()
 ) {
     var lastClickTime by remember { mutableStateOf(0L) }
     val isSelected = selectionState?.isSelected(cardInstance.instanceId) == true
@@ -1616,7 +1652,8 @@ fun HandCardDisplay(
 
     CardWithContextMenu(
         cardInstance = cardInstance,
-        onAction = onContextAction
+        onAction = onContextAction,
+        otherPlayers = otherPlayers
     ) {
         Box {
             Card(

@@ -330,6 +330,23 @@ class GameViewModel {
     }
 
     /**
+     * Give control of a card to another player
+     * Moves the card to their battlefield
+     */
+    fun giveControlTo(cardInstanceId: String, newControllerId: String) {
+        val currentState = _uiState.value
+        val gameState = currentState.gameState ?: return
+
+        val updatedGameState = gameState.updateCardInstance(cardInstanceId) {
+            it.changeController(newControllerId).moveToZone(Zone.BATTLEFIELD)
+        }
+
+        _uiState.update {
+            it.copy(gameState = updatedGameState)
+        }
+    }
+
+    /**
      * Tap/untap a card
      */
     fun toggleTap(cardInstanceId: String) {

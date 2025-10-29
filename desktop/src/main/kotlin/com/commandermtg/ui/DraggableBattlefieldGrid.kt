@@ -33,7 +33,9 @@ fun DraggableBattlefieldGrid(
     onCardPositionChanged: (String, Int, Int) -> Unit,
     modifier: Modifier = Modifier,
     currentPlayerId: String? = null, // ID of the player who can drag cards
-    selectionState: SelectionState? = null
+    selectionState: SelectionState? = null,
+    otherPlayers: List<com.commandermtg.models.Player> = emptyList(),
+    allPlayers: List<com.commandermtg.models.Player> = emptyList()
 ) {
     if (cards.isEmpty()) {
         Box(
@@ -79,7 +81,7 @@ fun DraggableBattlefieldGrid(
         cards.map { "${it.instanceId}:${it.gridX}:${it.gridY}" }.joinToString(",")
     }
 
-    // Card stacking offsets (Cockatrice-style)
+    // Card stacking offsets for visual clarity
     val stackOffsetX = (cardWidth.value * 0.25f).dp // CARD_WIDTH / 4
     val stackOffsetY = (cardHeight.value * 0.25f).dp // CARD_HEIGHT / 4
 
@@ -169,7 +171,7 @@ fun DraggableBattlefieldGrid(
                     var xPos = col * cellWidth
                     var yPos = row * cellHeight
 
-                    // Apply stacking offset (Cockatrice-style)
+                    // Apply stacking offset for visual separation
                     if (stackInfo != null) {
                         xPos += stackInfo.stackIndex * stackOffsetX.value
                         yPos += stackInfo.stackIndex * stackOffsetY.value
@@ -306,7 +308,9 @@ fun DraggableBattlefieldGrid(
                             isLocalPlayer = isLocalPlayer,
                             onCardClick = onCardClick,
                             onContextAction = onContextAction,
-                            selectionState = selectionState
+                            selectionState = selectionState,
+                            otherPlayers = otherPlayers,
+                            ownerName = allPlayers.firstOrNull { it.id == card.ownerId }?.name ?: ""
                         )
                     }
         }
