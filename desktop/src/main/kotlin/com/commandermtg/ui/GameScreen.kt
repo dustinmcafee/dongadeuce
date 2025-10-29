@@ -1667,81 +1667,87 @@ fun HandCardDisplay(
                             translationY = sharedDragOffset.y
                         }
                     }
-                    // Drag gesture support
-                    .pointerInput(cardInstance.instanceId) {
-                        detectDragGestures(
-                            onDragStart = {
-                                // Determine which cards to drag
-                                val cardsToDrag = if (selectionState?.isSelected(cardInstance.instanceId) == true &&
-                                                       selectionState.selectedCards.size > 1) {
-                                    // Drag all selected cards
-                                    selectionState.selectedCards.toSet()
-                                } else {
-                                    // Drag just this card
-                                    setOf(cardInstance.instanceId)
-                                }
-                                onDragStateChange(cardsToDrag, Offset.Zero)
-                            },
-                            onDrag = { change, dragAmount ->
-                                change.consume()
-                                onDragStateChange(sharedDraggedCardIds, sharedDragOffset + dragAmount)
-                            },
-                            onDragEnd = {
-                                // If dragged a significant distance, play to battlefield
-                                if (sharedDragOffset.getDistance() > 20f) {
-                                    // User dragged the card(s) - play them to battlefield
-                                    // The handleAction will apply to all selected cards if multi-selected
-                                    onContextAction(CardAction.ToBattlefield(cardInstance))
-                                }
-                                onDragStateChange(emptySet(), Offset.Zero)
-                            },
-                            onDragCancel = {
-                                onDragStateChange(emptySet(), Offset.Zero)
-                            }
-                        )
-                    }
-                    // Click gesture support with shift-key detection
+                    // Combined click and drag gesture support
                     .pointerInput(cardInstance.instanceId) {
                         awaitPointerEventScope {
                             while (true) {
                                 val event = awaitPointerEvent()
 
                                 if (event.type == PointerEventType.Press) {
-                                    // Skip right-clicks (they trigger context menu)
+                                    // Check button type
                                     val isRightClick = event.button != null && event.button.toString().contains("Secondary")
 
                                     if (isRightClick) {
-                                        // Right-click detected - consume the release event and skip selection logic
+                                        // Right-click detected - consume the release event and skip all logic
                                         awaitPointerEvent()
                                         continue
                                     }
 
+                                    // Left click - handle selection and drag
                                     val isShiftPressed = event.keyboardModifiers.isShiftPressed
+                                    var totalDrag = Offset.Zero
+                                    var isDragging = false
 
-                                    // Wait for release
-                                    val releaseEvent = awaitPointerEvent()
+                                    // Track drag or click
+                                    while (true) {
+                                        val moveEvent = awaitPointerEvent()
 
-                                    if (releaseEvent.type == PointerEventType.Release) {
-                                        // Check for double-click by tracking time
-                                        val clickTime = System.currentTimeMillis()
-                                        val timeSinceLastClick = clickTime - lastClickTime
-                                        lastClickTime = clickTime
+                                        if (moveEvent.type == PointerEventType.Move) {
+                                            val change = moveEvent.changes.first()
+                                            val dragAmount = change.position - change.previousPosition
+                                            totalDrag += dragAmount
 
-                                        if (timeSinceLastClick < 300) {
-                                            // Double-click - clear selection and play card
-                                            selectionState?.clearSelection()
-                                            onDoubleClick()
-                                        } else if (isShiftPressed && selectionState != null) {
-                                            // Shift+click - toggle selection
-                                            selectionState.toggleSelection(cardInstance.instanceId)
-                                        } else {
-                                            // Regular click - always clear and select only this card
-                                            if (selectionState != null) {
-                                                selectionState.clearSelection()
-                                                selectionState.select(cardInstance.instanceId)
-                                            } else {
-                                                onCardClick(cardInstance)
+                                            // Start drag if moved more than threshold
+                                            if (!isDragging && totalDrag.getDistance() > 5f) {
+                                                isDragging = true
+                                                // Determine which cards to drag
+                                                val cardsToDrag = if (selectionState?.isSelected(cardInstance.instanceId) == true &&
+                                                                       selectionState.selectedCards.size > 1) {
+                                                    // Drag all selected cards
+                                                    selectionState.selectedCards.toSet()
+                                                } else {
+                                                    // Drag just this card
+                                                    setOf(cardInstance.instanceId)
+                                                }
+                                                onDragStateChange(cardsToDrag, Offset.Zero)
                                             }
+
+                                            if (isDragging) {
+                                                change.consume()
+                                                onDragStateChange(sharedDraggedCardIds, sharedDragOffset + dragAmount)
+                                            }
+                                        } else if (moveEvent.type == PointerEventType.Release) {
+                                            if (isDragging) {
+                                                // Drag ended
+                                                if (sharedDragOffset.getDistance() > 20f) {
+                                                    // User dragged the card(s) - play them to battlefield
+                                                    onContextAction(CardAction.ToBattlefield(cardInstance))
+                                                }
+                                                onDragStateChange(emptySet(), Offset.Zero)
+                                            } else {
+                                                // Click (no drag)
+                                                val clickTime = System.currentTimeMillis()
+                                                val timeSinceLastClick = clickTime - lastClickTime
+                                                lastClickTime = clickTime
+
+                                                if (timeSinceLastClick < 300) {
+                                                    // Double-click - clear selection and play card
+                                                    selectionState?.clearSelection()
+                                                    onDoubleClick()
+                                                } else if (isShiftPressed && selectionState != null) {
+                                                    // Shift+click - toggle selection
+                                                    selectionState.toggleSelection(cardInstance.instanceId)
+                                                } else {
+                                                    // Regular click - always clear and select only this card
+                                                    if (selectionState != null) {
+                                                        selectionState.clearSelection()
+                                                        selectionState.select(cardInstance.instanceId)
+                                                    } else {
+                                                        onCardClick(cardInstance)
+                                                    }
+                                                }
+                                            }
+                                            break // Exit inner loop after release
                                         }
                                     }
                                 }
