@@ -408,6 +408,46 @@ fun GameScreen(
         )
     }
 
+    // Game over dialog
+    if (uiState.gameEnded) {
+        val winner = uiState.allPlayers.firstOrNull { !it.hasLost }
+        AlertDialog(
+            onDismissRequest = { /* Game has ended, cannot dismiss */ },
+            title = { Text("Game Over") },
+            text = {
+                Column {
+                    if (winner != null) {
+                        Text(
+                            "Winner: ${winner.name}!",
+                            style = MaterialTheme.typography.headlineMedium
+                        )
+                    } else {
+                        Text(
+                            "All players have been eliminated.",
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        "Final Standings:",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    uiState.allPlayers.forEach { player ->
+                        Text(
+                            "${player.name}: ${if (player.hasLost) "Defeated" else "Winner"} (Life: ${player.life})",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { /* Acknowledges game over, dialog stays visible */ }) {
+                    Text("OK")
+                }
+            }
+        )
+    }
+
 }
 
 /**
@@ -1206,6 +1246,19 @@ fun PlayerArea(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text("Create Token")
+                    }
+
+                    OutlinedButton(
+                        onClick = {
+                            // Mark player as having lost
+                            viewModel.markPlayerAsLost(player.id)
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = MaterialTheme.colorScheme.error
+                        )
+                    ) {
+                        Text("Leave Game")
                     }
                 }
             }

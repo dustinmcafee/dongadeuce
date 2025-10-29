@@ -17,7 +17,8 @@ data class GameUiState(
     val selectedCardId: String? = null,
     val isLoading: Boolean = false,
     val error: String? = null,
-    val isHotseatMode: Boolean = false
+    val isHotseatMode: Boolean = false,
+    val gameEnded: Boolean = false
 ) {
     val allPlayers: List<Player>
         get() = listOfNotNull(localPlayer) + opponents
@@ -208,6 +209,59 @@ class GameViewModel {
                     }
                 }
             )
+        }
+
+        // Check if game should end (less than 2 active players)
+        checkGameEnd()
+    }
+
+    /**
+     * Mark a player as having lost (they left the game or were defeated)
+     */
+    fun markPlayerAsLost(playerId: String) {
+        val currentState = _uiState.value
+        val gameState = currentState.gameState ?: return
+
+        val updatedGameState = gameState.updatePlayer(playerId) { player ->
+            player.copy(hasLost = true)
+        }
+
+        _uiState.update {
+            it.copy(
+                gameState = updatedGameState,
+                localPlayer = if (currentState.localPlayer?.id == playerId) {
+                    updatedGameState.players.find { p -> p.id == playerId }
+                } else {
+                    currentState.localPlayer
+                },
+                opponents = currentState.opponents.map { opponent ->
+                    if (opponent.id == playerId) {
+                        updatedGameState.players.find { p -> p.id == playerId } ?: opponent
+                    } else {
+                        opponent
+                    }
+                }
+            )
+        }
+
+        // Check if game should end
+        checkGameEnd()
+    }
+
+    /**
+     * Check if game should end (less than 2 active players remaining)
+     */
+    private fun checkGameEnd() {
+        val currentState = _uiState.value
+        val gameState = currentState.gameState ?: return
+
+        val activePlayers = gameState.players.count { !it.hasLost }
+
+        if (activePlayers < 2) {
+            // Game ends when less than 2 active players
+            _uiState.update {
+                it.copy(gameEnded = true)
+            }
         }
     }
 

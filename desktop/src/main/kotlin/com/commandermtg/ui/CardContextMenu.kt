@@ -23,6 +23,7 @@ sealed class CardAction {
     data class ToCommandZone(val cardInstance: CardInstance) : CardAction()
     data class AddCounter(val cardInstance: CardInstance, val counterType: String) : CardAction()
     data class RemoveCounter(val cardInstance: CardInstance, val counterType: String) : CardAction()
+    data class GiveControlTo(val cardInstance: CardInstance, val newControllerId: String, val newControllerName: String) : CardAction()
     data class ViewDetails(val cardInstance: CardInstance) : CardAction()
 }
 
@@ -34,9 +35,10 @@ fun CardWithContextMenu(
     cardInstance: CardInstance,
     onAction: (CardAction) -> Unit,
     modifier: Modifier = Modifier,
+    otherPlayers: List<Player> = emptyList(),
     content: @Composable () -> Unit
 ) {
-    val menuItems = buildContextMenuItems(cardInstance, onAction)
+    val menuItems = buildContextMenuItems(cardInstance, onAction, otherPlayers)
 
     ContextMenuArea(
         items = { menuItems }

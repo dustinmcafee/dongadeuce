@@ -31,4 +31,5 @@ data class CardInstance(
         return copy(counters = counters + (counterType to current + amount))
     }
     fun setGridPosition(x: Int, y: Int) = copy(gridX = x, gridY = y)
+    fun changeController(newControllerId: String) = copy(controllerId = newControllerId)
 }
