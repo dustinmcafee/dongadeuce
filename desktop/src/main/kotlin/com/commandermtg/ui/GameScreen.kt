@@ -695,6 +695,7 @@ fun HotseatPlayerSection(
 
         if (showTokenCreationDialog) {
             TokenCreationDialog(
+                viewModel = viewModel,
                 onDismiss = { showTokenCreationDialog = false },
                 onCreateToken = { tokenName, tokenType, power, toughness, color, imageUri, quantity ->
                     viewModel.createToken(player.id, tokenName, tokenType, power, toughness, color, imageUri, quantity)
@@ -1163,6 +1164,7 @@ fun PlayerArea(
     // Show token creation dialog if requested
     if (showTokenCreationDialog) {
         TokenCreationDialog(
+            viewModel = viewModel,
             onDismiss = { showTokenCreationDialog = false },
             onCreateToken = { tokenName, tokenType, power, toughness, color, imageUri, quantity ->
                 viewModel.createToken(player.id, tokenName, tokenType, power, toughness, color, imageUri, quantity)
@@ -1791,6 +1793,7 @@ fun HandCardDisplay(
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun TokenCreationDialog(
+    viewModel: com.commandermtg.viewmodel.GameViewModel,
     onDismiss: () -> Unit,
     onCreateToken: (tokenName: String, tokenType: String, power: String?, toughness: String?, color: String, imageUri: String?, quantity: Int) -> Unit
 ) {
@@ -1802,17 +1805,16 @@ fun TokenCreationDialog(
     var tokenImageUri by remember { mutableStateOf<String?>(null) }
     var quantity by remember { mutableStateOf("1") }
     var searchQuery by remember { mutableStateOf("") }
-    var searchResults by remember { mutableStateOf<List<com.commandermtg.models.Card>>(emptyList()) }
-    var isSearching by remember { mutableStateOf(false) }
 
     val colors = listOf("Colorless", "White", "Blue", "Black", "Red", "Green", "Multicolor")
-    val coroutineScope = rememberCoroutineScope()
-    val scryfallApi = remember { com.commandermtg.api.ScryfallApi() }
+    val uiState by viewModel.uiState.collectAsState()
+    val searchResults = uiState.tokenSearchResults
+    val isSearching = uiState.isSearchingTokens
 
-    // Cleanup on dismiss
+    // Clear search on dismiss
     DisposableEffect(Unit) {
         onDispose {
-            scryfallApi.close()
+            viewModel.clearTokenSearch()
         }
     }
 
@@ -1832,21 +1834,7 @@ fun TokenCreationDialog(
                     value = searchQuery,
                     onValueChange = {
                         searchQuery = it
-                        if (it.isNotBlank()) {
-                            isSearching = true
-                            coroutineScope.launch {
-                                try {
-                                    searchResults = scryfallApi.searchTokens(it)
-                                } catch (e: Exception) {
-                                    println("Search error: ${e.message}")
-                                    searchResults = emptyList()
-                                } finally {
-                                    isSearching = false
-                                }
-                            }
-                        } else {
-                            searchResults = emptyList()
-                        }
+                        viewModel.searchTokens(it)
                     },
                     label = { Text("Search Scryfall Tokens") },
                     placeholder = { Text("e.g., Goblin, Soldier, Treasure") },
@@ -1897,7 +1885,7 @@ fun TokenCreationDialog(
                                                 else -> "Colorless"
                                             }
                                             searchQuery = ""
-                                            searchResults = emptyList()
+                                            viewModel.clearTokenSearch()
                                         },
                                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
                                 ) {

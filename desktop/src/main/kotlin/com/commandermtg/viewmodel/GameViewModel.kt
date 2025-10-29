@@ -1,6 +1,8 @@
 package com.commandermtg.viewmodel
 
+import com.commandermtg.api.ScryfallApi
 import com.commandermtg.models.*
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -18,7 +20,9 @@ data class GameUiState(
     val isLoading: Boolean = false,
     val error: String? = null,
     val isHotseatMode: Boolean = false,
-    val gameEnded: Boolean = false
+    val gameEnded: Boolean = false,
+    val tokenSearchResults: List<Card> = emptyList(),
+    val isSearchingTokens: Boolean = false
 ) {
     val allPlayers: List<Player>
         get() = listOfNotNull(localPlayer) + opponents
@@ -27,6 +31,18 @@ data class GameUiState(
 class GameViewModel {
     private val _uiState = MutableStateFlow(GameUiState())
     val uiState: StateFlow<GameUiState> = _uiState.asStateFlow()
+
+    // Use SupervisorJob so exceptions don't cancel the whole scope
+    private val viewModelScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val scryfallApi = ScryfallApi()
+
+    /**
+     * Clean up resources when ViewModel is no longer needed
+     */
+    fun cleanup() {
+        viewModelScope.cancel()
+        scryfallApi.close()
+    }
 
     /**
      * Helper function to sync player references after updating game state
@@ -790,6 +806,51 @@ class GameViewModel {
 
         _uiState.update {
             it.copy(gameState = updatedGameState)
+        }
+    }
+
+    /**
+     * Search for tokens on Scryfall
+     */
+    fun searchTokens(query: String) {
+        if (query.isBlank()) {
+            clearTokenSearch()
+            return
+        }
+
+        _uiState.update { it.copy(isSearchingTokens = true) }
+
+        viewModelScope.launch {
+            try {
+                val results = scryfallApi.searchTokens(query)
+                _uiState.update {
+                    it.copy(
+                        tokenSearchResults = results,
+                        isSearchingTokens = false
+                    )
+                }
+            } catch (e: Exception) {
+                // Log error but don't crash
+                println("Token search error: ${e.message}")
+                _uiState.update {
+                    it.copy(
+                        tokenSearchResults = emptyList(),
+                        isSearchingTokens = false
+                    )
+                }
+            }
+        }
+    }
+
+    /**
+     * Clear token search results
+     */
+    fun clearTokenSearch() {
+        _uiState.update {
+            it.copy(
+                tokenSearchResults = emptyList(),
+                isSearchingTokens = false
+            )
         }
     }
 }
