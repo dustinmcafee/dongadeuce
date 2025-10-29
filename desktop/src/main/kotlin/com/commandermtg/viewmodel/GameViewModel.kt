@@ -29,6 +29,26 @@ class GameViewModel {
     val uiState: StateFlow<GameUiState> = _uiState.asStateFlow()
 
     /**
+     * Helper function to sync player references after updating game state
+     * This eliminates duplicate code pattern throughout the ViewModel
+     */
+    private fun syncPlayerReferences(updatedGameState: GameState) {
+        _uiState.update { currentState ->
+            currentState.copy(
+                gameState = updatedGameState,
+                localPlayer = if (currentState.localPlayer?.id != null) {
+                    updatedGameState.players.find { it.id == currentState.localPlayer.id }
+                } else {
+                    currentState.localPlayer
+                },
+                opponents = currentState.opponents.map { opponent ->
+                    updatedGameState.players.find { it.id == opponent.id } ?: opponent
+                }
+            )
+        }
+    }
+
+    /**
      * Initialize a new game with players
      */
     fun initializeGame(localPlayerName: String, opponentNames: List<String>, isHotseatMode: Boolean = false) {
@@ -149,28 +169,8 @@ class GameViewModel {
             cardInstances = otherPlayerCards + shuffledInstances
         )
 
-        // Update the player objects in UI state
-        val updatedLocalPlayer = if (currentState.localPlayer?.id == playerId) {
-            updatedGameState.players.find { it.id == playerId }
-        } else {
-            currentState.localPlayer
-        }
-
-        val updatedOpponents = currentState.opponents.map { opponent ->
-            if (opponent.id == playerId) {
-                updatedGameState.players.find { it.id == playerId } ?: opponent
-            } else {
-                opponent
-            }
-        }
-
-        _uiState.update {
-            it.copy(
-                gameState = updatedGameState,
-                localPlayer = updatedLocalPlayer,
-                opponents = updatedOpponents
-            )
-        }
+        // Sync player references
+        syncPlayerReferences(updatedGameState)
     }
 
     /**

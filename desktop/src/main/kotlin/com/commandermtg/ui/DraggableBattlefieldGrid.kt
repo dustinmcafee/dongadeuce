@@ -97,7 +97,10 @@ fun DraggableBattlefieldGrid(
         // First, place cards that have explicit grid positions
         val cardsWithPositions = cards.filter { it.gridX != null && it.gridY != null }
         cardsWithPositions.forEach { card ->
-            positionMap[card.instanceId] = Pair(card.gridX!!, card.gridY!!)
+            // Safe call: filter above ensures both are non-null, but use safe access for robustness
+            val x = card.gridX ?: 0
+            val y = card.gridY ?: 0
+            positionMap[card.instanceId] = Pair(x, y)
         }
 
         // Then, auto-arrange cards without positions

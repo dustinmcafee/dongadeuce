@@ -231,11 +231,8 @@ fun GameScreen(
                 val activePlayerIndex = gameState?.activePlayerIndex ?: 0
                 val activePlayerId = gameState?.activePlayer?.id
 
-                println("[GameScreen] Hotseat mode - activePlayerIndex: $activePlayerIndex, activePlayerId: $activePlayerId, allPlayers: ${allPlayers.map { it.name }}")
-
                 // Rotate players so active player is first (will be at bottom)
                 val rotatedPlayers = allPlayers.drop(activePlayerIndex) + allPlayers.take(activePlayerIndex)
-                println("[GameScreen] Rotated players: ${rotatedPlayers.map { it.name }}")
 
                 // Use key to force recomposition when active player changes
                 key(activePlayerId) {

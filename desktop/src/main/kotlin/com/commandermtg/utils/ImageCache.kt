@@ -16,10 +16,7 @@ object ImageCache {
     private var client: HttpClient? = null
 
     private fun getClient(): HttpClient {
-        if (client == null) {
-            client = HttpClient()
-        }
-        return client!!
+        return client ?: HttpClient().also { client = it }
     }
 
     // Cache directory in user's home directory
