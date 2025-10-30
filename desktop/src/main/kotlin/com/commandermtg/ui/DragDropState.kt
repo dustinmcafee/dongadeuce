@@ -2,6 +2,7 @@ package com.commandermtg.ui
 
 import androidx.compose.runtime.*
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import com.commandermtg.models.CardInstance
 import com.commandermtg.models.Zone
 
@@ -24,11 +25,34 @@ class DragDropState {
     var isDragging by mutableStateOf(false)
         private set
 
+    // Track if a zone handled the drop (to prevent battlefield from repositioning)
+    var wasHandledByZone by mutableStateOf(false)
+        private set
+
+    // Track which zone is currently being hovered over during drag
+    private var _hoveredZone by mutableStateOf<Zone?>(null)
+    val hoveredZone: Zone? get() = _hoveredZone
+
+    // Track zone bounds for accurate drop detection
+    private val zoneBounds = mutableStateMapOf<Zone, androidx.compose.ui.geometry.Rect>()
+
+    fun registerZoneBounds(zone: Zone, bounds: androidx.compose.ui.geometry.Rect) {
+        zoneBounds[zone] = bounds
+    }
+
+    fun getZoneAtPosition(position: Offset): Zone? {
+        return zoneBounds.entries.firstOrNull { (_, bounds) ->
+            bounds.contains(position)
+        }?.key
+    }
+
     fun startDrag(card: CardInstance, offset: Offset = Offset.Zero) {
         draggedCard = card
         draggedCardIds = setOf(card.instanceId)
         dragOffset = offset
         isDragging = true
+        wasHandledByZone = false
+        _hoveredZone = null
     }
 
     fun startDragMultiple(cardIds: Set<String>, offset: Offset = Offset.Zero) {
@@ -36,10 +60,20 @@ class DragDropState {
         draggedCard = null // Not tracking single card in multi-drag
         dragOffset = offset
         isDragging = true
+        wasHandledByZone = false
+        _hoveredZone = null
     }
 
     fun updateDragPosition(offset: Offset) {
         dragOffset = offset
+    }
+
+    fun setHoveredZone(zone: Zone?) {
+        _hoveredZone = zone
+    }
+
+    fun markHandledByZone() {
+        wasHandledByZone = true
     }
 
     fun endDrag() {
@@ -47,6 +81,8 @@ class DragDropState {
         draggedCardIds = emptySet()
         dragOffset = Offset.Zero
         isDragging = false
+        wasHandledByZone = false
+        _hoveredZone = null
     }
 }
 

@@ -14,10 +14,12 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.commandermtg.models.CardInstance
+import com.commandermtg.models.Zone
 import com.commandermtg.ui.UIConstants.BATTLEFIELD_CARD_TAPPED_SIZE
 import com.commandermtg.ui.UIConstants.STACK_OFFSET_RATIO
 import kotlin.math.roundToInt
@@ -39,7 +41,8 @@ fun DraggableBattlefieldGrid(
     selectionState: SelectionState? = null,
     otherPlayers: List<com.commandermtg.models.Player> = emptyList(),
     allPlayers: List<com.commandermtg.models.Player> = emptyList(),
-    dragDropState: DragDropState? = null
+    dragDropState: DragDropState? = null,
+    onDropToZone: ((Set<String>, com.commandermtg.models.Zone) -> Unit)? = null
 ) {
     if (cards.isEmpty()) {
         Box(
@@ -67,6 +70,7 @@ fun DraggableBattlefieldGrid(
     var localDraggedCardIds by remember { mutableStateOf<Set<String>>(emptySet()) }
     var localDragOffset by remember { mutableStateOf(Offset.Zero) }
     var dragStartPixelPos by remember { mutableStateOf(Offset.Zero) }
+    var dragStartCursorOffset by remember { mutableStateOf(Offset.Zero) } // Where on the card the drag started
 
     // Track target positions for dragged cards to prevent snap-back
     var targetPositions by remember { mutableStateOf<Map<String, Pair<Int, Int>>>(emptyMap()) }
@@ -75,8 +79,9 @@ fun DraggableBattlefieldGrid(
     val draggedCardIds = if (localDraggedCardIds.isNotEmpty()) localDraggedCardIds else (dragDropState?.draggedCardIds ?: emptySet())
     val dragOffset = localDragOffset
 
-    // Container size
+    // Container size and position
     var containerWidth by remember { mutableStateOf(0f) }
+    var containerPositionInWindow by remember { mutableStateOf(Offset.Zero) }
 
     // Clear drag offset and target positions once all cards have reached their targets
     LaunchedEffect(targetPositions, cards) {
@@ -92,6 +97,7 @@ fun DraggableBattlefieldGrid(
                 targetPositions = emptyMap()
                 localDragOffset = Offset.Zero
                 dragStartPixelPos = Offset.Zero
+                dragStartCursorOffset = Offset.Zero
             }
         }
     }
@@ -191,6 +197,7 @@ fun DraggableBattlefieldGrid(
         modifier = modifier
             .onGloballyPositioned { coordinates ->
                 containerWidth = coordinates.size.width.toFloat()
+                containerPositionInWindow = coordinates.positionInWindow()
             }
             .fillMaxWidth()
             .verticalScroll(scrollState)
@@ -248,13 +255,14 @@ fun DraggableBattlefieldGrid(
                                 if (canDrag) {
                                     Modifier.pointerInput(card.instanceId, gridPositions) {
                                         detectDragGestures(
-                                            onDragStart = { _ ->
+                                            onDragStart = { cursorOffset ->
                                                 // Look up current position from map and calculate pixel position
                                                 val currentPos = gridPositions[card.instanceId] ?: Pair(0, 0)
                                                 val currentStack = stackInfoMap[card.instanceId]
                                                 val startX = currentPos.first * cellWidth + (currentStack?.stackIndex ?: 0) * stackOffsetX.value
                                                 val startY = currentPos.second * cellHeight + (currentStack?.stackIndex ?: 0) * stackOffsetY.value
                                                 dragStartPixelPos = Offset(startX, startY)
+                                                dragStartCursorOffset = cursorOffset // Where on the card the cursor was when drag started
 
                                                 // Determine which cards to drag:
                                                 // 1. If this card is selected and multiple cards are selected, drag all selected cards
@@ -290,12 +298,67 @@ fun DraggableBattlefieldGrid(
                                                 // The computed property might fall back to shared state which could be cleared
                                                 val cardsBeingDragged = localDraggedCardIds.toSet()
 
+                                                // Calculate absolute window position of the cursor (not the card corner)
+                                                // This is: battlefield position + card start position + where cursor was on card + how far it was dragged
+                                                val absoluteDropX = containerPositionInWindow.x + dragStartPixelPos.x + dragStartCursorOffset.x + localDragOffset.x
+                                                val absoluteDropY = containerPositionInWindow.y + dragStartPixelPos.y + dragStartCursorOffset.y + localDragOffset.y
+                                                val absoluteDropPos = Offset(absoluteDropX, absoluteDropY)
+
+                                                // Check if dropped on a zone using accurate bounds detection
+                                                if (dragDropState != null && onDropToZone != null && cardsBeingDragged.isNotEmpty()) {
+                                                    val targetZone = dragDropState.getZoneAtPosition(absoluteDropPos)
+                                                    if (targetZone != null) {
+                                                        // Drop to detected zone
+                                                        onDropToZone(cardsBeingDragged, targetZone)
+
+                                                        // Clear local state
+                                                        localDraggedCardIds = emptySet()
+                                                        localDragOffset = Offset.Zero
+                                                        dragStartPixelPos = Offset.Zero
+                                                        dragStartCursorOffset = Offset.Zero
+                                                        targetPositions = emptyMap()
+
+                                                        // Clear shared state
+                                                        dragDropState.endDrag()
+                                                        return@detectDragGestures
+                                                    }
+                                                }
+
+                                                // Check if we're hovering over a zone - if so, drop to that zone
+                                                val hoveredZone = dragDropState?.hoveredZone
+                                                if (hoveredZone != null && onDropToZone != null && cardsBeingDragged.isNotEmpty()) {
+                                                    // Drop to zone
+                                                    onDropToZone(cardsBeingDragged, hoveredZone)
+
+                                                    // Clear local state
+                                                    localDraggedCardIds = emptySet()
+                                                    localDragOffset = Offset.Zero
+                                                    dragStartPixelPos = Offset.Zero
+                                                    dragStartCursorOffset = Offset.Zero
+                                                    targetPositions = emptyMap()
+
+                                                    // Clear shared state
+                                                    dragDropState?.endDrag()
+                                                    return@detectDragGestures
+                                                }
+
+                                                // Check if a zone handled the drop - if so, skip battlefield repositioning
+                                                if (dragDropState?.wasHandledByZone == true) {
+                                                    localDraggedCardIds = emptySet()
+                                                    localDragOffset = Offset.Zero
+                                                    dragStartPixelPos = Offset.Zero
+                                                    dragStartCursorOffset = Offset.Zero
+                                                    targetPositions = emptyMap()
+                                                    return@detectDragGestures
+                                                }
+
                                                 // If cards were already handled by a zone drop, skip repositioning
                                                 if (cardsBeingDragged.isEmpty()) {
                                                     // Reset local state
                                                     localDraggedCardIds = emptySet()
                                                     localDragOffset = Offset.Zero
                                                     dragStartPixelPos = Offset.Zero
+                                                    dragStartCursorOffset = Offset.Zero
                                                     return@detectDragGestures
                                                 }
 
@@ -310,6 +373,7 @@ fun DraggableBattlefieldGrid(
                                                     localDraggedCardIds = emptySet()
                                                     localDragOffset = Offset.Zero
                                                     dragStartPixelPos = Offset.Zero
+                                                    dragStartCursorOffset = Offset.Zero
                                                     dragDropState?.endDrag()
                                                     return@detectDragGestures
                                                 }
@@ -399,6 +463,7 @@ fun DraggableBattlefieldGrid(
                                                 localDraggedCardIds = emptySet()
                                                 localDragOffset = Offset.Zero
                                                 dragStartPixelPos = Offset.Zero
+                                                dragStartCursorOffset = Offset.Zero
                                                 targetPositions = emptyMap()
 
                                                 // Also clear shared state

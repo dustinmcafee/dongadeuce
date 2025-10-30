@@ -18,11 +18,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.*
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.zIndex
 import com.commandermtg.models.Player
+import kotlin.math.roundToInt
 import com.commandermtg.models.Zone
 import com.commandermtg.models.CardInstance
 import com.commandermtg.viewmodel.GameViewModel
@@ -428,6 +434,7 @@ fun HotseatPlayerSection(
             modifier = Modifier.fillMaxWidth().weight(1f),
             colors = CardDefaults.cardColors(containerColor = Color(0xFF1B5E20))
         ) {
+            Box(modifier = Modifier.fillMaxSize()) {
             Row(modifier = Modifier.fillMaxSize()) {
                 // Player info sidebar
                 Column(
@@ -483,6 +490,8 @@ fun HotseatPlayerSection(
                         dragDropState = if (isActivePlayer) dragDropState else null,
                         onDropCards = if (isActivePlayer) {
                             { cardIds ->
+                                // Mark that zone is handling this drop
+                                dragDropState?.markHandledByZone()
                                 cardIds.forEach { cardId ->
                                     viewModel.moveCardToTopOfLibrary(cardId)
                                 }
@@ -500,6 +509,8 @@ fun HotseatPlayerSection(
                         dragDropState = if (isActivePlayer) dragDropState else null,
                         onDropCards = if (isActivePlayer) {
                             { cardIds ->
+                                // Mark that zone is handling this drop
+                                dragDropState?.markHandledByZone()
                                 cardIds.forEach { cardId ->
                                     viewModel.moveCard(cardId, Zone.GRAVEYARD)
                                 }
@@ -517,6 +528,8 @@ fun HotseatPlayerSection(
                         dragDropState = if (isActivePlayer) dragDropState else null,
                         onDropCards = if (isActivePlayer) {
                             { cardIds ->
+                                // Mark that zone is handling this drop
+                                dragDropState?.markHandledByZone()
                                 cardIds.forEach { cardId ->
                                     viewModel.moveCard(cardId, Zone.EXILE)
                                 }
@@ -553,9 +566,18 @@ fun HotseatPlayerSection(
                         currentPlayerId = if (isActivePlayer) player.id else null,
                         otherPlayers = otherPlayers,
                         allPlayers = otherPlayers + listOf(player),
-                        dragDropState = if (isActivePlayer) dragDropState else null
+                        dragDropState = if (isActivePlayer) dragDropState else null,
+                        onDropToZone = if (isActivePlayer) { cardIds, zone ->
+                            cardIds.forEach { cardId ->
+                                when (zone) {
+                                    Zone.LIBRARY -> viewModel.moveCardToTopOfLibrary(cardId)
+                                    else -> viewModel.moveCard(cardId, zone)
+                                }
+                            }
+                        } else null
                     )
                 }
+            }
             }
         }
 
@@ -1137,7 +1159,15 @@ fun PlayerArea(
                 currentPlayerId = player.id, // Only this player can drag their cards
                 otherPlayers = allPlayers.filter { it.id != player.id },
                 allPlayers = allPlayers,
-                dragDropState = dragDropState
+                dragDropState = dragDropState,
+                onDropToZone = { cardIds, zone ->
+                    cardIds.forEach { cardId ->
+                        when (zone) {
+                            Zone.LIBRARY -> viewModel.moveCardToTopOfLibrary(cardId)
+                            else -> viewModel.moveCard(cardId, zone)
+                        }
+                    }
+                }
             )
         }
 
@@ -1254,6 +1284,8 @@ fun PlayerArea(
                     onClick = { showLibrarySearchDialog = true },
                     dragDropState = dragDropState,
                     onDropCards = { cardIds ->
+                        // Mark that zone is handling this drop
+                        dragDropState?.markHandledByZone()
                         cardIds.forEach { cardId ->
                             viewModel.moveCardToTopOfLibrary(cardId)
                         }
@@ -1273,6 +1305,8 @@ fun PlayerArea(
                         onClick = { showGraveyardDialog = true },
                         dragDropState = dragDropState,
                         onDropCards = { cardIds ->
+                            // Mark that zone is handling this drop
+                            dragDropState?.markHandledByZone()
                             cardIds.forEach { cardId ->
                                 viewModel.moveCard(cardId, Zone.GRAVEYARD)
                             }
@@ -1288,6 +1322,8 @@ fun PlayerArea(
                         onClick = { showExileDialog = true },
                         dragDropState = dragDropState,
                         onDropCards = { cardIds ->
+                            // Mark that zone is handling this drop
+                            dragDropState?.markHandledByZone()
                             cardIds.forEach { cardId ->
                                 viewModel.moveCard(cardId, Zone.EXILE)
                             }
@@ -1458,6 +1494,18 @@ fun ZoneCard(
 
     Card(
         modifier = modifier
+            .onGloballyPositioned { coordinates ->
+                // Register zone bounds for accurate drop detection
+                if (dragDropState != null) {
+                    val bounds = Rect(
+                        coordinates.positionInWindow().x,
+                        coordinates.positionInWindow().y,
+                        coordinates.positionInWindow().x + coordinates.size.width,
+                        coordinates.positionInWindow().y + coordinates.size.height
+                    )
+                    dragDropState.registerZoneBounds(zone, bounds)
+                }
+            }
             .border(
                 width = if (isDraggingOver) 3.dp else 1.dp,
                 color = if (isDraggingOver) Color(0xFF00FF00) else MaterialTheme.colorScheme.outline,
@@ -1480,10 +1528,14 @@ fun ZoneCard(
                                     PointerEventType.Enter -> {
                                         if (dragDropState.draggedCardIds.isNotEmpty()) {
                                             isHovering = true
+                                            dragDropState.setHoveredZone(zone)
                                         }
                                     }
                                     PointerEventType.Exit -> {
                                         isHovering = false
+                                        if (dragDropState.hoveredZone == zone) {
+                                            dragDropState.setHoveredZone(null)
+                                        }
                                     }
                                     PointerEventType.Release -> {
                                         // Only handle drop if we're hovering AND cards are being dragged
