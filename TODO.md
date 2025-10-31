@@ -1,4 +1,4 @@
-# Commander MTG - Development TODO
+# Dong-A-Deuce - Development TODO
 
 **Current Version:** v2.10.6
 **Hotseat Mode:** ~90% complete (fully playable!)
@@ -361,7 +361,7 @@
 2. **Weeks 2-4:** Network multiplayer implementation
 3. **Week 5:** Network testing and bug fixes
 
-**Result:** Complete Commander MTG experience
+**Result:** Complete Dong-A-Deuce experience
 
 ---
 

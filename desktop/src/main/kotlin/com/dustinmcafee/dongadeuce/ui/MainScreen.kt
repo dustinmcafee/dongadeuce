@@ -62,7 +62,7 @@ fun MenuScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Text(
-                text = "Commander MTG",
+                text = "Dong-A-Deuce",
                 style = MaterialTheme.typography.headlineLarge
             )
 

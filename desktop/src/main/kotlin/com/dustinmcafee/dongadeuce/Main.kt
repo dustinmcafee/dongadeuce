@@ -10,7 +10,7 @@ import com.commandermtg.ui.MainScreen
 fun main() = application {
     Window(
         onCloseRequest = ::exitApplication,
-        title = "Commander MTG",
+        title = "Dong-A-Deuce",
         state = rememberWindowState()
     ) {
         MaterialTheme(colorScheme = darkColorScheme()) {

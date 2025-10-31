@@ -10,7 +10,7 @@
 
 ## Executive Summary
 
-Commander MTG is a **highly functional hotseat multiplayer Commander game** with comprehensive game state management, professional UI, and nearly all core gameplay features implemented. The application is fully playable for 2-4 players on the same device.
+Dong-A-Deuce is a **highly functional hotseat multiplayer Commander game** with comprehensive game state management, professional UI, and nearly all core gameplay features implemented. The application is fully playable for 2-4 players on the same device.
 
 **Current State:**
 - ✅ **Hotseat multiplayer is 90% complete and fully playable**
@@ -412,7 +412,7 @@ These are features that would be nice but are not necessary for full Commander g
 
 ## 📝 CONCLUSION
 
-Commander MTG v2.10.6 is a **highly functional hotseat Commander game** that can be played today. The application demonstrates excellent MVVM architecture and comprehensive Commander gameplay support. The only significant missing feature is network multiplayer, which requires 3-4 weeks of dedicated development.
+Dong-A-Deuce v2.10.6 is a **highly functional hotseat Commander game** that can be played today. The application demonstrates excellent MVVM architecture and comprehensive Commander gameplay support. The only significant missing feature is network multiplayer, which requires 3-4 weeks of dedicated development.
 
 **For Hotseat Players:** This app is ready to use! ✅
 **For Network Players:** Patience required, or contribute to the network backend. ⏳

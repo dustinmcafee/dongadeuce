@@ -1,4 +1,4 @@
-rootProject.name = "commander-mtg"
+rootProject.name = "dongadeuce"
 
 pluginManagement {
     repositories {

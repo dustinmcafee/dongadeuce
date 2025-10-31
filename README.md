@@ -1,4 +1,4 @@
-# Commander MTG
+# Dong-A-Deuce
 
 A lightweight, cross-platform MTG Commander game client built with Kotlin and Compose Multiplatform.
 
@@ -12,7 +12,7 @@ A lightweight, cross-platform MTG Commander game client built with Kotlin and Co
 ## Project Structure
 
 ```
-commander-mtg/
+dongadeuce/
 ├── shared/              # Shared game logic and models
 │   ├── models/         # Card, Deck, GameState, Player, Zone
 │   ├── network/        # P2P networking protocol (TODO)
@@ -49,7 +49,7 @@ Benefits:
 
 ### Run the application
 ```bash
-cd commander-mtg
+cd dongadeuce
 ./gradlew desktop:run
 ```
 

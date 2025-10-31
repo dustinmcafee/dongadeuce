@@ -6,7 +6,7 @@
 ./gradlew desktop:run
 ```
 
-This will launch the Commander MTG application.
+This will launch the Dong-A-Deuce application.
 
 ## Loading a Deck
 

@@ -31,7 +31,7 @@ tasks.test {
 
 compose.desktop {
     application {
-        mainClass = "com.commandermtg.MainKt"
+        mainClass = "com.dustinmcafee.dongadeuce.MainKt"
 
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)

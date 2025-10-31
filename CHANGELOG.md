@@ -1,11 +1,62 @@
 # Changelog
 
-All notable changes to Commander MTG will be documented in this file.
+All notable changes to Dong-A-Deuce will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+### Changed
+- **Project Renamed** - Project renamed from "Commander MTG" to "Dong-A-Deuce"
+  - Package changed from com.commandermtg to com.dustinmcafee.dongadeuce
+  - All documentation updated to reflect new name
+  - Application window title and branding updated
+
+### Added
+- **Drag-and-Drop to Zones** - Cards can now be dragged from battlefield to zone buttons
+  - Drag cards directly onto Library button to put on top of library
+  - Drag cards directly onto Graveyard button to send to graveyard
+  - Drag cards directly onto Exile button to exile cards
+  - Accurate cursor position tracking for drop detection
+  - Zone buttons highlight when dragging cards over them
+  - Multi-card drag supported for all zones
+
+- **Battlefield Vertical Scrolling** - Battlefield now scrolls when cards extend beyond visible area
+  - Allows cards to be placed in any of 10 rows
+  - Cards no longer become inaccessible when placed too far down
+  - Smooth scrolling to access all battlefield positions
+
+- **UI Constants** - Extracted magic numbers to centralized constants
+  - All card dimensions, spacing, and thresholds now in UIConstants.kt
+  - Improved code maintainability and consistency
+  - Easy to adjust UI sizing in one place
+
+### Fixed
+- **State Management** - Fixed critical stale state reads in GameViewModel
+  - Over 23 methods updated to use atomic state updates
+  - Prevents race conditions and state inconsistencies
+  - More reliable card movements and game state changes
+
+- **Battlefield Card Filtering** - Fixed "Give Control" not moving cards to other player's battlefield
+  - Battlefield now correctly filters by controllerId instead of ownerId
+  - Cards appear on controller's battlefield, not owner's battlefield
+  - Proper support for gaining/giving control of permanents
+
+- **Right-Click Multi-Selection** - Fixed right-click clearing selection before showing menu
+  - Right-click now uses proper button detection instead of string matching
+  - Shift+click to select multiple cards, then right-click any to get menu
+  - More robust against platform differences in button reporting
+
+- **Card Snap-Back After Drag** - Fixed cards snapping back to original position after dragging
+  - Implemented target position tracking to prevent visual glitches
+  - Cards maintain drag offset until new grid position takes effect
+  - Smooth transition when repositioning cards on battlefield
+
+- **Multi-Card Selection Operations** - Business logic moved from UI to ViewModel
+  - All card actions now handled through handleBatchCardAction() in ViewModel
+  - Proper MVVM architecture separation
+  - Cleaner, more maintainable code structure
 
 ## [2.16.0] - 2025-10-28
 

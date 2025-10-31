@@ -5,6 +5,6 @@ plugins {
 }
 
 allprojects {
-    group = "com.commandermtg"
+    group = "com.dustinmcafee.dongadeuce"
     version = "2.16.0"
 }
