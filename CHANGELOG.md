@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.17.0] - 2025-10-30
+
 ### Changed
 - **Project Renamed** - Project renamed from "Commander MTG" to "Dong-A-Deuce"
   - Package changed from com.commandermtg to com.dustinmcafee.dongadeuce
