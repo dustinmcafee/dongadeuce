@@ -65,9 +65,9 @@ cd dongadeuce
 ./gradlew desktop:packageDeb
 ```
 
-## Current Status (v2.10.6)
+## Current Status (v2.17.0)
 
-**Hotseat Mode:** 90% Complete - Fully Playable! ✅
+**Hotseat Mode:** 95% Complete - Fully Playable! ✅
 **Network Mode:** 5% Complete - UI Only ⏳
 
 ### ✅ Fully Implemented
@@ -88,6 +88,13 @@ cd dongadeuce
 - **Draw from Empty Library** - Automatic loss detection
 - **All Zone Operations** - Move cards between any zones
 - **Library Operations** - Draw, mill, shuffle, search, tutor, mulligan
+- **Multi-Card Selection** - Shift+click to select multiple cards
+- **Batch Operations** - Right-click applies actions to all selected cards
+- **Card Stacking** - Grid-based stacking system (max 3 cards per stack)
+- **Token Creation** - Create tokens via Scryfall search with custom P/T
+- **Drag-and-Drop to Zones** - Drag cards from battlefield to Library/Graveyard/Exile buttons
+- **Battlefield Scrolling** - Vertical scrolling for cards placed in lower rows
+- **Give Control** - Transfer control of permanents between players
 
 **Hotseat Multiplayer:**
 - **2-4 Player Support** - Full local multiplayer
@@ -111,11 +118,11 @@ cd dongadeuce
 - **Game Log/History** - No action history (2-3 days work)
 - **Commander Tax Tracking** - Manual tracking required (1 day work)
 - **Network Multiplayer Backend** - UI exists but no server/client (3-4 weeks work)
-- **Token Creation** - No token support
 - **Keyboard Shortcuts** - All actions require mouse
+- **Copy/Clone Cards** - No support for card copying effects
 
 ### Completion Status
-- **Hotseat Mode:** ~90% complete (playable, missing game log + commander tax)
+- **Hotseat Mode:** ~95% complete (playable, missing game log + commander tax)
 - **Network Mode:** ~5% complete (UI only, no backend)
 
 ## Tech Stack
@@ -141,31 +148,30 @@ The UI includes all Commander zones:
 
 See [TODO.md](TODO.md) for detailed development roadmap.
 
-### Immediate Priorities (v2.11.0 - 1 week)
+### Immediate Priorities (v2.18.0 - 1 week)
 1. **Game Log/History System** - Track all game actions for review (2-3 days)
 2. **Commander Tax Tracking** - Automatic tax calculation (1 day)
 3. **Keyboard Shortcuts** - Speed up common actions (1 day)
 
 **Result:** Feature-complete hotseat multiplayer
 
-### Medium Term (v2.12.0 - 1-2 weeks)
+### Medium Term (v2.19.0 - 1-2 weeks)
 4. Settings/Preferences - Player name persistence, defaults
-5. Token Creation - Create common and custom tokens
-6. Copy/Clone Cards - Support for card copying effects
-7. Animations - Card movement and tap animations
-8. Sound Effects - Audio feedback for actions
+5. Copy/Clone Cards - Support for card copying effects
+6. Animations - Card movement and tap animations
+7. Sound Effects - Audio feedback for actions
 
 **Result:** Polished hotseat experience
 
 ### Long Term (v3.0.0 - 3-4 weeks)
-9. **Network Multiplayer Backend** - The big one
+8. **Network Multiplayer Backend** - The big one
    - GameServer.kt with Ktor WebSockets
    - GameClient.kt with Ktor WebSockets
    - GameMessage.kt network protocol
    - State synchronization
    - Integration with ViewModels
-10. Chat System - In-game chat with commands
-11. Spectator Mode - Watch games in progress
+9. Chat System - In-game chat with commands
+10. Spectator Mode - Watch games in progress
 
 **Result:** Full network multiplayer
 
