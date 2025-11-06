@@ -1,0 +1,78 @@
+name: Build Windows Release
+
+on:
+  push:
+    branches: [ master ]
+    tags:
+      - 'v*'
+  pull_request:
+    branches: [ master ]
+  workflow_dispatch:  # Allows manual triggering from GitHub UI
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        cache: gradle
+
+    - name: Grant execute permission for gradlew
+      run: chmod +x gradlew
+      shell: bash
+
+    - name: Build with Gradle
+      run: ./gradlew build
+      shell: bash
+
+    - name: Create Windows MSI installer
+      run: ./gradlew :desktop:packageMsi
+      shell: bash
+
+    - name: Create Windows JAR
+      run: ./gradlew :desktop:packageWindowsJar
+      shell: bash
+
+    - name: Find MSI file
+      id: find-msi
+      run: |
+        $msiFile = Get-ChildItem -Path desktop/build/compose/binaries/main/msi -Filter *.msi -Recurse | Select-Object -First 1
+        if ($msiFile) {
+          echo "msi_path=$($msiFile.FullName)" >> $env:GITHUB_OUTPUT
+          echo "msi_name=$($msiFile.Name)" >> $env:GITHUB_OUTPUT
+        }
+      shell: powershell
+
+    - name: Upload Windows MSI
+      if: steps.find-msi.outputs.msi_path != ''
+      uses: actions/upload-artifact@v4
+      with:
+        name: windows-msi-installer
+        path: ${{ steps.find-msi.outputs.msi_path }}
+        if-no-files-found: warn
+
+    - name: Upload Windows JAR
+      uses: actions/upload-artifact@v4
+      with:
+        name: windows-jar
+        path: desktop/build/windows/*.jar
+        if-no-files-found: warn
+
+    - name: Create Release (on tag)
+      if: startsWith(github.ref, 'refs/tags/v')
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          desktop/build/compose/binaries/main/msi/*.msi
+          desktop/build/windows/*.jar
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

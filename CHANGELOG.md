@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.18.0] - 2025-11-05
+
+### Added
+- **Windows EXE Build Support** - Added automated Windows executable generation from Linux
+  - Integrated Launch4j for wrapping JAR into native Windows .exe
+  - Automatic download and configuration of Launch4j binaries
+  - Cross-platform JAR includes Windows, Linux, and macOS dependencies
+  - No Docker or Wine required - runs natively on Linux
+  - Build task: `./gradlew :desktop:createWindowsExe`
+
+- **Custom Application Icon** - Created and integrated donkey-dragon hybrid icon
+  - Purple-themed icon matching application branding
+  - SVG source file for scalability
+  - Multi-resolution ICO file (16x16, 32x32, 48x48, 128x128, 256x256)
+  - Integrated into Windows EXE via Launch4j
+
+- **GitHub Actions Workflows** - Added CI/CD for automated builds
+  - `build-windows.yml` - Builds Windows MSI and JAR on every push
+  - `build-all-platforms.yml` - Builds Windows, macOS, and Linux packages on tag
+  - Automatic GitHub releases when version tags are pushed
+
+### Changed
+- **Build System Enhanced** - Updated Gradle build configuration
+  - Added cross-platform Compose dependencies for all OS targets
+  - Configured Launch4j integration for Windows EXE generation
+  - Improved build output with detailed success/failure messages
+
 ## [2.17.0] - 2025-10-30
 
 ### Changed
