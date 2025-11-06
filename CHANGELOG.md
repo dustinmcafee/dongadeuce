@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.25.0] - 2025-11-05
+
+### Added
+- **Logo Display** - Dong-A-Deuce logo now visible across the application
+  - Large logo (128px) displayed on main menu screen above title
+  - Smaller logo (64px) overlay in top-left corner of game screen
+  - Semi-transparent overlay on game screen to avoid obstruction
+  - Converted from .ico to PNG for better Compose compatibility
+
 ## [2.24.0] - 2025-11-05
 
 ### Added

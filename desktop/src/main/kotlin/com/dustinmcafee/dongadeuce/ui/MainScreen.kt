@@ -1,10 +1,12 @@
 package com.dustinmcafee.dongadeuce.ui
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.dustinmcafee.dongadeuce.viewmodel.MenuViewModel
 import com.dustinmcafee.dongadeuce.viewmodel.Screen
@@ -61,6 +63,13 @@ fun MenuScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            // Logo
+            Image(
+                painter = painterResource("dongadeuce_logo.png"),
+                contentDescription = "Dong-A-Deuce Logo",
+                modifier = Modifier.size(128.dp)
+            )
+
             Text(
                 text = "Dong-A-Deuce",
                 style = MaterialTheme.typography.headlineLarge

@@ -2,6 +2,7 @@
 
 package com.dustinmcafee.dongadeuce.ui
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -24,6 +25,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.*
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInWindow
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.zIndex
@@ -146,16 +148,17 @@ fun GameScreen(
         }
     }
 
-    Row(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        horizontalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        // Main game area (left side)
-        Column(
-            modifier = Modifier.weight(1f)
+    Box(modifier = Modifier.fillMaxSize()) {
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            // Main game area (left side)
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
             if (isHotseatMode) {
                 // Hotseat mode: Compact layout with battlefields touching
                 // Active player always at bottom-left
@@ -440,6 +443,18 @@ fun GameScreen(
                     Text("OK")
                 }
             }
+        )
+    }
+
+        // Logo overlay in top-left corner
+        Image(
+            painter = painterResource("dongadeuce_logo.png"),
+            contentDescription = "Dong-A-Deuce Logo",
+            modifier = Modifier
+                .size(64.dp)
+                .align(Alignment.TopStart)
+                .padding(8.dp)
+                .alpha(0.7f)
         )
     }
 
