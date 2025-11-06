@@ -1,4 +1,4 @@
-package com.commandermtg.ui
+package com.dustinmcafee.dongadeuce.ui
 
 import androidx.compose.ui.unit.dp
 

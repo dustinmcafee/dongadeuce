@@ -1,11 +1,11 @@
-package com.commandermtg
+package com.dustinmcafee.dongadeuce
 
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
-import com.commandermtg.ui.MainScreen
+import com.dustinmcafee.dongadeuce.ui.MainScreen
 
 fun main() = application {
     Window(

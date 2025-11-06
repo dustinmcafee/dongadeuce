@@ -1,6 +1,6 @@
 @file:OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class)
 
-package com.commandermtg.ui
+package com.dustinmcafee.dongadeuce.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -27,11 +27,11 @@ import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.zIndex
-import com.commandermtg.models.Player
+import com.dustinmcafee.dongadeuce.models.Player
 import kotlin.math.roundToInt
-import com.commandermtg.models.Zone
-import com.commandermtg.models.CardInstance
-import com.commandermtg.viewmodel.GameViewModel
+import com.dustinmcafee.dongadeuce.models.Zone
+import com.dustinmcafee.dongadeuce.models.CardInstance
+import com.dustinmcafee.dongadeuce.viewmodel.GameViewModel
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -39,8 +39,8 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun GameScreen(
-    loadedDeck: com.commandermtg.models.Deck? = null,
-    hotseatDecks: Map<Int, com.commandermtg.models.Deck> = emptyMap(),
+    loadedDeck: com.dustinmcafee.dongadeuce.models.Deck? = null,
+    hotseatDecks: Map<Int, com.dustinmcafee.dongadeuce.models.Deck> = emptyMap(),
     playerCount: Int = 2, // Total players (including local player): 2, 3, or 4
     isHotseatMode: Boolean = false,
     viewModel: GameViewModel = remember { GameViewModel() }
@@ -49,7 +49,7 @@ fun GameScreen(
     val selectionState = rememberSelectionState()
 
     val uiState by viewModel.uiState.collectAsState()
-    var cardDetailsToShow by remember { mutableStateOf<com.commandermtg.models.CardInstance?>(null) }
+    var cardDetailsToShow by remember { mutableStateOf<com.dustinmcafee.dongadeuce.models.CardInstance?>(null) }
 
     // Handler for card actions - delegates business logic to ViewModel
     val handleAction: (CardAction) -> Unit = { action ->
@@ -1590,12 +1590,12 @@ private fun Modifier.clickableWithRipple(onClick: () -> Unit): Modifier {
 
 @Composable
 fun HandDialog(
-    cards: List<com.commandermtg.models.CardInstance>,
+    cards: List<com.dustinmcafee.dongadeuce.models.CardInstance>,
     onDismiss: () -> Unit,
-    onPlayCard: (com.commandermtg.models.CardInstance) -> Unit,
-    onDiscard: (com.commandermtg.models.CardInstance) -> Unit = {},
-    onExile: (com.commandermtg.models.CardInstance) -> Unit = {},
-    onToLibrary: (com.commandermtg.models.CardInstance) -> Unit = {},
+    onPlayCard: (com.dustinmcafee.dongadeuce.models.CardInstance) -> Unit,
+    onDiscard: (com.dustinmcafee.dongadeuce.models.CardInstance) -> Unit = {},
+    onExile: (com.dustinmcafee.dongadeuce.models.CardInstance) -> Unit = {},
+    onToLibrary: (com.dustinmcafee.dongadeuce.models.CardInstance) -> Unit = {},
     onContextAction: (CardAction) -> Unit = {}
 ) {
     AlertDialog(
@@ -1720,7 +1720,7 @@ fun HandCardDisplay(
     sharedDraggedCardIds: Set<String> = emptySet(),
     sharedDragOffset: Offset = Offset.Zero,
     onDragStateChange: (Set<String>, Offset) -> Unit = { _, _ -> },
-    otherPlayers: List<com.commandermtg.models.Player> = emptyList()
+    otherPlayers: List<com.dustinmcafee.dongadeuce.models.Player> = emptyList()
 ) {
     var lastClickTime by remember { mutableStateOf(0L) }
     val isSelected = selectionState?.isSelected(cardInstance.instanceId) == true
@@ -1873,7 +1873,7 @@ fun HandCardDisplay(
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun TokenCreationDialog(
-    viewModel: com.commandermtg.viewmodel.GameViewModel,
+    viewModel: com.dustinmcafee.dongadeuce.viewmodel.GameViewModel,
     onDismiss: () -> Unit,
     onCreateToken: (tokenName: String, tokenType: String, power: String?, toughness: String?, color: String, imageUri: String?, quantity: Int) -> Unit
 ) {

@@ -1,4 +1,4 @@
-package com.commandermtg.ui
+package com.dustinmcafee.dongadeuce.ui
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -11,8 +11,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.commandermtg.models.GamePhase
-import com.commandermtg.models.Player
+import com.dustinmcafee.dongadeuce.models.GamePhase
+import com.dustinmcafee.dongadeuce.models.Player
 
 @Composable
 fun TurnIndicator(

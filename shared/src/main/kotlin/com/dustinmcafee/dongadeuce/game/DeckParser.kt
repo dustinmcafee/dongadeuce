@@ -1,8 +1,8 @@
-package com.commandermtg.game
+package com.dustinmcafee.dongadeuce.game
 
-import com.commandermtg.models.Card
-import com.commandermtg.models.Deck
-import com.commandermtg.models.GameConstants
+import com.dustinmcafee.dongadeuce.models.Card
+import com.dustinmcafee.dongadeuce.models.Deck
+import com.dustinmcafee.dongadeuce.models.GameConstants
 import java.io.File
 
 /**

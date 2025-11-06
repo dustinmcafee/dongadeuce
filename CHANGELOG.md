@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.19.0] - 2025-11-05
+
+### Fixed
+- **Critical Bug Fix** - Fixed potential stack overflow crash in battlefield card positioning
+  - Converted recursive `findNextAvailablePosition()` to iterative approach
+  - Added max position check to prevent infinite recursion
+  - Added graceful fallback when battlefield is full (120+ cards)
+  - Prevents application crashes during normal gameplay with many cards
+
+### Changed
+- **Package Naming Refactored** - Unified all package names to `com.dustinmcafee.dongadeuce`
+  - Updated all 32 source files from legacy `com.commandermtg` package
+  - Ensures consistent codebase naming and proper ownership
+  - Cleaned build artifacts after refactoring
+
 ## [2.18.0] - 2025-11-05
 
 ### Added

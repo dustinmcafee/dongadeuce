@@ -1,4 +1,4 @@
-package com.commandermtg.models
+package com.dustinmcafee.dongadeuce.models
 
 import kotlin.test.*
 

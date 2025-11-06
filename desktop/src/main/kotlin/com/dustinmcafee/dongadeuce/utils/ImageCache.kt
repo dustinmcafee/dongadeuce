@@ -1,4 +1,4 @@
-package com.commandermtg.utils
+package com.dustinmcafee.dongadeuce.utils
 
 import io.ktor.client.*
 import io.ktor.client.request.*

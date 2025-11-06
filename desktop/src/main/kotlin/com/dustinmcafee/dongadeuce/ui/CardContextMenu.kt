@@ -1,12 +1,12 @@
-package com.commandermtg.ui
+package com.dustinmcafee.dongadeuce.ui
 
 import androidx.compose.foundation.ContextMenuArea
 import androidx.compose.foundation.ContextMenuItem
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import com.commandermtg.models.CardInstance
-import com.commandermtg.models.Player
-import com.commandermtg.models.Zone
+import com.dustinmcafee.dongadeuce.models.CardInstance
+import com.dustinmcafee.dongadeuce.models.Player
+import com.dustinmcafee.dongadeuce.models.Zone
 
 /**
  * Context menu actions for cards in different zones
@@ -200,7 +200,7 @@ private fun buildContextMenuItems(
  */
 fun handleCardAction(
     action: CardAction,
-    viewModel: com.commandermtg.viewmodel.GameViewModel
+    viewModel: com.dustinmcafee.dongadeuce.viewmodel.GameViewModel
 ) {
     when (action) {
         is CardAction.Tap -> viewModel.toggleTap(action.cardInstance.instanceId)

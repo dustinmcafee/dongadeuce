@@ -1,4 +1,4 @@
-package com.commandermtg.ui
+package com.dustinmcafee.dongadeuce.ui
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
@@ -6,8 +6,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.commandermtg.viewmodel.MenuViewModel
-import com.commandermtg.viewmodel.Screen
+import com.dustinmcafee.dongadeuce.viewmodel.MenuViewModel
+import com.dustinmcafee.dongadeuce.viewmodel.Screen
 import javax.swing.JFileChooser
 import javax.swing.filechooser.FileNameExtensionFilter
 
@@ -51,7 +51,7 @@ fun MainScreen(
 @Composable
 fun MenuScreen(
     viewModel: MenuViewModel,
-    uiState: com.commandermtg.viewmodel.MenuUiState
+    uiState: com.dustinmcafee.dongadeuce.viewmodel.MenuUiState
 ) {
     Box(
         modifier = Modifier.fillMaxSize(),
@@ -304,7 +304,7 @@ fun MenuScreen(
 @Composable
 fun HotseatDeckLoader(
     viewModel: MenuViewModel,
-    uiState: com.commandermtg.viewmodel.MenuUiState
+    uiState: com.dustinmcafee.dongadeuce.viewmodel.MenuUiState
 ) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,

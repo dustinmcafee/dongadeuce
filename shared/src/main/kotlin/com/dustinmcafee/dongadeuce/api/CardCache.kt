@@ -1,6 +1,6 @@
-package com.commandermtg.api
+package com.dustinmcafee.dongadeuce.api
 
-import com.commandermtg.models.Card
+import com.dustinmcafee.dongadeuce.models.Card
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.engine.cio.*
@@ -18,7 +18,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.encodeToString
 import java.io.File
 // Import Scryfall types from ScryfallApi
-import com.commandermtg.api.ScryfallCard
+import com.dustinmcafee.dongadeuce.api.ScryfallCard
 
 /**
  * Card cache system that downloads and stores bulk card data from Scryfall

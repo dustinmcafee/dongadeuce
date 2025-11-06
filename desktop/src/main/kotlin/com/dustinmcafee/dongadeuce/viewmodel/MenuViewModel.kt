@@ -1,10 +1,10 @@
-package com.commandermtg.viewmodel
+package com.dustinmcafee.dongadeuce.viewmodel
 
-import com.commandermtg.api.ScryfallApi
-import com.commandermtg.api.CardCache
-import com.commandermtg.game.DeckParser
-import com.commandermtg.models.Card
-import com.commandermtg.models.Deck
+import com.dustinmcafee.dongadeuce.api.ScryfallApi
+import com.dustinmcafee.dongadeuce.api.CardCache
+import com.dustinmcafee.dongadeuce.game.DeckParser
+import com.dustinmcafee.dongadeuce.models.Card
+import com.dustinmcafee.dongadeuce.models.Deck
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob

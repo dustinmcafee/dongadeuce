@@ -1,10 +1,10 @@
-package com.commandermtg.ui
+package com.dustinmcafee.dongadeuce.ui
 
 import androidx.compose.runtime.*
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
-import com.commandermtg.models.CardInstance
-import com.commandermtg.models.Zone
+import com.dustinmcafee.dongadeuce.models.CardInstance
+import com.dustinmcafee.dongadeuce.models.Zone
 
 /**
  * State holder for drag and drop operations

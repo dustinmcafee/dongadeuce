@@ -1,7 +1,7 @@
-package com.commandermtg.ui
+package com.dustinmcafee.dongadeuce.ui
 
 import androidx.compose.runtime.*
-import com.commandermtg.models.CardInstance
+import com.dustinmcafee.dongadeuce.models.CardInstance
 
 /**
  * State holder for multi-card selection

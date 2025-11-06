@@ -1,6 +1,6 @@
-package com.commandermtg.viewmodel
+package com.dustinmcafee.dongadeuce.viewmodel
 
-import com.commandermtg.models.*
+import com.dustinmcafee.dongadeuce.models.*
 import kotlin.test.*
 
 class GameViewModelTest {

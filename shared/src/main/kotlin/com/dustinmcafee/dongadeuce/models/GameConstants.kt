@@ -1,4 +1,4 @@
-package com.commandermtg.models
+package com.dustinmcafee.dongadeuce.models
 
 /**
  * MTG Commander format constants and rules

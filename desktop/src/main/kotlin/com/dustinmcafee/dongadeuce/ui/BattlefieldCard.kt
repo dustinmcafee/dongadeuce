@@ -1,6 +1,6 @@
 @file:OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class)
 
-package com.commandermtg.ui
+package com.dustinmcafee.dongadeuce.ui
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -16,15 +16,15 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.*
 import androidx.compose.ui.unit.dp
-import com.commandermtg.models.CardInstance
-import com.commandermtg.ui.UIConstants.BATTLEFIELD_CARD_HEIGHT
-import com.commandermtg.ui.UIConstants.BATTLEFIELD_CARD_TAPPED_SIZE
-import com.commandermtg.ui.UIConstants.BATTLEFIELD_CARD_WIDTH
-import com.commandermtg.ui.UIConstants.CARD_CORNER_RADIUS
-import com.commandermtg.ui.UIConstants.CARD_ELEVATION
-import com.commandermtg.ui.UIConstants.DOUBLE_CLICK_DELAY_MS
-import com.commandermtg.ui.UIConstants.SELECTED_BORDER_WIDTH
-import com.commandermtg.ui.UIConstants.SELECTION_BORDER_WIDTH
+import com.dustinmcafee.dongadeuce.models.CardInstance
+import com.dustinmcafee.dongadeuce.ui.UIConstants.BATTLEFIELD_CARD_HEIGHT
+import com.dustinmcafee.dongadeuce.ui.UIConstants.BATTLEFIELD_CARD_TAPPED_SIZE
+import com.dustinmcafee.dongadeuce.ui.UIConstants.BATTLEFIELD_CARD_WIDTH
+import com.dustinmcafee.dongadeuce.ui.UIConstants.CARD_CORNER_RADIUS
+import com.dustinmcafee.dongadeuce.ui.UIConstants.CARD_ELEVATION
+import com.dustinmcafee.dongadeuce.ui.UIConstants.DOUBLE_CLICK_DELAY_MS
+import com.dustinmcafee.dongadeuce.ui.UIConstants.SELECTED_BORDER_WIDTH
+import com.dustinmcafee.dongadeuce.ui.UIConstants.SELECTION_BORDER_WIDTH
 
 @Composable
 fun BattlefieldCard(
@@ -34,7 +34,7 @@ fun BattlefieldCard(
     onContextAction: (CardAction) -> Unit = {},
     selectionState: SelectionState? = null,
     modifier: Modifier = Modifier,
-    otherPlayers: List<com.commandermtg.models.Player> = emptyList(),
+    otherPlayers: List<com.dustinmcafee.dongadeuce.models.Player> = emptyList(),
     ownerName: String = ""
 ) {
     var lastClickTime by remember { mutableStateOf(0L) }

@@ -1,4 +1,4 @@
-package com.commandermtg.ui
+package com.dustinmcafee.dongadeuce.ui
 
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
@@ -18,10 +18,10 @@ import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
-import com.commandermtg.models.CardInstance
-import com.commandermtg.models.Zone
-import com.commandermtg.ui.UIConstants.BATTLEFIELD_CARD_TAPPED_SIZE
-import com.commandermtg.ui.UIConstants.STACK_OFFSET_RATIO
+import com.dustinmcafee.dongadeuce.models.CardInstance
+import com.dustinmcafee.dongadeuce.models.Zone
+import com.dustinmcafee.dongadeuce.ui.UIConstants.BATTLEFIELD_CARD_TAPPED_SIZE
+import com.dustinmcafee.dongadeuce.ui.UIConstants.STACK_OFFSET_RATIO
 import kotlin.math.roundToInt
 
 /**
@@ -39,10 +39,10 @@ fun DraggableBattlefieldGrid(
     modifier: Modifier = Modifier,
     currentPlayerId: String? = null, // ID of the player who can drag cards
     selectionState: SelectionState? = null,
-    otherPlayers: List<com.commandermtg.models.Player> = emptyList(),
-    allPlayers: List<com.commandermtg.models.Player> = emptyList(),
+    otherPlayers: List<com.dustinmcafee.dongadeuce.models.Player> = emptyList(),
+    allPlayers: List<com.dustinmcafee.dongadeuce.models.Player> = emptyList(),
     dragDropState: DragDropState? = null,
-    onDropToZone: ((Set<String>, com.commandermtg.models.Zone) -> Unit)? = null
+    onDropToZone: ((Set<String>, com.dustinmcafee.dongadeuce.models.Zone) -> Unit)? = null
 ) {
     if (cards.isEmpty()) {
         Box(
@@ -145,27 +145,43 @@ fun DraggableBattlefieldGrid(
         var nextCol = 0
 
         // Find next available position (with stacking support)
-        fun findNextAvailablePosition(): Pair<Int, Int> {
-            // Count how many cards are at the current position
-            val cardsAtPosition = positionMap.values.count { it == Pair(nextCol, nextRow) }
+        // Returns null if battlefield is full (all positions have 3 cards)
+        fun findNextAvailablePosition(): Pair<Int, Int>? {
+            val maxPositions = columns * 10 // 4 columns x 10 rows = 40 positions
+            var positionsChecked = 0
 
-            // If less than 3 cards, can stack here
-            if (cardsAtPosition < 3) {
-                return Pair(nextCol, nextRow)
+            while (positionsChecked < maxPositions) {
+                // Count how many cards are at the current position
+                val cardsAtPosition = positionMap.values.count { it == Pair(nextCol, nextRow) }
+
+                // If less than 3 cards, can stack here
+                if (cardsAtPosition < 3) {
+                    return Pair(nextCol, nextRow)
+                }
+
+                // Move to next position
+                nextCol++
+                if (nextCol >= columns) {
+                    nextCol = 0
+                    nextRow++
+                }
+
+                positionsChecked++
             }
 
-            // Move to next position
-            nextCol++
-            if (nextCol >= columns) {
-                nextCol = 0
-                nextRow++
-            }
-            return findNextAvailablePosition()
+            // Battlefield is full
+            return null
         }
 
         cardsWithoutPositions.forEach { card ->
-            val (col, row) = findNextAvailablePosition()
-            positionMap[card.instanceId] = Pair(col, row)
+            val position = findNextAvailablePosition()
+            if (position != null) {
+                positionMap[card.instanceId] = position
+            } else {
+                // Battlefield full - place at (0, 0) and stack (will show at max stack depth)
+                // This is a fallback to prevent crashes
+                positionMap[card.instanceId] = Pair(0, 0)
+            }
         }
 
         // Calculate stack indices for all cards

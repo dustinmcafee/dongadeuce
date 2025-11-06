@@ -1,7 +1,7 @@
-package com.commandermtg.viewmodel
+package com.dustinmcafee.dongadeuce.viewmodel
 
-import com.commandermtg.api.ScryfallApi
-import com.commandermtg.models.*
+import com.dustinmcafee.dongadeuce.api.ScryfallApi
+import com.dustinmcafee.dongadeuce.models.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -427,7 +427,7 @@ class GameViewModel {
 
             // If we just moved to UNTAP phase (new turn), untap all cards for the active player
             // We'll let untapAll handle its own state update instead
-            if (updatedGameState.phase == com.commandermtg.models.GamePhase.UNTAP) {
+            if (updatedGameState.phase == com.dustinmcafee.dongadeuce.models.GamePhase.UNTAP) {
                 // Store updated game state and let untapAll handle the actual untapping
                 currentState.copy(gameState = updatedGameState)
             } else {
@@ -437,7 +437,7 @@ class GameViewModel {
 
         // Call untapAll after state update if needed
         _uiState.value.gameState?.let { gameState ->
-            if (gameState.phase == com.commandermtg.models.GamePhase.UNTAP) {
+            if (gameState.phase == com.dustinmcafee.dongadeuce.models.GamePhase.UNTAP) {
                 val activePlayerId = gameState.activePlayer.id
                 untapAll(activePlayerId)
             }
@@ -455,7 +455,7 @@ class GameViewModel {
             var updatedState = gameState
             do {
                 updatedState = updatedState.nextPhase()
-            } while (updatedState.phase != com.commandermtg.models.GamePhase.UNTAP)
+            } while (updatedState.phase != com.dustinmcafee.dongadeuce.models.GamePhase.UNTAP)
 
             // Don't automatically untap - player must click "Untap All" button
             val finalGameState = updatedState
@@ -491,7 +491,7 @@ class GameViewModel {
             val gameState = currentState.gameState ?: return@update currentState
 
             val untappedCards = gameState.cardInstances.map { card ->
-                if (card.controllerId == playerId && card.zone == com.commandermtg.models.Zone.BATTLEFIELD) {
+                if (card.controllerId == playerId && card.zone == com.dustinmcafee.dongadeuce.models.Zone.BATTLEFIELD) {
                     card.untap()
                 } else {
                     card
@@ -905,11 +905,11 @@ class GameViewModel {
      * @return Number of cards successfully acted upon
      */
     fun handleBatchCardAction(
-        action: com.commandermtg.ui.CardAction,
+        action: com.dustinmcafee.dongadeuce.ui.CardAction,
         selectedCardIds: Set<String> = emptySet()
     ): Int {
         // ViewDetails doesn't require ownership check
-        if (action is com.commandermtg.ui.CardAction.ViewDetails) {
+        if (action is com.dustinmcafee.dongadeuce.ui.CardAction.ViewDetails) {
             return 1 // Handled separately in UI
         }
 
@@ -918,19 +918,19 @@ class GameViewModel {
 
         // Get the primary card instance from the action
         val primaryCard = when (action) {
-            is com.commandermtg.ui.CardAction.Tap -> action.cardInstance
-            is com.commandermtg.ui.CardAction.Untap -> action.cardInstance
-            is com.commandermtg.ui.CardAction.FlipCard -> action.cardInstance
-            is com.commandermtg.ui.CardAction.ToHand -> action.cardInstance
-            is com.commandermtg.ui.CardAction.ToBattlefield -> action.cardInstance
-            is com.commandermtg.ui.CardAction.ToGraveyard -> action.cardInstance
-            is com.commandermtg.ui.CardAction.ToExile -> action.cardInstance
-            is com.commandermtg.ui.CardAction.ToLibrary -> action.cardInstance
-            is com.commandermtg.ui.CardAction.ToTop -> action.cardInstance
-            is com.commandermtg.ui.CardAction.ToCommandZone -> action.cardInstance
-            is com.commandermtg.ui.CardAction.AddCounter -> action.cardInstance
-            is com.commandermtg.ui.CardAction.RemoveCounter -> action.cardInstance
-            is com.commandermtg.ui.CardAction.GiveControlTo -> action.cardInstance
+            is com.dustinmcafee.dongadeuce.ui.CardAction.Tap -> action.cardInstance
+            is com.dustinmcafee.dongadeuce.ui.CardAction.Untap -> action.cardInstance
+            is com.dustinmcafee.dongadeuce.ui.CardAction.FlipCard -> action.cardInstance
+            is com.dustinmcafee.dongadeuce.ui.CardAction.ToHand -> action.cardInstance
+            is com.dustinmcafee.dongadeuce.ui.CardAction.ToBattlefield -> action.cardInstance
+            is com.dustinmcafee.dongadeuce.ui.CardAction.ToGraveyard -> action.cardInstance
+            is com.dustinmcafee.dongadeuce.ui.CardAction.ToExile -> action.cardInstance
+            is com.dustinmcafee.dongadeuce.ui.CardAction.ToLibrary -> action.cardInstance
+            is com.dustinmcafee.dongadeuce.ui.CardAction.ToTop -> action.cardInstance
+            is com.dustinmcafee.dongadeuce.ui.CardAction.ToCommandZone -> action.cardInstance
+            is com.dustinmcafee.dongadeuce.ui.CardAction.AddCounter -> action.cardInstance
+            is com.dustinmcafee.dongadeuce.ui.CardAction.RemoveCounter -> action.cardInstance
+            is com.dustinmcafee.dongadeuce.ui.CardAction.GiveControlTo -> action.cardInstance
             else -> return 0
         }
 
@@ -958,19 +958,19 @@ class GameViewModel {
             if (card.ownerId == authorizedPlayerId) {
                 // Dispatch to appropriate ViewModel method
                 when (action) {
-                    is com.commandermtg.ui.CardAction.Tap -> toggleTap(card.instanceId)
-                    is com.commandermtg.ui.CardAction.Untap -> toggleTap(card.instanceId)
-                    is com.commandermtg.ui.CardAction.FlipCard -> flipCard(card.instanceId)
-                    is com.commandermtg.ui.CardAction.ToHand -> moveCard(card.instanceId, Zone.HAND)
-                    is com.commandermtg.ui.CardAction.ToBattlefield -> moveCard(card.instanceId, Zone.BATTLEFIELD)
-                    is com.commandermtg.ui.CardAction.ToGraveyard -> moveCard(card.instanceId, Zone.GRAVEYARD)
-                    is com.commandermtg.ui.CardAction.ToExile -> moveCard(card.instanceId, Zone.EXILE)
-                    is com.commandermtg.ui.CardAction.ToLibrary -> moveCard(card.instanceId, Zone.LIBRARY)
-                    is com.commandermtg.ui.CardAction.ToTop -> moveCardToTopOfLibrary(card.instanceId)
-                    is com.commandermtg.ui.CardAction.ToCommandZone -> moveCard(card.instanceId, Zone.COMMAND_ZONE)
-                    is com.commandermtg.ui.CardAction.AddCounter -> addCounter(card.instanceId, action.counterType, 1)
-                    is com.commandermtg.ui.CardAction.RemoveCounter -> removeCounter(card.instanceId, action.counterType, 1)
-                    is com.commandermtg.ui.CardAction.GiveControlTo -> giveControlTo(card.instanceId, action.newControllerId)
+                    is com.dustinmcafee.dongadeuce.ui.CardAction.Tap -> toggleTap(card.instanceId)
+                    is com.dustinmcafee.dongadeuce.ui.CardAction.Untap -> toggleTap(card.instanceId)
+                    is com.dustinmcafee.dongadeuce.ui.CardAction.FlipCard -> flipCard(card.instanceId)
+                    is com.dustinmcafee.dongadeuce.ui.CardAction.ToHand -> moveCard(card.instanceId, Zone.HAND)
+                    is com.dustinmcafee.dongadeuce.ui.CardAction.ToBattlefield -> moveCard(card.instanceId, Zone.BATTLEFIELD)
+                    is com.dustinmcafee.dongadeuce.ui.CardAction.ToGraveyard -> moveCard(card.instanceId, Zone.GRAVEYARD)
+                    is com.dustinmcafee.dongadeuce.ui.CardAction.ToExile -> moveCard(card.instanceId, Zone.EXILE)
+                    is com.dustinmcafee.dongadeuce.ui.CardAction.ToLibrary -> moveCard(card.instanceId, Zone.LIBRARY)
+                    is com.dustinmcafee.dongadeuce.ui.CardAction.ToTop -> moveCardToTopOfLibrary(card.instanceId)
+                    is com.dustinmcafee.dongadeuce.ui.CardAction.ToCommandZone -> moveCard(card.instanceId, Zone.COMMAND_ZONE)
+                    is com.dustinmcafee.dongadeuce.ui.CardAction.AddCounter -> addCounter(card.instanceId, action.counterType, 1)
+                    is com.dustinmcafee.dongadeuce.ui.CardAction.RemoveCounter -> removeCounter(card.instanceId, action.counterType, 1)
+                    is com.dustinmcafee.dongadeuce.ui.CardAction.GiveControlTo -> giveControlTo(card.instanceId, action.newControllerId)
                     else -> {}
                 }
                 actionCount++

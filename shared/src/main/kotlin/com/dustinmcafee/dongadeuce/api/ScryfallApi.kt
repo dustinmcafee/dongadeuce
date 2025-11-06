@@ -1,6 +1,6 @@
-package com.commandermtg.api
+package com.dustinmcafee.dongadeuce.api
 
-import com.commandermtg.models.Card
+import com.dustinmcafee.dongadeuce.models.Card
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.engine.cio.*
