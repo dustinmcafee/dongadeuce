@@ -173,23 +173,59 @@ fun BattlefieldCard(
 
                         // Counters - always show even when flipped
                         if (cardInstance.counters.isNotEmpty()) {
-                            Surface(
-                                color = Color.Black.copy(alpha = 0.7f),
-                                shape = RoundedCornerShape(4.dp)
+                            Column(
+                                horizontalAlignment = Alignment.Start,
+                                verticalArrangement = Arrangement.spacedBy(2.dp)
                             ) {
-                                Column(
-                                    modifier = Modifier.padding(4.dp),
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    verticalArrangement = Arrangement.spacedBy(2.dp)
-                                ) {
-                                    cardInstance.counters.forEach { (counterType, count) ->
+                                cardInstance.counters.forEach { (counterTypeId, count) ->
+                                    // Find matching counter type for color
+                                    val counterType = UIConstants.COUNTER_TYPES.find { it.id == counterTypeId }
+                                    val counterColor = counterType?.color ?: Color.White
+                                    val displayName = counterType?.displayName ?: counterTypeId
+
+                                    Surface(
+                                        color = counterColor.copy(alpha = 0.9f),
+                                        shape = RoundedCornerShape(4.dp)
+                                    ) {
                                         Text(
-                                            text = "$count $counterType",
+                                            text = "$count $displayName",
                                             style = MaterialTheme.typography.labelSmall,
-                                            color = Color.White
+                                            color = Color.Black,
+                                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
                                         )
                                     }
                                 }
+                            }
+                        }
+
+                        // "Doesn't Untap" indicator
+                        if (cardInstance.doesntUntap) {
+                            Surface(
+                                color = Color.Magenta.copy(alpha = 0.8f),
+                                shape = RoundedCornerShape(4.dp)
+                            ) {
+                                Text(
+                                    text = "⊘ Doesn't Untap",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = Color.White,
+                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
+
+                        // Annotation indicator
+                        if (!cardInstance.annotation.isNullOrBlank()) {
+                            Surface(
+                                color = Color.Yellow.copy(alpha = 0.8f),
+                                shape = RoundedCornerShape(4.dp)
+                            ) {
+                                Text(
+                                    text = "📝 ${cardInstance.annotation}",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = Color.Black,
+                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
+                                    maxLines = 1
+                                )
                             }
                         }
                     }
@@ -198,9 +234,13 @@ fun BattlefieldCard(
 
                     // Power/Toughness indicator (bottom right for creatures) - only show when not flipped
                     if (!cardInstance.isFlipped) {
-                        val power = cardInstance.card.power
-                        val toughness = cardInstance.card.toughness
-                        if (power != null && toughness != null) {
+                        val basePower = cardInstance.card.power
+                        val baseToughness = cardInstance.card.toughness
+                        if (basePower != null && baseToughness != null) {
+                            val currentPower = (basePower.toIntOrNull() ?: 0) + cardInstance.powerModifier
+                            val currentToughness = (baseToughness.toIntOrNull() ?: 0) + cardInstance.toughnessModifier
+                            val isModified = cardInstance.powerModifier != 0 || cardInstance.toughnessModifier != 0
+
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.End
@@ -209,12 +249,27 @@ fun BattlefieldCard(
                                     color = Color.Black.copy(alpha = 0.7f),
                                     shape = RoundedCornerShape(4.dp)
                                 ) {
-                                    Text(
-                                        text = "$power/$toughness",
-                                        style = MaterialTheme.typography.labelMedium,
-                                        color = Color.White,
-                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                    )
+                                    Column(
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                        horizontalAlignment = Alignment.End
+                                    ) {
+                                        Text(
+                                            text = "$currentPower/$currentToughness",
+                                            style = MaterialTheme.typography.labelMedium,
+                                            color = when {
+                                                !isModified -> Color.White
+                                                cardInstance.powerModifier > 0 || cardInstance.toughnessModifier > 0 -> Color.Green
+                                                else -> Color.Red
+                                            }
+                                        )
+                                        if (isModified) {
+                                            Text(
+                                                text = "($basePower/$baseToughness)",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = Color.Gray
+                                            )
+                                        }
+                                    }
                                 }
                             }
                         }

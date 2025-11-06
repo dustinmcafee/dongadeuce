@@ -28,6 +28,11 @@ sealed class CardAction {
     data class ViewDetails(val cardInstance: CardInstance) : CardAction()
     data class ShowLibraryPositionDialog(val cardInstance: CardInstance) : CardAction()
     data class ShowCounterDialog(val cardInstance: CardInstance, val counterType: String) : CardAction()
+    data class ShowPowerToughnessDialog(val cardInstance: CardInstance) : CardAction()
+    data class ToggleDoesntUntap(val cardInstance: CardInstance) : CardAction()
+    data class SetAnnotation(val cardInstance: CardInstance) : CardAction()
+    data class PlayFaceDown(val cardInstance: CardInstance) : CardAction()
+    data class ToggleFaceDown(val cardInstance: CardInstance) : CardAction()
 }
 
 /**
@@ -71,19 +76,40 @@ private fun buildContextMenuItems(
 
             items.add(ContextMenuItem("Flip Card") { onAction(CardAction.FlipCard(cardInstance)) })
 
-            // Counters
-            items.add(ContextMenuItem("Add +1/+1 Counter") {
-                onAction(CardAction.AddCounter(cardInstance, "+1/+1"))
+            // Face down
+            if (cardInstance.isFaceDown) {
+                items.add(ContextMenuItem("Turn Face Up") { onAction(CardAction.ToggleFaceDown(cardInstance)) })
+            } else {
+                items.add(ContextMenuItem("Turn Face Down") { onAction(CardAction.ToggleFaceDown(cardInstance)) })
+            }
+
+            // P/T modifications (for creatures)
+            if (cardInstance.card.power != null && cardInstance.card.toughness != null) {
+                items.add(ContextMenuItem("Modify Power/Toughness...") {
+                    onAction(CardAction.ShowPowerToughnessDialog(cardInstance))
+                })
+            }
+
+            // Card state
+            items.add(ContextMenuItem(
+                if (cardInstance.doesntUntap) "Remove 'Doesn't Untap'" else "Mark 'Doesn't Untap'"
+            ) {
+                onAction(CardAction.ToggleDoesntUntap(cardInstance))
             })
-            items.add(ContextMenuItem("Manage +1/+1 Counters...") {
-                onAction(CardAction.ShowCounterDialog(cardInstance, "+1/+1"))
+
+            items.add(ContextMenuItem("Set Annotation...") {
+                onAction(CardAction.SetAnnotation(cardInstance))
             })
-            items.add(ContextMenuItem("Add Charge Counter") {
-                onAction(CardAction.AddCounter(cardInstance, "charge"))
-            })
-            items.add(ContextMenuItem("Manage Charge Counters...") {
-                onAction(CardAction.ShowCounterDialog(cardInstance, "charge"))
-            })
+
+            // Counters - Show all 6 configurable types
+            UIConstants.COUNTER_TYPES.forEach { counterType ->
+                items.add(ContextMenuItem("Add ${counterType.displayName} Counter") {
+                    onAction(CardAction.AddCounter(cardInstance, counterType.id))
+                })
+                items.add(ContextMenuItem("Manage ${counterType.displayName} Counters...") {
+                    onAction(CardAction.ShowCounterDialog(cardInstance, counterType.id))
+                })
+            }
 
             // Show remove counter options if card has counters
             if (cardInstance.counters.isNotEmpty()) {
@@ -116,6 +142,7 @@ private fun buildContextMenuItems(
 
         Zone.HAND -> {
             items.add(ContextMenuItem("Play to Battlefield") { onAction(CardAction.ToBattlefield(cardInstance)) })
+            items.add(ContextMenuItem("Play Face Down") { onAction(CardAction.PlayFaceDown(cardInstance)) })
             items.add(ContextMenuItem("Discard") { onAction(CardAction.ToGraveyard(cardInstance)) })
             items.add(ContextMenuItem("Exile") { onAction(CardAction.ToExile(cardInstance)) })
             items.add(ContextMenuItem("To Library") { onAction(CardAction.ToLibrary(cardInstance)) })
@@ -238,5 +265,16 @@ fun handleCardAction(
             // Handled in UI layer (GameScreen)
             // Dialog will be shown there
         }
+        is CardAction.ShowPowerToughnessDialog -> {
+            // Handled in UI layer (GameScreen)
+            // Dialog will be shown there
+        }
+        is CardAction.ToggleDoesntUntap -> viewModel.toggleDoesntUntap(action.cardInstance.instanceId)
+        is CardAction.SetAnnotation -> {
+            // Handled in UI layer (GameScreen)
+            // Dialog will be shown there
+        }
+        is CardAction.PlayFaceDown -> viewModel.playFaceDown(action.cardInstance.instanceId)
+        is CardAction.ToggleFaceDown -> viewModel.toggleFaceDown(action.cardInstance.instanceId)
     }
 }

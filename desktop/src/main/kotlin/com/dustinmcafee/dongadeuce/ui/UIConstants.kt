@@ -1,6 +1,16 @@
 package com.dustinmcafee.dongadeuce.ui
 
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+
+/**
+ * Represents a type of counter with display name and color
+ */
+data class CounterType(
+    val id: String,
+    val displayName: String,
+    val color: Color
+)
 
 /**
  * UI constants for card dimensions and layout
@@ -34,4 +44,14 @@ object UIConstants {
 
     // Card elevation
     val CARD_ELEVATION = 4.dp
+
+    // Counter types (6 configurable types)
+    val COUNTER_TYPES = listOf(
+        CounterType("+1/+1", "+1/+1", Color.Green),
+        CounterType("-1/-1", "-1/-1", Color.Red),
+        CounterType("charge", "Charge", Color.Blue),
+        CounterType("loyalty", "Loyalty", Color.Cyan),
+        CounterType("poison", "Poison", Color.Magenta),
+        CounterType("custom", "Custom", Color.Yellow)
+    )
 }

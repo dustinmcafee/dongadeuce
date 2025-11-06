@@ -195,7 +195,12 @@ fun DraggableBattlefieldGrid(
         }
 
         positionToCards.forEach { (gridPos, cardIds) ->
-            cardIds.forEachIndexed { index, cardId ->
+            // Sort cards by placement timestamp to maintain stack order
+            val sortedCardIds = cardIds.sortedBy { cardId ->
+                cards.find { it.instanceId == cardId }?.placedTimestamp ?: 0L
+            }
+
+            sortedCardIds.forEachIndexed { index, cardId ->
                 stackInfo[cardId] = CardStackInfo(
                     gridPos = gridPos,
                     stackIndex = index.coerceAtMost(2) // Max 3 cards per stack

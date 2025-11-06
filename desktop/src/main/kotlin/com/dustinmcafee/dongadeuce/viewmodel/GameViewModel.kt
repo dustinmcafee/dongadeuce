@@ -341,8 +341,28 @@ class GameViewModel {
         _uiState.update { currentState ->
             val gameState = currentState.gameState ?: return@update currentState
 
-            val updatedGameState = gameState.updateCardInstance(cardInstanceId) {
-                it.moveToZone(targetZone)
+            val updatedGameState = gameState.updateCardInstance(cardInstanceId) { card ->
+                var updated = card.moveToZone(targetZone)
+
+                // Reset battlefield-specific state when leaving battlefield
+                if (card.zone == Zone.BATTLEFIELD && targetZone != Zone.BATTLEFIELD) {
+                    updated = updated.copy(
+                        counters = emptyMap(),
+                        powerModifier = 0,
+                        toughnessModifier = 0,
+                        isTapped = false,
+                        isFlipped = false,
+                        doesntUntap = false,
+                        attachedTo = null
+                    )
+                }
+
+                // Update timestamp when moving to battlefield
+                if (targetZone == Zone.BATTLEFIELD) {
+                    updated = updated.copy(placedTimestamp = System.currentTimeMillis())
+                }
+
+                updated
             }
 
             currentState.copy(gameState = updatedGameState)
@@ -665,6 +685,190 @@ class GameViewModel {
                         card.counters - type
                     }
                 )
+            }
+
+            currentState.copy(gameState = updatedGameState)
+        }
+    }
+
+    /**
+     * Modify a card's power
+     */
+    fun modifyPower(cardId: String, amount: Int) {
+        _uiState.update { currentState ->
+            val gameState = currentState.gameState ?: return@update currentState
+
+            val updatedGameState = gameState.updateCardInstance(cardId) { card ->
+                card.copy(powerModifier = card.powerModifier + amount)
+            }
+
+            currentState.copy(gameState = updatedGameState)
+        }
+    }
+
+    /**
+     * Modify a card's toughness
+     */
+    fun modifyToughness(cardId: String, amount: Int) {
+        _uiState.update { currentState ->
+            val gameState = currentState.gameState ?: return@update currentState
+
+            val updatedGameState = gameState.updateCardInstance(cardId) { card ->
+                card.copy(toughnessModifier = card.toughnessModifier + amount)
+            }
+
+            currentState.copy(gameState = updatedGameState)
+        }
+    }
+
+    /**
+     * Modify both power and toughness by the same amount
+     */
+    fun modifyPowerToughness(cardId: String, amount: Int) {
+        _uiState.update { currentState ->
+            val gameState = currentState.gameState ?: return@update currentState
+
+            val updatedGameState = gameState.updateCardInstance(cardId) { card ->
+                card.copy(
+                    powerModifier = card.powerModifier + amount,
+                    toughnessModifier = card.toughnessModifier + amount
+                )
+            }
+
+            currentState.copy(gameState = updatedGameState)
+        }
+    }
+
+    /**
+     * Set power and toughness to specific values (calculates needed modifier)
+     */
+    fun setPowerToughness(cardId: String, newPower: Int, newToughness: Int) {
+        _uiState.update { currentState ->
+            val gameState = currentState.gameState ?: return@update currentState
+
+            val updatedGameState = gameState.updateCardInstance(cardId) { card ->
+                val basePower = card.card.power?.toIntOrNull() ?: 0
+                val baseToughness = card.card.toughness?.toIntOrNull() ?: 0
+
+                card.copy(
+                    powerModifier = newPower - basePower,
+                    toughnessModifier = newToughness - baseToughness
+                )
+            }
+
+            currentState.copy(gameState = updatedGameState)
+        }
+    }
+
+    /**
+     * Reset P/T modifiers to 0
+     */
+    fun resetPowerToughness(cardId: String) {
+        _uiState.update { currentState ->
+            val gameState = currentState.gameState ?: return@update currentState
+
+            val updatedGameState = gameState.updateCardInstance(cardId) { card ->
+                card.copy(powerModifier = 0, toughnessModifier = 0)
+            }
+
+            currentState.copy(gameState = updatedGameState)
+        }
+    }
+
+    /**
+     * Flow P: increase power, decrease toughness
+     */
+    fun flowPower(cardId: String) {
+        _uiState.update { currentState ->
+            val gameState = currentState.gameState ?: return@update currentState
+
+            val updatedGameState = gameState.updateCardInstance(cardId) { card ->
+                card.copy(
+                    powerModifier = card.powerModifier + 1,
+                    toughnessModifier = card.toughnessModifier - 1
+                )
+            }
+
+            currentState.copy(gameState = updatedGameState)
+        }
+    }
+
+    /**
+     * Flow T: decrease power, increase toughness
+     */
+    fun flowToughness(cardId: String) {
+        _uiState.update { currentState ->
+            val gameState = currentState.gameState ?: return@update currentState
+
+            val updatedGameState = gameState.updateCardInstance(cardId) { card ->
+                card.copy(
+                    powerModifier = card.powerModifier - 1,
+                    toughnessModifier = card.toughnessModifier + 1
+                )
+            }
+
+            currentState.copy(gameState = updatedGameState)
+        }
+    }
+
+    /**
+     * Toggle doesn't untap flag
+     */
+    fun toggleDoesntUntap(cardId: String) {
+        _uiState.update { currentState ->
+            val gameState = currentState.gameState ?: return@update currentState
+
+            val updatedGameState = gameState.updateCardInstance(cardId) { card ->
+                card.copy(doesntUntap = !card.doesntUntap)
+            }
+
+            currentState.copy(gameState = updatedGameState)
+        }
+    }
+
+    /**
+     * Set annotation on a card
+     */
+    fun setAnnotation(cardId: String, annotation: String?) {
+        _uiState.update { currentState ->
+            val gameState = currentState.gameState ?: return@update currentState
+
+            val updatedGameState = gameState.updateCardInstance(cardId) { card ->
+                card.copy(annotation = if (annotation.isNullOrBlank()) null else annotation)
+            }
+
+            currentState.copy(gameState = updatedGameState)
+        }
+    }
+
+    /**
+     * Play a card face down
+     */
+    fun playFaceDown(cardId: String) {
+        _uiState.update { currentState ->
+            val gameState = currentState.gameState ?: return@update currentState
+
+            val updatedGameState = gameState.updateCardInstance(cardId) { card ->
+                card.copy(
+                    isFaceDown = true,
+                    zone = Zone.BATTLEFIELD,
+                    placedTimestamp = System.currentTimeMillis()
+                )
+            }
+
+            currentState.copy(gameState = updatedGameState)
+        }
+    }
+
+    /**
+     * Toggle face down status
+     */
+    fun toggleFaceDown(cardId: String) {
+        _uiState.update { currentState ->
+            val gameState = currentState.gameState ?: return@update currentState
+
+            val updatedGameState = gameState.updateCardInstance(cardId) { card ->
+                card.copy(isFaceDown = !card.isFaceDown)
             }
 
             currentState.copy(gameState = updatedGameState)

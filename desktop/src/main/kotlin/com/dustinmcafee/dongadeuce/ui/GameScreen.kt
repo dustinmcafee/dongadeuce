@@ -57,6 +57,10 @@ fun GameScreen(
     var showCounterDialog by remember { mutableStateOf(false) }
     var cardForCounterDialog by remember { mutableStateOf<com.dustinmcafee.dongadeuce.models.CardInstance?>(null) }
     var counterTypeForDialog by remember { mutableStateOf("") }
+    var showPowerToughnessDialog by remember { mutableStateOf(false) }
+    var cardForPowerToughnessDialog by remember { mutableStateOf<com.dustinmcafee.dongadeuce.models.CardInstance?>(null) }
+    var showAnnotationDialog by remember { mutableStateOf(false) }
+    var cardForAnnotationDialog by remember { mutableStateOf<com.dustinmcafee.dongadeuce.models.CardInstance?>(null) }
 
     // Handler for card actions - delegates business logic to ViewModel
     val handleAction: (CardAction) -> Unit = { action ->
@@ -75,6 +79,16 @@ fun GameScreen(
                 cardForCounterDialog = action.cardInstance
                 counterTypeForDialog = action.counterType
                 showCounterDialog = true
+            }
+            is CardAction.ShowPowerToughnessDialog -> {
+                // Show dialog for modifying power/toughness
+                cardForPowerToughnessDialog = action.cardInstance
+                showPowerToughnessDialog = true
+            }
+            is CardAction.SetAnnotation -> {
+                // Show dialog for setting annotation
+                cardForAnnotationDialog = action.cardInstance
+                showAnnotationDialog = true
             }
             else -> {
                 // Delegate to ViewModel with multi-selection support
@@ -402,6 +416,61 @@ fun GameScreen(
             },
             onSubtract = { amount ->
                 viewModel.removeCounter(card.instanceId, counterTypeForDialog, amount)
+            }
+        )
+    }
+
+    // Power/Toughness dialog
+    if (showPowerToughnessDialog && cardForPowerToughnessDialog != null) {
+        val card = cardForPowerToughnessDialog!!
+
+        PowerToughnessDialog(
+            cardName = card.card.name,
+            basePower = card.card.power,
+            baseToughness = card.card.toughness,
+            currentPowerMod = card.powerModifier,
+            currentToughnessMod = card.toughnessModifier,
+            onDismiss = {
+                showPowerToughnessDialog = false
+                cardForPowerToughnessDialog = null
+            },
+            onModifyPower = { amount ->
+                viewModel.modifyPower(card.instanceId, amount)
+            },
+            onModifyToughness = { amount ->
+                viewModel.modifyToughness(card.instanceId, amount)
+            },
+            onModifyBoth = { amount ->
+                viewModel.modifyPowerToughness(card.instanceId, amount)
+            },
+            onSetPT = { newPower, newToughness ->
+                viewModel.setPowerToughness(card.instanceId, newPower, newToughness)
+            },
+            onReset = {
+                viewModel.resetPowerToughness(card.instanceId)
+            },
+            onFlowP = {
+                viewModel.flowPower(card.instanceId)
+            },
+            onFlowT = {
+                viewModel.flowToughness(card.instanceId)
+            }
+        )
+    }
+
+    // Annotation dialog
+    if (showAnnotationDialog && cardForAnnotationDialog != null) {
+        val card = cardForAnnotationDialog!!
+
+        AnnotationDialog(
+            cardName = card.card.name,
+            currentAnnotation = card.annotation,
+            onDismiss = {
+                showAnnotationDialog = false
+                cardForAnnotationDialog = null
+            },
+            onConfirm = { annotation ->
+                viewModel.setAnnotation(card.instanceId, annotation)
             }
         )
     }

@@ -20,7 +20,12 @@ data class CardInstance(
     val counters: Map<String, Int> = emptyMap(), // e.g., "+1/+1" -> 3
     val attachedTo: String? = null, // instanceId of card this is attached to
     val gridX: Int? = null, // Grid X position on battlefield (null = auto-arrange)
-    val gridY: Int? = null  // Grid Y position on battlefield (null = auto-arrange)
+    val gridY: Int? = null,  // Grid Y position on battlefield (null = auto-arrange)
+    val powerModifier: Int = 0, // Modifier to power (e.g., +2 or -1)
+    val toughnessModifier: Int = 0, // Modifier to toughness
+    val doesntUntap: Boolean = false, // Card doesn't untap during untap step
+    val annotation: String? = null, // Custom text note on card
+    val placedTimestamp: Long = System.currentTimeMillis() // When card was placed at this position
 ) {
     fun tap() = copy(isTapped = true)
     fun untap() = copy(isTapped = false)
@@ -30,6 +35,6 @@ data class CardInstance(
         val current = counters[counterType] ?: 0
         return copy(counters = counters + (counterType to current + amount))
     }
-    fun setGridPosition(x: Int, y: Int) = copy(gridX = x, gridY = y)
+    fun setGridPosition(x: Int, y: Int) = copy(gridX = x, gridY = y, placedTimestamp = System.currentTimeMillis())
     fun changeController(newControllerId: String) = copy(controllerId = newControllerId)
 }
