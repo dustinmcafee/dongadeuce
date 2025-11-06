@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.21.2] - 2025-11-05
+
+### Fixed
+- **Library Peek Dialog** - Fixed card list not updating after moving cards to hand
+  - When viewing top/bottom N cards, moving a card to hand now removes it from the peek list
+  - Dialog no longer shows cards that have already been moved
+  - Provides immediate visual feedback for card movements
+
 ## [2.21.1] - 2025-11-05
 
 ### Fixed

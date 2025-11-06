@@ -708,6 +708,8 @@ fun HotseatPlayerSection(
                 },
                 onMoveCard = { cardInstance, zone ->
                     viewModel.moveCard(cardInstance.instanceId, zone)
+                    // Update the peek list to remove the moved card
+                    libraryPeekCards = libraryPeekCards.filter { it.instanceId != cardInstance.instanceId }
                 },
                 onMoveAllToZone = { zone ->
                     libraryPeekCards.forEach { cardInstance ->
