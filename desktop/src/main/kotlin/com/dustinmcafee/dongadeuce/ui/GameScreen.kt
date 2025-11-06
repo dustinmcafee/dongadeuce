@@ -50,6 +50,8 @@ fun GameScreen(
 
     val uiState by viewModel.uiState.collectAsState()
     var cardDetailsToShow by remember { mutableStateOf<com.dustinmcafee.dongadeuce.models.CardInstance?>(null) }
+    var showLibraryPositionDialog by remember { mutableStateOf(false) }
+    var cardForLibraryPosition by remember { mutableStateOf<com.dustinmcafee.dongadeuce.models.CardInstance?>(null) }
 
     // Handler for card actions - delegates business logic to ViewModel
     val handleAction: (CardAction) -> Unit = { action ->
@@ -57,6 +59,11 @@ fun GameScreen(
             is CardAction.ViewDetails -> {
                 // Anyone can view card details - handle in UI
                 cardDetailsToShow = action.cardInstance
+            }
+            is CardAction.ShowLibraryPositionDialog -> {
+                // Show dialog for choosing library position
+                cardForLibraryPosition = action.cardInstance
+                showLibraryPositionDialog = true
             }
             else -> {
                 // Delegate to ViewModel with multi-selection support
@@ -331,6 +338,33 @@ fun GameScreen(
         CardDetailsDialog(
             cardInstance = cardInstance,
             onDismiss = { cardDetailsToShow = null }
+        )
+    }
+
+    // Library position dialog
+    if (showLibraryPositionDialog && cardForLibraryPosition != null) {
+        val card = cardForLibraryPosition!!
+        val librarySize = viewModel.getCardCount(card.ownerId, Zone.LIBRARY)
+
+        LibraryPositionDialog(
+            cardName = card.card.name,
+            librarySize = librarySize,
+            onDismiss = {
+                showLibraryPositionDialog = false
+                cardForLibraryPosition = null
+            },
+            onToTop = {
+                viewModel.moveCardToTopOfLibrary(card.instanceId)
+            },
+            onToBottom = {
+                viewModel.moveCardToBottomOfLibrary(card.instanceId)
+            },
+            onToPositionFromTop = { position ->
+                viewModel.moveCardToLibraryPosition(card.instanceId, position)
+            },
+            onToPositionFromBottom = { position ->
+                viewModel.moveCardToLibraryPositionFromBottom(card.instanceId, position)
+            }
         )
     }
 

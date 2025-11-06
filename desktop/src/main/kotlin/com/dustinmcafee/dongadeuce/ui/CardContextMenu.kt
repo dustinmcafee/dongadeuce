@@ -26,6 +26,7 @@ sealed class CardAction {
     data class RemoveCounter(val cardInstance: CardInstance, val counterType: String) : CardAction()
     data class GiveControlTo(val cardInstance: CardInstance, val newControllerId: String, val newControllerName: String) : CardAction()
     data class ViewDetails(val cardInstance: CardInstance) : CardAction()
+    data class ShowLibraryPositionDialog(val cardInstance: CardInstance) : CardAction()
 }
 
 /**
@@ -98,6 +99,7 @@ private fun buildContextMenuItems(
             items.add(ContextMenuItem("To Graveyard") { onAction(CardAction.ToGraveyard(cardInstance)) })
             items.add(ContextMenuItem("Exile") { onAction(CardAction.ToExile(cardInstance)) })
             items.add(ContextMenuItem("To Library") { onAction(CardAction.ToLibrary(cardInstance)) })
+            items.add(ContextMenuItem("To Library (Choose Position)...") { onAction(CardAction.ShowLibraryPositionDialog(cardInstance)) })
 
             // Commander-specific: can go to command zone from anywhere
             if (cardInstance.card.isLegendary && cardInstance.card.isCreature) {
@@ -111,6 +113,7 @@ private fun buildContextMenuItems(
             items.add(ContextMenuItem("Exile") { onAction(CardAction.ToExile(cardInstance)) })
             items.add(ContextMenuItem("To Library") { onAction(CardAction.ToLibrary(cardInstance)) })
             items.add(ContextMenuItem("To Top of Library") { onAction(CardAction.ToTop(cardInstance)) })
+            items.add(ContextMenuItem("To Library (Choose Position)...") { onAction(CardAction.ShowLibraryPositionDialog(cardInstance)) })
 
             // Give control to other players
             otherPlayers.forEach { player: Player ->
@@ -217,8 +220,12 @@ fun handleCardAction(
         is CardAction.RemoveCounter -> viewModel.removeCounter(action.cardInstance.instanceId, action.counterType, 1)
         is CardAction.GiveControlTo -> viewModel.giveControlTo(action.cardInstance.instanceId, action.newControllerId)
         is CardAction.ViewDetails -> {
-            // TODO: Implement card details dialog
+            // Handled in UI layer (GameScreen)
             println("View details for: ${action.cardInstance.card.name}")
+        }
+        is CardAction.ShowLibraryPositionDialog -> {
+            // Handled in UI layer (GameScreen)
+            // Dialog will be shown there
         }
     }
 }

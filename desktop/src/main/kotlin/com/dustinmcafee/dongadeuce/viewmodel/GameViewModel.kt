@@ -822,6 +822,84 @@ class GameViewModel {
     }
 
     /**
+     * Move a card to a specific position from the top of its owner's library
+     * Convention: position 1 = top (last in list), position 2 = second from top, etc.
+     */
+    fun moveCardToLibraryPosition(cardId: String, positionFromTop: Int) {
+        _uiState.update { currentState ->
+            val gameState = currentState.gameState ?: return@update currentState
+
+            // Find the card
+            val card = gameState.cardInstances.find { it.instanceId == cardId } ?: return@update currentState
+            val ownerId = card.ownerId
+
+            // Move card to library first
+            val updatedCard = card.moveToZone(Zone.LIBRARY)
+
+            // Get all cards except the target card
+            val otherCards = gameState.cardInstances.filter { it.instanceId != cardId }
+
+            // Get all library cards for this player (excluding the moved card)
+            val libraryCards = otherCards.filter { it.ownerId == ownerId && it.zone == Zone.LIBRARY }.toMutableList()
+
+            // Get all non-library cards
+            val nonLibraryCards = otherCards.filter { !(it.ownerId == ownerId && it.zone == Zone.LIBRARY) }
+
+            // Calculate insertion index: position 1 = last (top), position N = (size - N + 1) from start
+            val insertIndex = (libraryCards.size - positionFromTop + 1).coerceIn(0, libraryCards.size)
+
+            // Insert the card at the specified position
+            libraryCards.add(insertIndex, updatedCard)
+
+            // Rebuild card list
+            val reorderedCards = nonLibraryCards + libraryCards
+
+            currentState.copy(
+                gameState = gameState.copy(cardInstances = reorderedCards)
+            )
+        }
+    }
+
+    /**
+     * Move a card to a specific position from the bottom of its owner's library
+     * Convention: position 1 = bottom (first in list), position 2 = second from bottom, etc.
+     */
+    fun moveCardToLibraryPositionFromBottom(cardId: String, positionFromBottom: Int) {
+        _uiState.update { currentState ->
+            val gameState = currentState.gameState ?: return@update currentState
+
+            // Find the card
+            val card = gameState.cardInstances.find { it.instanceId == cardId } ?: return@update currentState
+            val ownerId = card.ownerId
+
+            // Move card to library first
+            val updatedCard = card.moveToZone(Zone.LIBRARY)
+
+            // Get all cards except the target card
+            val otherCards = gameState.cardInstances.filter { it.instanceId != cardId }
+
+            // Get all library cards for this player (excluding the moved card)
+            val libraryCards = otherCards.filter { it.ownerId == ownerId && it.zone == Zone.LIBRARY }.toMutableList()
+
+            // Get all non-library cards
+            val nonLibraryCards = otherCards.filter { !(it.ownerId == ownerId && it.zone == Zone.LIBRARY) }
+
+            // Calculate insertion index: position 1 = first (bottom), position 2 = second, etc.
+            val insertIndex = (positionFromBottom - 1).coerceIn(0, libraryCards.size)
+
+            // Insert the card at the specified position
+            libraryCards.add(insertIndex, updatedCard)
+
+            // Rebuild card list
+            val reorderedCards = nonLibraryCards + libraryCards
+
+            currentState.copy(
+                gameState = gameState.copy(cardInstances = reorderedCards)
+            )
+        }
+    }
+
+    /**
      * Get the top N cards from a player's library
      * Convention: Last cards in library list = top of library (stack-based)
      */

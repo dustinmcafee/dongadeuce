@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.23.0] - 2025-11-05
+
+### Added
+- **Library Position Dialog** - Send cards to specific library positions
+  - Right-click cards in battlefield or hand and choose "To Library (Choose Position)..."
+  - Dialog offers quick options: To Top, To Bottom
+  - Specify custom position: "X from Top" or "X from Bottom"
+  - Position 1 = top/bottom, position 2 = second from top/bottom, etc.
+  - Works for tucking commanders, scrying to bottom, and other position-specific effects
+  - Shows current library size for reference
+
 ## [2.22.0] - 2025-11-05
 
 ### Added
