@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.22.0] - 2025-11-05
+
+### Added
+- **Clickable Life Total** - Direct life total input for quick adjustments
+  - Click on life total to open dialog for setting exact value
+  - Faster than incrementing/decrementing for large changes
+  - Supports negative life totals
+  - Available in both hotseat and network player views
+
+### Fixed
+- **Counter Display on Flipped Cards** - Counters now visible on face-down cards
+  - Previously, all counters (+1/+1, charge, etc.) were hidden when cards were flipped
+  - Counters now display on card back overlay, just like on face-up cards
+  - Owner tags also remain visible when cards are flipped
+  - Power/Toughness indicator correctly hidden on flipped cards (not relevant for card backs)
+
 ## [2.21.3] - 2025-11-05
 
 ### Changed

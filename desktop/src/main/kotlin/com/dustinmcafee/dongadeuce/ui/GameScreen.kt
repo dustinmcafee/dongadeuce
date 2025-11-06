@@ -410,6 +410,7 @@ fun HotseatPlayerSection(
     var libraryPeekLocation by remember { mutableStateOf(PeekLocation.TOP) }
     var showCommandZoneDialog by remember { mutableStateOf(false) }
     var showTokenCreationDialog by remember { mutableStateOf(false) }
+    var showSetLifeDialog by remember { mutableStateOf(false) }
 
     Column(
         modifier = modifier.background(
@@ -465,7 +466,8 @@ fun HotseatPlayerSection(
                         Text(
                             "Life: ${player.life}",
                             style = MaterialTheme.typography.bodySmall,
-                            color = Color.White
+                            color = Color.White,
+                            modifier = Modifier.clickable { showSetLifeDialog = true }
                         )
                         IconButton(
                             onClick = { viewModel.updateLife(player.id, player.life + 1) },
@@ -751,6 +753,17 @@ fun HotseatPlayerSection(
                 onDismiss = { showTokenCreationDialog = false },
                 onCreateToken = { tokenName, tokenType, power, toughness, color, imageUri, quantity ->
                     viewModel.createToken(player.id, tokenName, tokenType, power, toughness, color, imageUri, quantity)
+                }
+            )
+        }
+
+        if (showSetLifeDialog) {
+            SetLifeDialog(
+                playerName = player.name,
+                currentLife = player.life,
+                onDismiss = { showSetLifeDialog = false },
+                onConfirm = { newLife ->
+                    viewModel.updateLife(player.id, newLife)
                 }
             )
         }
@@ -1096,6 +1109,7 @@ fun PlayerArea(
     var showLibrarySearchDialog by remember { mutableStateOf(false) }
     var showCommandZoneDialog by remember { mutableStateOf(false) }
     var showTokenCreationDialog by remember { mutableStateOf(false) }
+    var showSetLifeDialog by remember { mutableStateOf(false) }
 
     val libraryCount = viewModel.getCardCount(player.id, Zone.LIBRARY)
     val handCount = viewModel.getCardCount(player.id, Zone.HAND)
@@ -1224,6 +1238,18 @@ fun PlayerArea(
         )
     }
 
+    // Show set life dialog if requested
+    if (showSetLifeDialog) {
+        SetLifeDialog(
+            playerName = player.name,
+            currentLife = player.life,
+            onDismiss = { showSetLifeDialog = false },
+            onConfirm = { newLife ->
+                viewModel.updateLife(player.id, newLife)
+            }
+        )
+    }
+
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
         // Player's battlefield
         Card(
@@ -1297,7 +1323,11 @@ fun PlayerArea(
                                 IconButton(onClick = { viewModel.updateLife(player.id, player.life - 1) }) {
                                     Text("-", style = MaterialTheme.typography.headlineSmall)
                                 }
-                                Text("Life: ${player.life}", style = MaterialTheme.typography.headlineMedium)
+                                Text(
+                                    "Life: ${player.life}",
+                                    style = MaterialTheme.typography.headlineMedium,
+                                    modifier = Modifier.clickable { showSetLifeDialog = true }
+                                )
                                 IconButton(onClick = { viewModel.updateLife(player.id, player.life + 1) }) {
                                     Text("+", style = MaterialTheme.typography.headlineSmall)
                                 }

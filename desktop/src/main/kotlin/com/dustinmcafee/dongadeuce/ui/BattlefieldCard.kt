@@ -144,60 +144,60 @@ fun BattlefieldCard(
                     modifier = Modifier.fillMaxSize()
                 )
 
-                // Overlay for counters and controller info (only show when not flipped)
-                if (!cardInstance.isFlipped) {
+                // Overlay for counters and controller info (always show)
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(4.dp),
+                    verticalArrangement = Arrangement.SpaceBetween
+                ) {
+                    // Owner tag and counters (top) - always visible
                     Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(4.dp),
-                        verticalArrangement = Arrangement.SpaceBetween
+                        horizontalAlignment = Alignment.Start,
+                        verticalArrangement = Arrangement.spacedBy(2.dp)
                     ) {
-                        // Owner tag and counters (top)
-                        Column(
-                            horizontalAlignment = Alignment.Start,
-                            verticalArrangement = Arrangement.spacedBy(2.dp)
-                        ) {
-                            // Owner tag (only show if controller != owner)
-                            if (showOwnerTag) {
-                                Surface(
-                                    color = Color.Blue.copy(alpha = 0.8f),
-                                    shape = RoundedCornerShape(4.dp)
-                                ) {
-                                    Text(
-                                        text = "Owner: $ownerName",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = Color.White,
-                                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
-                                    )
-                                }
+                        // Owner tag (only show if controller != owner)
+                        if (showOwnerTag) {
+                            Surface(
+                                color = Color.Blue.copy(alpha = 0.8f),
+                                shape = RoundedCornerShape(4.dp)
+                            ) {
+                                Text(
+                                    text = "Owner: $ownerName",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = Color.White,
+                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                                )
                             }
+                        }
 
-                            // Counters
-                            if (cardInstance.counters.isNotEmpty()) {
-                                Surface(
-                                    color = Color.Black.copy(alpha = 0.7f),
-                                    shape = RoundedCornerShape(4.dp)
+                        // Counters - always show even when flipped
+                        if (cardInstance.counters.isNotEmpty()) {
+                            Surface(
+                                color = Color.Black.copy(alpha = 0.7f),
+                                shape = RoundedCornerShape(4.dp)
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(4.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.spacedBy(2.dp)
                                 ) {
-                                    Column(
-                                        modifier = Modifier.padding(4.dp),
-                                        horizontalAlignment = Alignment.CenterHorizontally,
-                                        verticalArrangement = Arrangement.spacedBy(2.dp)
-                                    ) {
-                                        cardInstance.counters.forEach { (counterType, count) ->
-                                            Text(
-                                                text = "$count $counterType",
-                                                style = MaterialTheme.typography.labelSmall,
-                                                color = Color.White
-                                            )
-                                        }
+                                    cardInstance.counters.forEach { (counterType, count) ->
+                                        Text(
+                                            text = "$count $counterType",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = Color.White
+                                        )
                                     }
                                 }
                             }
                         }
+                    }
 
-                        Spacer(modifier = Modifier.weight(1f))
+                    Spacer(modifier = Modifier.weight(1f))
 
-                        // Power/Toughness indicator (bottom right for creatures)
+                    // Power/Toughness indicator (bottom right for creatures) - only show when not flipped
+                    if (!cardInstance.isFlipped) {
                         val power = cardInstance.card.power
                         val toughness = cardInstance.card.toughness
                         if (power != null && toughness != null) {
