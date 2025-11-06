@@ -27,6 +27,7 @@ sealed class CardAction {
     data class GiveControlTo(val cardInstance: CardInstance, val newControllerId: String, val newControllerName: String) : CardAction()
     data class ViewDetails(val cardInstance: CardInstance) : CardAction()
     data class ShowLibraryPositionDialog(val cardInstance: CardInstance) : CardAction()
+    data class ShowCounterDialog(val cardInstance: CardInstance, val counterType: String) : CardAction()
 }
 
 /**
@@ -74,8 +75,14 @@ private fun buildContextMenuItems(
             items.add(ContextMenuItem("Add +1/+1 Counter") {
                 onAction(CardAction.AddCounter(cardInstance, "+1/+1"))
             })
+            items.add(ContextMenuItem("Manage +1/+1 Counters...") {
+                onAction(CardAction.ShowCounterDialog(cardInstance, "+1/+1"))
+            })
             items.add(ContextMenuItem("Add Charge Counter") {
                 onAction(CardAction.AddCounter(cardInstance, "charge"))
+            })
+            items.add(ContextMenuItem("Manage Charge Counters...") {
+                onAction(CardAction.ShowCounterDialog(cardInstance, "charge"))
             })
 
             // Show remove counter options if card has counters
@@ -224,6 +231,10 @@ fun handleCardAction(
             println("View details for: ${action.cardInstance.card.name}")
         }
         is CardAction.ShowLibraryPositionDialog -> {
+            // Handled in UI layer (GameScreen)
+            // Dialog will be shown there
+        }
+        is CardAction.ShowCounterDialog -> {
             // Handled in UI layer (GameScreen)
             // Dialog will be shown there
         }

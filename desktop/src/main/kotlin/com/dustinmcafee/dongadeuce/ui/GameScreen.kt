@@ -52,6 +52,9 @@ fun GameScreen(
     var cardDetailsToShow by remember { mutableStateOf<com.dustinmcafee.dongadeuce.models.CardInstance?>(null) }
     var showLibraryPositionDialog by remember { mutableStateOf(false) }
     var cardForLibraryPosition by remember { mutableStateOf<com.dustinmcafee.dongadeuce.models.CardInstance?>(null) }
+    var showCounterDialog by remember { mutableStateOf(false) }
+    var cardForCounterDialog by remember { mutableStateOf<com.dustinmcafee.dongadeuce.models.CardInstance?>(null) }
+    var counterTypeForDialog by remember { mutableStateOf("") }
 
     // Handler for card actions - delegates business logic to ViewModel
     val handleAction: (CardAction) -> Unit = { action ->
@@ -64,6 +67,12 @@ fun GameScreen(
                 // Show dialog for choosing library position
                 cardForLibraryPosition = action.cardInstance
                 showLibraryPositionDialog = true
+            }
+            is CardAction.ShowCounterDialog -> {
+                // Show dialog for managing counters
+                cardForCounterDialog = action.cardInstance
+                counterTypeForDialog = action.counterType
+                showCounterDialog = true
             }
             else -> {
                 // Delegate to ViewModel with multi-selection support
@@ -364,6 +373,32 @@ fun GameScreen(
             },
             onToPositionFromBottom = { position ->
                 viewModel.moveCardToLibraryPositionFromBottom(card.instanceId, position)
+            }
+        )
+    }
+
+    // Counter dialog
+    if (showCounterDialog && cardForCounterDialog != null) {
+        val card = cardForCounterDialog!!
+        val currentCount = card.counters[counterTypeForDialog] ?: 0
+
+        CounterDialog(
+            cardName = card.card.name,
+            counterType = counterTypeForDialog,
+            currentCount = currentCount,
+            onDismiss = {
+                showCounterDialog = false
+                cardForCounterDialog = null
+                counterTypeForDialog = ""
+            },
+            onSet = { amount ->
+                viewModel.setCounter(card.instanceId, counterTypeForDialog, amount)
+            },
+            onAdd = { amount ->
+                viewModel.addCounter(card.instanceId, counterTypeForDialog, amount)
+            },
+            onSubtract = { amount ->
+                viewModel.removeCounter(card.instanceId, counterTypeForDialog, amount)
             }
         )
     }

@@ -648,6 +648,30 @@ class GameViewModel {
     }
 
     /**
+     * Set counter(s) on a card to a specific value
+     */
+    fun setCounter(cardId: String, type: String, amount: Int) {
+        require(type.isNotBlank()) { "Counter type cannot be blank" }
+        require(amount >= 0) { "Counter amount must be non-negative, got $amount" }
+
+        _uiState.update { currentState ->
+            val gameState = currentState.gameState ?: return@update currentState
+
+            val updatedGameState = gameState.updateCardInstance(cardId) { card ->
+                card.copy(
+                    counters = if (amount > 0) {
+                        card.counters + (type to amount)
+                    } else {
+                        card.counters - type
+                    }
+                )
+            }
+
+            currentState.copy(gameState = updatedGameState)
+        }
+    }
+
+    /**
      * Attach a card (aura/equipment) to another card
      */
     fun attachCard(sourceId: String, targetId: String) {

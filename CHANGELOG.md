@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.24.0] - 2025-11-05
+
+### Added
+- **Counter Management Dialog** - Advanced counter operations for +1/+1 and charge counters
+  - Right-click cards in battlefield and choose "Manage +1/+1 Counters..." or "Manage Charge Counters..."
+  - Set counters to specific value (e.g., set to 5)
+  - Add X counters at once (e.g., add 3)
+  - Subtract X counters at once (e.g., subtract 2)
+  - Shows current counter count
+  - Faster than clicking +/- one at a time for large adjustments
+
 ## [2.23.0] - 2025-11-05
 
 ### Added
