@@ -1,13 +1,26 @@
 package com.dustinmcafee.dongadeuce.ui
 
-import androidx.compose.foundation.ContextMenuArea
-import androidx.compose.foundation.ContextMenuItem
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Divider
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.input.pointer.PointerButton
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Popup
 import com.dustinmcafee.dongadeuce.models.CardInstance
 import com.dustinmcafee.dongadeuce.models.Player
 import com.dustinmcafee.dongadeuce.models.Zone
@@ -53,6 +66,7 @@ enum class MenuState {
 /**
  * Wraps content with a context menu appropriate for the card's current zone
  */
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun CardWithContextMenu(
     cardInstance: CardInstance,
@@ -61,142 +75,252 @@ fun CardWithContextMenu(
     otherPlayers: List<Player> = emptyList(),
     content: @Composable () -> Unit
 ) {
+    var showMenu by remember { mutableStateOf(false) }
+    var menuPosition by remember { mutableStateOf(IntOffset.Zero) }
     var menuState by remember { mutableStateOf(MenuState.MAIN) }
 
-    val menuItems = buildContextMenuItems(
-        cardInstance = cardInstance,
-        onAction = onAction,
-        otherPlayers = otherPlayers,
-        menuState = menuState,
-        onMenuStateChange = { menuState = it }
-    )
-
-    ContextMenuArea(
-        items = { menuItems }
+    Box(
+        modifier = modifier.pointerInput(Unit) {
+            awaitPointerEventScope {
+                while (true) {
+                    val event = awaitPointerEvent()
+                    if (event.type == PointerEventType.Press && event.button == PointerButton.Secondary) {
+                        val position = event.changes.first().position
+                        menuPosition = IntOffset(position.x.toInt(), position.y.toInt())
+                        menuState = MenuState.MAIN
+                        showMenu = true
+                        event.changes.forEach { it.consume() }
+                    }
+                }
+            }
+        }
     ) {
         content()
+
+        if (showMenu) {
+            CustomContextMenu(
+                cardInstance = cardInstance,
+                onAction = { action ->
+                    onAction(action)
+                    showMenu = false
+                },
+                otherPlayers = otherPlayers,
+                menuState = menuState,
+                onMenuStateChange = { menuState = it },
+                onDismiss = { showMenu = false },
+                offset = menuPosition
+            )
+        }
     }
 }
 
 /**
+ * Custom context menu with persistent state for sub-menu navigation
+ */
+@Composable
+private fun CustomContextMenu(
+    cardInstance: CardInstance,
+    onAction: (CardAction) -> Unit,
+    otherPlayers: List<Player>,
+    menuState: MenuState,
+    onMenuStateChange: (MenuState) -> Unit,
+    onDismiss: () -> Unit,
+    offset: IntOffset
+) {
+    Popup(
+        offset = offset,
+        onDismissRequest = onDismiss
+    ) {
+        Surface(
+            modifier = Modifier.width(220.dp),
+            shape = RoundedCornerShape(4.dp),
+            shadowElevation = 8.dp,
+            tonalElevation = 2.dp
+        ) {
+            Column(modifier = Modifier.padding(vertical = 4.dp)) {
+                val items = buildMenuItems(
+                    cardInstance = cardInstance,
+                    onAction = onAction,
+                    otherPlayers = otherPlayers,
+                    menuState = menuState,
+                    onMenuStateChange = onMenuStateChange
+                )
+
+                items.forEach { item ->
+                    MenuItem(
+                        text = item.label,
+                        onClick = item.onClick
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Individual menu item
+ */
+@Composable
+private fun MenuItem(
+    text: String,
+    onClick: () -> Unit
+) {
+    Text(
+        text = text,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        style = MaterialTheme.typography.bodyMedium
+    )
+}
+
+/**
+ * Data class for menu items
+ */
+private data class MenuItemData(
+    val label: String,
+    val onClick: () -> Unit
+)
+
+/**
  * Builds context menu items based on card's current zone and menu state
  */
-private fun buildContextMenuItems(
+private fun buildMenuItems(
     cardInstance: CardInstance,
     onAction: (CardAction) -> Unit,
     otherPlayers: List<Player> = emptyList(),
     menuState: MenuState,
     onMenuStateChange: (MenuState) -> Unit
-): List<ContextMenuItem> {
+): List<MenuItemData> {
     return when (menuState) {
-        MenuState.MAIN -> buildMainMenu(cardInstance, onAction, otherPlayers, onMenuStateChange)
-        MenuState.COUNTERS -> buildCountersMenu(cardInstance, onAction, onMenuStateChange)
-        MenuState.MOVE_TO -> buildMoveToMenu(cardInstance, onAction, onMenuStateChange)
-        MenuState.GIVE_CONTROL -> buildGiveControlMenu(cardInstance, onAction, otherPlayers, onMenuStateChange)
-        MenuState.CARD_STATE -> buildCardStateMenu(cardInstance, onAction, onMenuStateChange)
+        MenuState.MAIN -> buildMainMenuItems(cardInstance, onAction, otherPlayers, onMenuStateChange)
+        MenuState.COUNTERS -> buildCountersMenuItems(cardInstance, onAction, onMenuStateChange)
+        MenuState.MOVE_TO -> buildMoveToMenuItems(cardInstance, onAction, onMenuStateChange)
+        MenuState.GIVE_CONTROL -> buildGiveControlMenuItems(cardInstance, onAction, otherPlayers, onMenuStateChange)
+        MenuState.CARD_STATE -> buildCardStateMenuItems(cardInstance, onAction, onMenuStateChange)
     }
 }
 
 /**
- * Builds the main context menu
+ * Builds context menu items based on card's current zone and menu state (DEPRECATED - kept for compatibility)
  */
-private fun buildMainMenu(
+private fun buildMenuItemDatas(
+    cardInstance: CardInstance,
+    onAction: (CardAction) -> Unit,
+    otherPlayers: List<Player> = emptyList(),
+    menuState: MenuState,
+    onMenuStateChange: (MenuState) -> Unit
+): List<MenuItemData> {
+    return when (menuState) {
+        MenuState.MAIN -> buildMainMenuItems(cardInstance, onAction, otherPlayers, onMenuStateChange)
+        MenuState.COUNTERS -> buildCountersMenuItems(cardInstance, onAction, onMenuStateChange)
+        MenuState.MOVE_TO -> buildMoveToMenuItems(cardInstance, onAction, onMenuStateChange)
+        MenuState.GIVE_CONTROL -> buildGiveControlMenuItems(cardInstance, onAction, otherPlayers, onMenuStateChange)
+        MenuState.CARD_STATE -> buildCardStateMenuItems(cardInstance, onAction, onMenuStateChange)
+    }
+}
+
+/**
+ * Builds the main context menu items
+ */
+private fun buildMainMenuItems(
     cardInstance: CardInstance,
     onAction: (CardAction) -> Unit,
     otherPlayers: List<Player>,
     onMenuStateChange: (MenuState) -> Unit
-): List<ContextMenuItem> {
-    val items = mutableListOf<ContextMenuItem>()
+): List<MenuItemData> {
+    val items = mutableListOf<MenuItemData>()
 
     when (cardInstance.zone) {
         Zone.BATTLEFIELD -> {
             // Quick actions
             if (cardInstance.isTapped) {
-                items.add(ContextMenuItem("Untap") { onAction(CardAction.Untap(cardInstance)) })
+                items.add(MenuItemData("Untap") { onAction(CardAction.Untap(cardInstance)) })
             } else {
-                items.add(ContextMenuItem("Tap") { onAction(CardAction.Tap(cardInstance)) })
+                items.add(MenuItemData("Tap") { onAction(CardAction.Tap(cardInstance)) })
             }
 
-            items.add(ContextMenuItem("Flip Card") { onAction(CardAction.FlipCard(cardInstance)) })
+            items.add(MenuItemData("Flip Card") { onAction(CardAction.FlipCard(cardInstance)) })
 
             // P/T modifications (for creatures)
             if (cardInstance.card.power != null && cardInstance.card.toughness != null) {
-                items.add(ContextMenuItem("Modify Power/Toughness...") {
+                items.add(MenuItemData("Modify Power/Toughness...") {
                     onAction(CardAction.ShowPowerToughnessDialog(cardInstance))
                 })
             }
 
             // Sub-menus
-            items.add(ContextMenuItem("Card State ►") { onMenuStateChange(MenuState.CARD_STATE) })
-            items.add(ContextMenuItem("Counters ►") { onMenuStateChange(MenuState.COUNTERS) })
-            items.add(ContextMenuItem("Move To ►") { onMenuStateChange(MenuState.MOVE_TO) })
+            items.add(MenuItemData("Card State ►") { onMenuStateChange(MenuState.CARD_STATE) })
+            items.add(MenuItemData("Counters ►") { onMenuStateChange(MenuState.COUNTERS) })
+            items.add(MenuItemData("Move To ►") { onMenuStateChange(MenuState.MOVE_TO) })
 
             if (otherPlayers.isNotEmpty()) {
-                items.add(ContextMenuItem("Give Control ►") { onMenuStateChange(MenuState.GIVE_CONTROL) })
+                items.add(MenuItemData("Give Control ►") { onMenuStateChange(MenuState.GIVE_CONTROL) })
             }
 
             // Always add view details option
-            items.add(ContextMenuItem("View Details") { onAction(CardAction.ViewDetails(cardInstance)) })
+            items.add(MenuItemData("View Details") { onAction(CardAction.ViewDetails(cardInstance)) })
         }
 
         Zone.HAND -> {
-            items.add(ContextMenuItem("Play to Battlefield") { onAction(CardAction.ToBattlefield(cardInstance)) })
-            items.add(ContextMenuItem("Play Face Down") { onAction(CardAction.PlayFaceDown(cardInstance)) })
-            items.add(ContextMenuItem("Move To ►") { onMenuStateChange(MenuState.MOVE_TO) })
+            items.add(MenuItemData("Play to Battlefield") { onAction(CardAction.ToBattlefield(cardInstance)) })
+            items.add(MenuItemData("Play Face Down") { onAction(CardAction.PlayFaceDown(cardInstance)) })
+            items.add(MenuItemData("Move To ►") { onMenuStateChange(MenuState.MOVE_TO) })
 
             if (otherPlayers.isNotEmpty()) {
-                items.add(ContextMenuItem("Give Control ►") { onMenuStateChange(MenuState.GIVE_CONTROL) })
+                items.add(MenuItemData("Give Control ►") { onMenuStateChange(MenuState.GIVE_CONTROL) })
             }
 
-            items.add(ContextMenuItem("View Details") { onAction(CardAction.ViewDetails(cardInstance)) })
+            items.add(MenuItemData("View Details") { onAction(CardAction.ViewDetails(cardInstance)) })
         }
 
         Zone.GRAVEYARD -> {
-            items.add(ContextMenuItem("Return to Hand") { onAction(CardAction.ToHand(cardInstance)) })
-            items.add(ContextMenuItem("Return to Battlefield") { onAction(CardAction.ToBattlefield(cardInstance)) })
-            items.add(ContextMenuItem("Move To ►") { onMenuStateChange(MenuState.MOVE_TO) })
+            items.add(MenuItemData("Return to Hand") { onAction(CardAction.ToHand(cardInstance)) })
+            items.add(MenuItemData("Return to Battlefield") { onAction(CardAction.ToBattlefield(cardInstance)) })
+            items.add(MenuItemData("Move To ►") { onMenuStateChange(MenuState.MOVE_TO) })
 
             if (otherPlayers.isNotEmpty()) {
-                items.add(ContextMenuItem("Give Control ►") { onMenuStateChange(MenuState.GIVE_CONTROL) })
+                items.add(MenuItemData("Give Control ►") { onMenuStateChange(MenuState.GIVE_CONTROL) })
             }
 
-            items.add(ContextMenuItem("View Details") { onAction(CardAction.ViewDetails(cardInstance)) })
+            items.add(MenuItemData("View Details") { onAction(CardAction.ViewDetails(cardInstance)) })
         }
 
         Zone.EXILE -> {
-            items.add(ContextMenuItem("Return to Hand") { onAction(CardAction.ToHand(cardInstance)) })
-            items.add(ContextMenuItem("Return to Battlefield") { onAction(CardAction.ToBattlefield(cardInstance)) })
-            items.add(ContextMenuItem("Move To ►") { onMenuStateChange(MenuState.MOVE_TO) })
+            items.add(MenuItemData("Return to Hand") { onAction(CardAction.ToHand(cardInstance)) })
+            items.add(MenuItemData("Return to Battlefield") { onAction(CardAction.ToBattlefield(cardInstance)) })
+            items.add(MenuItemData("Move To ►") { onMenuStateChange(MenuState.MOVE_TO) })
 
             if (otherPlayers.isNotEmpty()) {
-                items.add(ContextMenuItem("Give Control ►") { onMenuStateChange(MenuState.GIVE_CONTROL) })
+                items.add(MenuItemData("Give Control ►") { onMenuStateChange(MenuState.GIVE_CONTROL) })
             }
 
-            items.add(ContextMenuItem("View Details") { onAction(CardAction.ViewDetails(cardInstance)) })
+            items.add(MenuItemData("View Details") { onAction(CardAction.ViewDetails(cardInstance)) })
         }
 
         Zone.LIBRARY -> {
-            items.add(ContextMenuItem("To Hand") { onAction(CardAction.ToHand(cardInstance)) })
-            items.add(ContextMenuItem("To Battlefield") { onAction(CardAction.ToBattlefield(cardInstance)) })
-            items.add(ContextMenuItem("Move To ►") { onMenuStateChange(MenuState.MOVE_TO) })
+            items.add(MenuItemData("To Hand") { onAction(CardAction.ToHand(cardInstance)) })
+            items.add(MenuItemData("To Battlefield") { onAction(CardAction.ToBattlefield(cardInstance)) })
+            items.add(MenuItemData("Move To ►") { onMenuStateChange(MenuState.MOVE_TO) })
 
             if (otherPlayers.isNotEmpty()) {
-                items.add(ContextMenuItem("Give Control ►") { onMenuStateChange(MenuState.GIVE_CONTROL) })
+                items.add(MenuItemData("Give Control ►") { onMenuStateChange(MenuState.GIVE_CONTROL) })
             }
 
-            items.add(ContextMenuItem("View Details") { onAction(CardAction.ViewDetails(cardInstance)) })
+            items.add(MenuItemData("View Details") { onAction(CardAction.ViewDetails(cardInstance)) })
         }
 
         Zone.COMMAND_ZONE -> {
-            items.add(ContextMenuItem("Cast to Battlefield") { onAction(CardAction.ToBattlefield(cardInstance)) })
-            items.add(ContextMenuItem("To Hand") { onAction(CardAction.ToHand(cardInstance)) })
-            items.add(ContextMenuItem("View Details") { onAction(CardAction.ViewDetails(cardInstance)) })
+            items.add(MenuItemData("Cast to Battlefield") { onAction(CardAction.ToBattlefield(cardInstance)) })
+            items.add(MenuItemData("To Hand") { onAction(CardAction.ToHand(cardInstance)) })
+            items.add(MenuItemData("View Details") { onAction(CardAction.ViewDetails(cardInstance)) })
         }
 
         Zone.STACK -> {
-            items.add(ContextMenuItem("To Graveyard") { onAction(CardAction.ToGraveyard(cardInstance)) })
-            items.add(ContextMenuItem("To Exile") { onAction(CardAction.ToExile(cardInstance)) })
-            items.add(ContextMenuItem("View Details") { onAction(CardAction.ViewDetails(cardInstance)) })
+            items.add(MenuItemData("To Graveyard") { onAction(CardAction.ToGraveyard(cardInstance)) })
+            items.add(MenuItemData("To Exile") { onAction(CardAction.ToExile(cardInstance)) })
+            items.add(MenuItemData("View Details") { onAction(CardAction.ViewDetails(cardInstance)) })
         }
     }
 
@@ -206,31 +330,31 @@ private fun buildMainMenu(
 /**
  * Builds the Card State sub-menu
  */
-private fun buildCardStateMenu(
+private fun buildCardStateMenuItems(
     cardInstance: CardInstance,
     onAction: (CardAction) -> Unit,
     onMenuStateChange: (MenuState) -> Unit
-): List<ContextMenuItem> {
-    val items = mutableListOf<ContextMenuItem>()
+): List<MenuItemData> {
+    val items = mutableListOf<MenuItemData>()
 
-    items.add(ContextMenuItem("← Back") { onMenuStateChange(MenuState.MAIN) })
+    items.add(MenuItemData("← Back") { onMenuStateChange(MenuState.MAIN) })
 
     // Face down toggle
     if (cardInstance.isFaceDown) {
-        items.add(ContextMenuItem("Turn Face Up") { onAction(CardAction.ToggleFaceDown(cardInstance)) })
+        items.add(MenuItemData("Turn Face Up") { onAction(CardAction.ToggleFaceDown(cardInstance)) })
     } else {
-        items.add(ContextMenuItem("Turn Face Down") { onAction(CardAction.ToggleFaceDown(cardInstance)) })
+        items.add(MenuItemData("Turn Face Down") { onAction(CardAction.ToggleFaceDown(cardInstance)) })
     }
 
     // Doesn't untap
-    items.add(ContextMenuItem(
+    items.add(MenuItemData(
         if (cardInstance.doesntUntap) "Remove 'Doesn't Untap'" else "Mark 'Doesn't Untap'"
     ) {
         onAction(CardAction.ToggleDoesntUntap(cardInstance))
     })
 
     // Annotation
-    items.add(ContextMenuItem("Set Annotation...") {
+    items.add(MenuItemData("Set Annotation...") {
         onAction(CardAction.SetAnnotation(cardInstance))
     })
 
@@ -240,21 +364,21 @@ private fun buildCardStateMenu(
 /**
  * Builds the Counters sub-menu
  */
-private fun buildCountersMenu(
+private fun buildCountersMenuItems(
     cardInstance: CardInstance,
     onAction: (CardAction) -> Unit,
     onMenuStateChange: (MenuState) -> Unit
-): List<ContextMenuItem> {
-    val items = mutableListOf<ContextMenuItem>()
+): List<MenuItemData> {
+    val items = mutableListOf<MenuItemData>()
 
-    items.add(ContextMenuItem("← Back") { onMenuStateChange(MenuState.MAIN) })
+    items.add(MenuItemData("← Back") { onMenuStateChange(MenuState.MAIN) })
 
     // Show all 6 configurable counter types
     UIConstants.COUNTER_TYPES.forEach { counterType ->
-        items.add(ContextMenuItem("Add ${counterType.displayName}") {
+        items.add(MenuItemData("Add ${counterType.displayName}") {
             onAction(CardAction.AddCounter(cardInstance, counterType.id))
         })
-        items.add(ContextMenuItem("Manage ${counterType.displayName}...") {
+        items.add(MenuItemData("Manage ${counterType.displayName}...") {
             onAction(CardAction.ShowCounterDialog(cardInstance, counterType.id))
         })
     }
@@ -262,7 +386,7 @@ private fun buildCountersMenu(
     // Show remove counter options if card has counters
     if (cardInstance.counters.isNotEmpty()) {
         cardInstance.counters.keys.forEach { counterType ->
-            items.add(ContextMenuItem("Remove $counterType") {
+            items.add(MenuItemData("Remove $counterType") {
                 onAction(CardAction.RemoveCounter(cardInstance, counterType))
             })
         }
@@ -274,57 +398,57 @@ private fun buildCountersMenu(
 /**
  * Builds the Move To sub-menu
  */
-private fun buildMoveToMenu(
+private fun buildMoveToMenuItems(
     cardInstance: CardInstance,
     onAction: (CardAction) -> Unit,
     onMenuStateChange: (MenuState) -> Unit
-): List<ContextMenuItem> {
-    val items = mutableListOf<ContextMenuItem>()
+): List<MenuItemData> {
+    val items = mutableListOf<MenuItemData>()
 
-    items.add(ContextMenuItem("← Back") { onMenuStateChange(MenuState.MAIN) })
+    items.add(MenuItemData("← Back") { onMenuStateChange(MenuState.MAIN) })
 
     when (cardInstance.zone) {
         Zone.BATTLEFIELD -> {
-            items.add(ContextMenuItem("To Hand") { onAction(CardAction.ToHand(cardInstance)) })
-            items.add(ContextMenuItem("To Graveyard") { onAction(CardAction.ToGraveyard(cardInstance)) })
-            items.add(ContextMenuItem("To Exile") { onAction(CardAction.ToExile(cardInstance)) })
-            items.add(ContextMenuItem("To Library (Bottom)") { onAction(CardAction.ToLibrary(cardInstance)) })
-            items.add(ContextMenuItem("To Library (Position)...") { onAction(CardAction.ShowLibraryPositionDialog(cardInstance)) })
+            items.add(MenuItemData("To Hand") { onAction(CardAction.ToHand(cardInstance)) })
+            items.add(MenuItemData("To Graveyard") { onAction(CardAction.ToGraveyard(cardInstance)) })
+            items.add(MenuItemData("To Exile") { onAction(CardAction.ToExile(cardInstance)) })
+            items.add(MenuItemData("To Library (Bottom)") { onAction(CardAction.ToLibrary(cardInstance)) })
+            items.add(MenuItemData("To Library (Position)...") { onAction(CardAction.ShowLibraryPositionDialog(cardInstance)) })
 
             if (cardInstance.card.isLegendary && cardInstance.card.isCreature) {
-                items.add(ContextMenuItem("To Command Zone") { onAction(CardAction.ToCommandZone(cardInstance)) })
+                items.add(MenuItemData("To Command Zone") { onAction(CardAction.ToCommandZone(cardInstance)) })
             }
         }
         Zone.HAND -> {
-            items.add(ContextMenuItem("Discard") { onAction(CardAction.ToGraveyard(cardInstance)) })
-            items.add(ContextMenuItem("To Exile") { onAction(CardAction.ToExile(cardInstance)) })
-            items.add(ContextMenuItem("To Library (Bottom)") { onAction(CardAction.ToLibrary(cardInstance)) })
-            items.add(ContextMenuItem("To Library (Top)") { onAction(CardAction.ToTop(cardInstance)) })
-            items.add(ContextMenuItem("To Library (Position)...") { onAction(CardAction.ShowLibraryPositionDialog(cardInstance)) })
+            items.add(MenuItemData("Discard") { onAction(CardAction.ToGraveyard(cardInstance)) })
+            items.add(MenuItemData("To Exile") { onAction(CardAction.ToExile(cardInstance)) })
+            items.add(MenuItemData("To Library (Bottom)") { onAction(CardAction.ToLibrary(cardInstance)) })
+            items.add(MenuItemData("To Library (Top)") { onAction(CardAction.ToTop(cardInstance)) })
+            items.add(MenuItemData("To Library (Position)...") { onAction(CardAction.ShowLibraryPositionDialog(cardInstance)) })
 
             if (cardInstance.card.isLegendary && cardInstance.card.isCreature) {
-                items.add(ContextMenuItem("To Command Zone") { onAction(CardAction.ToCommandZone(cardInstance)) })
+                items.add(MenuItemData("To Command Zone") { onAction(CardAction.ToCommandZone(cardInstance)) })
             }
         }
         Zone.GRAVEYARD -> {
-            items.add(ContextMenuItem("To Exile") { onAction(CardAction.ToExile(cardInstance)) })
-            items.add(ContextMenuItem("To Library (Bottom)") { onAction(CardAction.ToLibrary(cardInstance)) })
-            items.add(ContextMenuItem("To Library (Top)") { onAction(CardAction.ToTop(cardInstance)) })
+            items.add(MenuItemData("To Exile") { onAction(CardAction.ToExile(cardInstance)) })
+            items.add(MenuItemData("To Library (Bottom)") { onAction(CardAction.ToLibrary(cardInstance)) })
+            items.add(MenuItemData("To Library (Top)") { onAction(CardAction.ToTop(cardInstance)) })
 
             if (cardInstance.card.isLegendary && cardInstance.card.isCreature) {
-                items.add(ContextMenuItem("To Command Zone") { onAction(CardAction.ToCommandZone(cardInstance)) })
+                items.add(MenuItemData("To Command Zone") { onAction(CardAction.ToCommandZone(cardInstance)) })
             }
         }
         Zone.EXILE -> {
-            items.add(ContextMenuItem("To Graveyard") { onAction(CardAction.ToGraveyard(cardInstance)) })
-            items.add(ContextMenuItem("To Library (Bottom)") { onAction(CardAction.ToLibrary(cardInstance)) })
+            items.add(MenuItemData("To Graveyard") { onAction(CardAction.ToGraveyard(cardInstance)) })
+            items.add(MenuItemData("To Library (Bottom)") { onAction(CardAction.ToLibrary(cardInstance)) })
 
             if (cardInstance.card.isLegendary && cardInstance.card.isCreature) {
-                items.add(ContextMenuItem("To Command Zone") { onAction(CardAction.ToCommandZone(cardInstance)) })
+                items.add(MenuItemData("To Command Zone") { onAction(CardAction.ToCommandZone(cardInstance)) })
             }
         }
         Zone.LIBRARY -> {
-            items.add(ContextMenuItem("To Top of Library") { onAction(CardAction.ToTop(cardInstance)) })
+            items.add(MenuItemData("To Top of Library") { onAction(CardAction.ToTop(cardInstance)) })
         }
         else -> {
             // No additional move options for COMMAND_ZONE, STACK
@@ -337,22 +461,22 @@ private fun buildMoveToMenu(
 /**
  * Builds the Give Control sub-menu
  */
-private fun buildGiveControlMenu(
+private fun buildGiveControlMenuItems(
     cardInstance: CardInstance,
     onAction: (CardAction) -> Unit,
     otherPlayers: List<Player>,
     onMenuStateChange: (MenuState) -> Unit
-): List<ContextMenuItem> {
-    val items = mutableListOf<ContextMenuItem>()
+): List<MenuItemData> {
+    val items = mutableListOf<MenuItemData>()
 
-    items.add(ContextMenuItem("← Back") { onMenuStateChange(MenuState.MAIN) })
+    items.add(MenuItemData("← Back") { onMenuStateChange(MenuState.MAIN) })
 
     otherPlayers.forEach { player: Player ->
         val actionText = when (cardInstance.zone) {
             Zone.BATTLEFIELD -> "Give Control to ${player.name}"
             else -> "Give to ${player.name}'s Battlefield"
         }
-        items.add(ContextMenuItem(actionText) {
+        items.add(MenuItemData(actionText) {
             onAction(CardAction.GiveControlTo(cardInstance, player.id, player.name))
         })
     }
