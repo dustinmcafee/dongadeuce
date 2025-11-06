@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.21.0] - 2025-11-05
+
+### Added
+- **Advanced Library Operations** - Comprehensive library manipulation tools
+  - View top N cards (private peek without full search)
+  - View bottom N cards (private peek without full search)
+  - Move top/bottom N cards to any zone (Hand, Battlefield, Graveyard, Exile)
+  - Shuffle top N cards (useful after scrying or deck manipulation)
+  - Shuffle bottom N cards (useful for effects that put cards on bottom)
+  - Reveal top card to all players (public information)
+  - Move individual cards to bottom of library in search dialog
+  - New LibraryOperationsDialog for selecting operations
+  - New LibraryPeekDialog for viewing and manipulating peeked cards
+  - Batch operations: Move all peeked cards to a zone at once
+  - Position indicators showing card order (#1, #2, #3, etc.)
+
+### Changed
+- **Library UI Workflow** - Clicking Library zone now opens operations menu
+  - Full library search available from operations menu
+  - More intuitive access to common library operations
+  - Operations menu shows current library size
+  - Separate dialogs for different operation types
+
 ## [2.20.0] - 2025-11-05
 
 ### Performance

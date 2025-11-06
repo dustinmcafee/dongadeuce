@@ -1,6 +1,6 @@
 # Dong-A-Deuce - Development TODO
 
-**Current Version:** v2.20.0
+**Current Version:** v2.21.0
 **Hotseat Mode:** ~90% complete (fully playable!)
 **Network Mode:** ~5% complete (UI only)
 **Last Code Review:** 2025-11-05
@@ -150,21 +150,21 @@
 
 ---
 
-### 7. **Advanced Library Operations**
-**Current Status:** Basic operations only
-**Estimated Effort:** 3-4 days
+### 7. ~~**Advanced Library Operations**~~ ✅ COMPLETED (v2.21.0)
+**Status:** Completed in v2.21.0
+**Completed:** 2025-11-05
 
-**What's Needed:**
-- [ ] View top N cards
-- [ ] View bottom N cards
-- [ ] Move top/bottom cards to specific zones
-- [ ] Shuffle top N cards
-- [ ] Shuffle bottom N cards
-- [ ] Reveal top card to all players
-- [ ] Reveal top card to self only
-- [ ] Conditional moves with filter
-
-**Why Important:** Core MTG gameplay mechanics missing
+**What Was Done:**
+- [x] View top N cards (LibraryPeekDialog)
+- [x] View bottom N cards (LibraryPeekDialog)
+- [x] Move top/bottom cards to specific zones (batch operations)
+- [x] Shuffle top N cards
+- [x] Shuffle bottom N cards
+- [x] Reveal top card to all players
+- [x] Move individual cards to bottom of library
+- [x] New LibraryOperationsDialog UI
+- [x] Position indicators (#1, #2, #3) in peek view
+- [x] Batch operations (move all peeked cards at once)
 
 ---
 
@@ -565,7 +565,7 @@
 4. Commander Tax Tracking (1 day)
 5. ✅ Grid Recalculation Performance (2-3 days) - COMPLETED v2.20.0
 6. Player Counters System (2-3 days)
-7. Advanced Library Operations (3-4 days)
+7. ✅ Advanced Library Operations (3-4 days) - COMPLETED v2.21.0
 
 **Result:** Stable, feature-complete hotseat mode
 
@@ -640,4 +640,4 @@
 ---
 
 **Last Updated:** 2025-11-05
-**Version:** v2.19.0
+**Version:** v2.21.0

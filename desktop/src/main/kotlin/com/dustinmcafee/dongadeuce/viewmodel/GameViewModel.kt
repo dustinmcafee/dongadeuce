@@ -789,6 +789,173 @@ class GameViewModel {
     }
 
     /**
+     * Move a card to the bottom of its owner's library
+     * Convention: First card in library list = bottom of library (stack-based)
+     */
+    fun moveCardToBottomOfLibrary(cardId: String) {
+        _uiState.update { currentState ->
+            val gameState = currentState.gameState ?: return@update currentState
+
+            // Find the card
+            val card = gameState.cardInstances.find { it.instanceId == cardId } ?: return@update currentState
+            val ownerId = card.ownerId
+
+            // Move card to library first
+            val updatedCard = card.moveToZone(Zone.LIBRARY)
+
+            // Get all cards except the target card
+            val otherCards = gameState.cardInstances.filter { it.instanceId != cardId }
+
+            // Get all library cards for this player (excluding the moved card)
+            val libraryCards = otherCards.filter { it.ownerId == ownerId && it.zone == Zone.LIBRARY }
+
+            // Get all non-library cards
+            val nonLibraryCards = otherCards.filter { !(it.ownerId == ownerId && it.zone == Zone.LIBRARY) }
+
+            // Rebuild card list: non-library cards + target card (bottom = first) + rest of library
+            val reorderedCards = nonLibraryCards + listOf(updatedCard) + libraryCards
+
+            currentState.copy(
+                gameState = gameState.copy(cardInstances = reorderedCards)
+            )
+        }
+    }
+
+    /**
+     * Get the top N cards from a player's library
+     * Convention: Last cards in library list = top of library (stack-based)
+     */
+    fun getTopCards(playerId: String, count: Int): List<CardInstance> {
+        val gameState = _uiState.value.gameState ?: return emptyList()
+        val libraryCards = gameState.cardInstances
+            .filter { it.ownerId == playerId && it.zone == Zone.LIBRARY }
+        return libraryCards.takeLast(count.coerceAtMost(libraryCards.size))
+    }
+
+    /**
+     * Get the bottom N cards from a player's library
+     * Convention: First cards in library list = bottom of library (stack-based)
+     */
+    fun getBottomCards(playerId: String, count: Int): List<CardInstance> {
+        val gameState = _uiState.value.gameState ?: return emptyList()
+        val libraryCards = gameState.cardInstances
+            .filter { it.ownerId == playerId && it.zone == Zone.LIBRARY }
+        return libraryCards.take(count.coerceAtMost(libraryCards.size))
+    }
+
+    /**
+     * Shuffle the top N cards of a player's library
+     */
+    fun shuffleTopCards(playerId: String, count: Int) {
+        _uiState.update { currentState ->
+            val gameState = currentState.gameState ?: return@update currentState
+
+            // Get library cards
+            val libraryCards = gameState.cardInstances
+                .filter { it.ownerId == playerId && it.zone == Zone.LIBRARY }
+
+            if (libraryCards.size <= 1 || count <= 1) {
+                return@update currentState // Nothing to shuffle
+            }
+
+            val actualCount = count.coerceAtMost(libraryCards.size)
+
+            // Split library into top N and rest
+            val topCards = libraryCards.takeLast(actualCount).shuffled()
+            val remainingCards = libraryCards.dropLast(actualCount)
+
+            // Get all non-library cards
+            val otherCards = gameState.cardInstances
+                .filter { !(it.ownerId == playerId && it.zone == Zone.LIBRARY) }
+
+            // Rebuild: other cards + remaining library + shuffled top cards
+            val reorderedCards = otherCards + remainingCards + topCards
+
+            currentState.copy(
+                gameState = gameState.copy(cardInstances = reorderedCards)
+            )
+        }
+    }
+
+    /**
+     * Shuffle the bottom N cards of a player's library
+     */
+    fun shuffleBottomCards(playerId: String, count: Int) {
+        _uiState.update { currentState ->
+            val gameState = currentState.gameState ?: return@update currentState
+
+            // Get library cards
+            val libraryCards = gameState.cardInstances
+                .filter { it.ownerId == playerId && it.zone == Zone.LIBRARY }
+
+            if (libraryCards.size <= 1 || count <= 1) {
+                return@update currentState // Nothing to shuffle
+            }
+
+            val actualCount = count.coerceAtMost(libraryCards.size)
+
+            // Split library into bottom N and rest
+            val bottomCards = libraryCards.take(actualCount).shuffled()
+            val remainingCards = libraryCards.drop(actualCount)
+
+            // Get all non-library cards
+            val otherCards = gameState.cardInstances
+                .filter { !(it.ownerId == playerId && it.zone == Zone.LIBRARY) }
+
+            // Rebuild: other cards + shuffled bottom cards + remaining library
+            val reorderedCards = otherCards + bottomCards + remainingCards
+
+            currentState.copy(
+                gameState = gameState.copy(cardInstances = reorderedCards)
+            )
+        }
+    }
+
+    /**
+     * Move top N cards from library to a specific zone
+     */
+    fun moveTopCardsToZone(playerId: String, count: Int, targetZone: Zone) {
+        _uiState.update { currentState ->
+            val gameState = currentState.gameState ?: return@update currentState
+
+            val topCards = getTopCards(playerId, count)
+            if (topCards.isEmpty()) return@update currentState
+
+            // Move each card to the target zone
+            var updatedGameState = gameState
+            topCards.forEach { card ->
+                updatedGameState = updatedGameState.updateCardInstance(card.instanceId) {
+                    it.moveToZone(targetZone)
+                }
+            }
+
+            currentState.copy(gameState = updatedGameState)
+        }
+    }
+
+    /**
+     * Move bottom N cards from library to a specific zone
+     */
+    fun moveBottomCardsToZone(playerId: String, count: Int, targetZone: Zone) {
+        _uiState.update { currentState ->
+            val gameState = currentState.gameState ?: return@update currentState
+
+            val bottomCards = getBottomCards(playerId, count)
+            if (bottomCards.isEmpty()) return@update currentState
+
+            // Move each card to the target zone
+            var updatedGameState = gameState
+            bottomCards.forEach { card ->
+                updatedGameState = updatedGameState.updateCardInstance(card.instanceId) {
+                    it.moveToZone(targetZone)
+                }
+            }
+
+            currentState.copy(gameState = updatedGameState)
+        }
+    }
+
+    /**
      * Create token(s) on the battlefield
      */
     fun createToken(

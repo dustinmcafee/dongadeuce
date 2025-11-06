@@ -404,6 +404,10 @@ fun HotseatPlayerSection(
     var showGraveyardDialog by remember { mutableStateOf(false) }
     var showExileDialog by remember { mutableStateOf(false) }
     var showLibrarySearchDialog by remember { mutableStateOf(false) }
+    var showLibraryOperationsDialog by remember { mutableStateOf(false) }
+    var showLibraryPeekDialog by remember { mutableStateOf(false) }
+    var libraryPeekCards by remember { mutableStateOf<List<CardInstance>>(emptyList()) }
+    var libraryPeekLocation by remember { mutableStateOf(PeekLocation.TOP) }
     var showCommandZoneDialog by remember { mutableStateOf(false) }
     var showTokenCreationDialog by remember { mutableStateOf(false) }
 
@@ -486,7 +490,7 @@ fun HotseatPlayerSection(
                         Zone.LIBRARY,
                         libraryCount,
                         Modifier.fillMaxWidth().height(50.dp),
-                        onClick = if (isActivePlayer) ({ showLibrarySearchDialog = true }) else null,
+                        onClick = if (isActivePlayer) ({ showLibraryOperationsDialog = true }) else null,
                         dragDropState = if (isActivePlayer) dragDropState else null,
                         onDropCards = if (isActivePlayer) {
                             { cardIds ->
@@ -641,7 +645,85 @@ fun HotseatPlayerSection(
                 onToTop = { cardInstance ->
                     viewModel.moveCardToTopOfLibrary(cardInstance.instanceId)
                 },
+                onToBottom = { cardInstance ->
+                    viewModel.moveCardToBottomOfLibrary(cardInstance.instanceId)
+                },
                 onShuffle = { viewModel.shuffleLibrary(player.id) }
+            )
+        }
+
+        if (showLibraryOperationsDialog) {
+            LibraryOperationsDialog(
+                playerName = player.name,
+                librarySize = libraryCount,
+                onDismiss = { showLibraryOperationsDialog = false },
+                onViewTopCards = { count ->
+                    libraryPeekCards = viewModel.getTopCards(player.id, count)
+                    libraryPeekLocation = PeekLocation.TOP
+                    showLibraryPeekDialog = true
+                    showLibraryOperationsDialog = false
+                },
+                onViewBottomCards = { count ->
+                    libraryPeekCards = viewModel.getBottomCards(player.id, count)
+                    libraryPeekLocation = PeekLocation.BOTTOM
+                    showLibraryPeekDialog = true
+                    showLibraryOperationsDialog = false
+                },
+                onShuffleTopCards = { count ->
+                    viewModel.shuffleTopCards(player.id, count)
+                },
+                onShuffleBottomCards = { count ->
+                    viewModel.shuffleBottomCards(player.id, count)
+                },
+                onMoveTopToZone = { count, zone ->
+                    viewModel.moveTopCardsToZone(player.id, count, zone)
+                },
+                onMoveBottomToZone = { count, zone ->
+                    viewModel.moveBottomCardsToZone(player.id, count, zone)
+                },
+                onRevealTopCard = {
+                    val topCard = viewModel.getTopCards(player.id, 1).firstOrNull()
+                    if (topCard != null) {
+                        libraryPeekCards = listOf(topCard)
+                        libraryPeekLocation = PeekLocation.TOP
+                        showLibraryPeekDialog = true
+                        showLibraryOperationsDialog = false
+                    }
+                },
+                onFullSearch = {
+                    showLibraryOperationsDialog = false
+                    showLibrarySearchDialog = true
+                }
+            )
+        }
+
+        if (showLibraryPeekDialog) {
+            LibraryPeekDialog(
+                cards = libraryPeekCards,
+                playerName = player.name,
+                peekLocation = libraryPeekLocation,
+                onDismiss = {
+                    showLibraryPeekDialog = false
+                    libraryPeekCards = emptyList()
+                },
+                onMoveCard = { cardInstance, zone ->
+                    viewModel.moveCard(cardInstance.instanceId, zone)
+                },
+                onMoveAllToZone = { zone ->
+                    libraryPeekCards.forEach { cardInstance ->
+                        viewModel.moveCard(cardInstance.instanceId, zone)
+                    }
+                    showLibraryPeekDialog = false
+                    libraryPeekCards = emptyList()
+                },
+                onShuffleCards = {
+                    when (libraryPeekLocation) {
+                        PeekLocation.TOP -> viewModel.shuffleTopCards(player.id, libraryPeekCards.size)
+                        PeekLocation.BOTTOM -> viewModel.shuffleBottomCards(player.id, libraryPeekCards.size)
+                    }
+                    showLibraryPeekDialog = false
+                    libraryPeekCards = emptyList()
+                }
             )
         }
 
