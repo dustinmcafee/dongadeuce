@@ -490,7 +490,9 @@ fun HotseatPlayerSection(
                         Zone.LIBRARY,
                         libraryCount,
                         Modifier.fillMaxWidth().height(50.dp),
-                        onClick = if (isActivePlayer) ({ showLibraryOperationsDialog = true }) else null,
+                        onClick = null, // No single-click action
+                        onDoubleClick = if (isActivePlayer) ({ viewModel.drawCard(player.id) }) else null,
+                        onRightClick = if (isActivePlayer) ({ showLibraryOperationsDialog = true }) else null,
                         dragDropState = if (isActivePlayer) dragDropState else null,
                         onDropCards = if (isActivePlayer) {
                             { cardIds ->
@@ -1566,10 +1568,13 @@ fun ZoneCard(
     cardCount: Int,
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
+    onDoubleClick: (() -> Unit)? = null,
+    onRightClick: (() -> Unit)? = null,
     dragDropState: DragDropState? = null,
     onDropCards: ((List<String>) -> Unit)? = null
 ) {
     var isHovering by remember { mutableStateOf(false) }
+    var lastClickTime by remember { mutableStateOf(0L) }
 
     // Check if cards are being dragged over this zone
     val isDraggingOver = dragDropState != null &&
@@ -1596,8 +1601,35 @@ fun ZoneCard(
                 shape = RoundedCornerShape(8.dp)
             )
             .then(
-                if (onClick != null) {
-                    Modifier.clickableWithRipple { onClick() }
+                if (onDoubleClick != null || onRightClick != null || onClick != null) {
+                    Modifier.pointerInput(zone) {
+                        awaitPointerEventScope {
+                            while (true) {
+                                val event = awaitPointerEvent()
+
+                                // Handle right-click
+                                if (event.buttons.isSecondaryPressed && onRightClick != null) {
+                                    onRightClick()
+                                }
+                                // Handle left-click for double-click detection
+                                else if (event.changes.any { !it.pressed && it.previousPressed }) {
+                                    val change = event.changes.first { !it.pressed && it.previousPressed }
+                                    change.consume()
+
+                                    val currentTime = System.currentTimeMillis()
+                                    if (currentTime - lastClickTime < 300L && onDoubleClick != null) {
+                                        // Double-click detected
+                                        onDoubleClick()
+                                        lastClickTime = 0L
+                                    } else {
+                                        // First click
+                                        lastClickTime = currentTime
+                                        onClick?.invoke()
+                                    }
+                                }
+                            }
+                        }
+                    }
                 } else {
                     Modifier
                 }

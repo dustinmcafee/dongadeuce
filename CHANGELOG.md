@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.21.3] - 2025-11-05
+
+### Changed
+- **Library Zone Interactions** - Improved usability for library operations
+  - Double-click Library zone to draw a single card (quick draw)
+  - Right-click Library zone to open advanced operations menu
+  - Removed single-click action to prevent accidental menu opens
+  - More intuitive workflow for common library actions
+
 ## [2.21.2] - 2025-11-05
 
 ### Fixed
