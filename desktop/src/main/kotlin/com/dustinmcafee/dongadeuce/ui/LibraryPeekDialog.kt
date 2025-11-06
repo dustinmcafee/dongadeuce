@@ -99,13 +99,16 @@ fun LibraryPeekDialog(
                             .verticalScroll(rememberScrollState()),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        cards.forEachIndexed { index, cardInstance ->
+                        // For TOP cards, reverse so topmost card appears first
+                        val displayCards = when (peekLocation) {
+                            PeekLocation.TOP -> cards.reversed()
+                            PeekLocation.BOTTOM -> cards
+                        }
+
+                        displayCards.forEachIndexed { index, cardInstance ->
                             LibraryPeekCard(
                                 cardInstance = cardInstance,
-                                cardNumber = when (peekLocation) {
-                                    PeekLocation.TOP -> cards.size - index // Top card is #1
-                                    PeekLocation.BOTTOM -> index + 1 // Bottom card is #1
-                                },
+                                cardNumber = index + 1, // #1 is always first displayed card
                                 onMoveToZone = { zone -> onMoveCard(cardInstance, zone) }
                             )
                         }
