@@ -1,5 +1,9 @@
 # Dong-A-Deuce
 
+<p align="center">
+  <img src="resources/dongadeuce_icon.svg" alt="Dong-A-Deuce Icon" width="200"/>
+</p>
+
 A lightweight, cross-platform MTG Commander game client built with Kotlin and Compose Multiplatform.
 
 ## Features (Planned)
