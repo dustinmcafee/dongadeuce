@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.20.0] - 2025-11-05
+
+### Performance
+- **Grid Recalculation Optimization** - Major performance improvement for battlefield card positioning
+  - Replaced O(n²) algorithm with O(n) using position count map
+  - Changed from `remember` to `derivedStateOf` to reduce unnecessary recalculations
+  - Eliminated expensive string concatenation for grid position keys
+  - Optimized card grouping using reverse map instead of `groupBy`
+  - Battlefield now renders smoothly even with 100+ cards
+  - Reduces CPU usage during card movements and drag operations
+
 ## [2.19.0] - 2025-11-05
 
 ### Fixed

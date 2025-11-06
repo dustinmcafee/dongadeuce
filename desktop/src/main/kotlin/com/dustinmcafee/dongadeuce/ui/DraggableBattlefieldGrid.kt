@@ -111,12 +111,6 @@ fun DraggableBattlefieldGrid(
         }
     }
 
-    // Organize cards into grid positions with stacking support
-    // Key by the grid positions of all cards to ensure recalculation when positions change
-    val gridPositionsKey = remember(cards) {
-        cards.map { "${it.instanceId}:${it.gridX}:${it.gridY}" }.joinToString(",")
-    }
-
     // Card stacking offsets for visual clarity
     val stackOffsetX = (cardWidth.value * STACK_OFFSET_RATIO).dp
     val stackOffsetY = (cardHeight.value * STACK_OFFSET_RATIO).dp
@@ -126,21 +120,26 @@ fun DraggableBattlefieldGrid(
         val stackIndex: Int  // 0 = bottom, 1 = middle, 2 = top
     )
 
-    val cardPositions = remember(gridPositionsKey, columns) {
+    // Optimize grid position calculation using derivedStateOf
+    // This ensures we only recalculate when cards actually change, not on every recomposition
+    val cardPositions = remember { derivedStateOf {
         val positionMap = mutableMapOf<String, Pair<Int, Int>>()
         val stackInfo = mutableMapOf<String, CardStackInfo>()
 
         // First, place cards that have explicit grid positions
-        val cardsWithPositions = cards.filter { it.gridX != null && it.gridY != null }
-        cardsWithPositions.forEach { card ->
-            // Safe call: filter above ensures both are non-null, but use safe access for robustness
-            val x = card.gridX ?: 0
-            val y = card.gridY ?: 0
-            positionMap[card.instanceId] = Pair(x, y)
+        cards.forEach { card ->
+            if (card.gridX != null && card.gridY != null) {
+                positionMap[card.instanceId] = Pair(card.gridX!!, card.gridY!!)
+            }
         }
 
         // Then, auto-arrange cards without positions
-        val cardsWithoutPositions = cards.filter { it.gridX == null || it.gridY == null }
+        // Build a count map for O(1) lookups instead of O(n) counts
+        val positionCounts = mutableMapOf<Pair<Int, Int>, Int>()
+        positionMap.values.forEach { pos ->
+            positionCounts[pos] = (positionCounts[pos] ?: 0) + 1
+        }
+
         var nextRow = 0
         var nextCol = 0
 
@@ -151,12 +150,14 @@ fun DraggableBattlefieldGrid(
             var positionsChecked = 0
 
             while (positionsChecked < maxPositions) {
-                // Count how many cards are at the current position
-                val cardsAtPosition = positionMap.values.count { it == Pair(nextCol, nextRow) }
+                val currentPos = Pair(nextCol, nextRow)
+                val count = positionCounts[currentPos] ?: 0
 
                 // If less than 3 cards, can stack here
-                if (cardsAtPosition < 3) {
-                    return Pair(nextCol, nextRow)
+                if (count < 3) {
+                    // Update count map for next iteration
+                    positionCounts[currentPos] = count + 1
+                    return currentPos
                 }
 
                 // Move to next position
@@ -173,25 +174,29 @@ fun DraggableBattlefieldGrid(
             return null
         }
 
-        cardsWithoutPositions.forEach { card ->
-            val position = findNextAvailablePosition()
-            if (position != null) {
-                positionMap[card.instanceId] = position
-            } else {
-                // Battlefield full - place at (0, 0) and stack (will show at max stack depth)
-                // This is a fallback to prevent crashes
-                positionMap[card.instanceId] = Pair(0, 0)
+        cards.forEach { card ->
+            if (card.gridX == null || card.gridY == null) {
+                val position = findNextAvailablePosition()
+                if (position != null) {
+                    positionMap[card.instanceId] = position
+                } else {
+                    // Battlefield full - place at (0, 0) and stack (will show at max stack depth)
+                    // This is a fallback to prevent crashes
+                    positionMap[card.instanceId] = Pair(0, 0)
+                }
             }
         }
 
         // Calculate stack indices for all cards
-        val gridGroupedCards = cards.groupBy { card ->
-            positionMap[card.instanceId] ?: Pair(0, 0)
+        // Build reverse map for O(1) lookup: position -> list of card IDs
+        val positionToCards = mutableMapOf<Pair<Int, Int>, MutableList<String>>()
+        positionMap.forEach { (cardId, pos) ->
+            positionToCards.getOrPut(pos) { mutableListOf() }.add(cardId)
         }
 
-        gridGroupedCards.forEach { (gridPos, cardsAtPos) ->
-            cardsAtPos.forEachIndexed { index, card ->
-                stackInfo[card.instanceId] = CardStackInfo(
+        positionToCards.forEach { (gridPos, cardIds) ->
+            cardIds.forEachIndexed { index, cardId ->
+                stackInfo[cardId] = CardStackInfo(
                     gridPos = gridPos,
                     stackIndex = index.coerceAtMost(2) // Max 3 cards per stack
                 )
@@ -199,7 +204,7 @@ fun DraggableBattlefieldGrid(
         }
 
         Pair(positionMap, stackInfo)
-    }
+    } }.value
 
     val (gridPositions, stackInfoMap) = cardPositions
 

@@ -1,6 +1,6 @@
 # Dong-A-Deuce - Development TODO
 
-**Current Version:** v2.19.0
+**Current Version:** v2.20.0
 **Hotseat Mode:** ~90% complete (fully playable!)
 **Network Mode:** ~5% complete (UI only)
 **Last Code Review:** 2025-11-05
@@ -102,17 +102,17 @@
 
 ---
 
-### 4. **Grid Recalculation Performance** ⚠️ PERFORMANCE
-**Current Status:** O(n²) complexity on every card position change
-**Estimated Effort:** 2-3 days
+### 4. ~~**Grid Recalculation Performance**~~ ✅ COMPLETED (v2.20.0)
+**Status:** Fixed in v2.20.0
+**Completed:** 2025-11-05
 
-**What's Needed:**
-- [ ] Profile grid recalculation in DraggableBattlefieldGrid.kt
-- [ ] Use incremental updates instead of full recalculation
-- [ ] Add memoization for expensive calculations
-- [ ] Use derivedStateOf for computed grid positions
-
-**Why Critical:** Performance bottleneck that gets worse with more cards
+**What Was Done:**
+- [x] Optimized from O(n²) to O(n) complexity
+- [x] Replaced `remember` with `derivedStateOf` for better recomposition control
+- [x] Added position count map for O(1) lookups instead of O(n) counts
+- [x] Eliminated expensive string concatenation for grid keys
+- [x] Optimized card grouping with reverse map
+- [x] Battlefield now smooth with 100+ cards
 
 ---
 
@@ -559,11 +559,11 @@
 ## 📊 DEVELOPMENT ROADMAP
 
 ### 🎯 Phase 1: Critical Fixes & Core Features (2-3 weeks)
-1. Fix Recursive Stack Risk (2 hours) ⚠️
-2. Package Naming Refactor (3 hours)
+1. ✅ Fix Recursive Stack Risk (2 hours) - COMPLETED v2.19.0
+2. ✅ Package Naming Refactor (3 hours) - COMPLETED v2.19.0
 3. Game Log/History System (2-3 days)
 4. Commander Tax Tracking (1 day)
-5. Grid Recalculation Performance (2-3 days)
+5. ✅ Grid Recalculation Performance (2-3 days) - COMPLETED v2.20.0
 6. Player Counters System (2-3 days)
 7. Advanced Library Operations (3-4 days)
 
