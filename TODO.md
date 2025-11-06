@@ -1,6 +1,6 @@
 # Dong-A-Deuce - Development TODO
 
-**Current Version:** v2.21.0
+**Current Version:** v2.21.3
 **Hotseat Mode:** ~90% complete (fully playable!)
 **Network Mode:** ~5% complete (UI only)
 **Last Code Review:** 2025-11-05
@@ -187,20 +187,77 @@
 
 ### 9. **P/T Modification System**
 **Current Status:** ❌ Not implemented
-**Estimated Effort:** 2 days
+**Estimated Effort:** 2-3 days
 
 **What's Needed:**
-- [ ] Add `powerOverride: Int?` and `toughnessOverride: Int?` to CardInstance
-- [ ] Context menu option "Set P/T"
-- [ ] Dialog for entering custom P/T
-- [ ] Display modified P/T in UI
-- [ ] Clear override option
+- [ ] Add `powerModifier: Int` and `toughnessModifier: Int` to CardInstance
+- [ ] Context menu options:
+  - [ ] Increase Power (+1)
+  - [ ] Decrease Power (-1)
+  - [ ] Increase Toughness (+1)
+  - [ ] Decrease Toughness (-1)
+  - [ ] Increase Both (+1/+1)
+  - [ ] Decrease Both (-1/-1)
+  - [ ] Flow P (increase power, decrease toughness)
+  - [ ] Flow T (decrease power, increase toughness)
+  - [ ] Set P/T (dialog for custom values)
+  - [ ] Reset P/T (to card's printed values)
+- [ ] Display modified P/T in UI (e.g., "3/4" in green if modified)
+- [ ] Show original P/T in tooltip
 
 **Why Important:** Very common in Commander gameplay
 
 ---
 
-### 10. **Refactor GameScreen.kt** 🛠️ MAINTENANCE
+### 10. **Card State Management**
+**Current Status:** Partial (tap/flip implemented)
+**Estimated Effort:** 1-2 days
+
+**What's Needed:**
+- [ ] Add `doesntUntap: Boolean` to CardInstance (toggle "Doesn't Untap")
+- [ ] Add `annotation: String?` to CardInstance (custom text notes)
+- [ ] Context menu "Set Annotation"
+- [ ] Context menu "Toggle Doesn't Untap"
+- [ ] Display annotation badge on card
+- [ ] Display "doesn't untap" indicator
+- [ ] Auto-skip untap for marked cards
+
+**Why Important:** Essential for tracking complex board states
+
+---
+
+### 11. **Counter System Overhaul**
+**Current Status:** Basic counters only (+1/+1, charge)
+**Estimated Effort:** 2-3 days
+
+**What's Needed:**
+- [ ] Support 6 configurable counter types (A-F)
+- [ ] Assign colors to counter types (red, yellow, green, cyan, purple, magenta)
+- [ ] Context menu "Set Counters" (enter specific number)
+- [ ] Display counter type and color on card
+- [ ] Show counter breakdown (e.g., "3x +1/+1, 2x charge")
+- [ ] Settings for counter type names/colors
+
+**Why Important:** Many cards use custom counters
+
+---
+
+### 12. **Library Position Operations**
+**Current Status:** Can only move to top
+**Estimated Effort:** 1 day
+
+**What's Needed:**
+- [ ] Add moveCardToBottomOfLibrary() support to context menu
+- [ ] Add "To X Cards from Top" option (enter position 1-N)
+- [ ] Add positionInLibrary field to track order
+- [ ] Update LibrarySearchDialog with bottom option
+- [ ] Add "In random order" option for multiple cards
+
+**Why Important:** Common MTG effects (scry to bottom, tuck effects)
+
+---
+
+### 13. **Refactor GameScreen.kt** 🛠️ MAINTENANCE
 **Current Status:** 2,090 lines - too large
 **Estimated Effort:** 1-2 days
 
@@ -338,7 +395,94 @@
 
 ---
 
-### 21. **Refactor DraggableBattlefieldGrid** 🛠️ MAINTENANCE
+### 21. **Play Face Down**
+**Estimated Effort:** 1 day
+
+- [ ] Add `isFaceDown: Boolean` to CardInstance
+- [ ] Context menu "Play Face Down" (from hand)
+- [ ] Context menu "Peek at Face" (private view for owner)
+- [ ] Display face-down cards as card back image
+- [ ] Flip face-down cards with "Turn Over"
+- [ ] Hide face-down card names from opponents
+
+**Why Important:** Core mechanic for morph, manifest, disguise
+
+---
+
+### 22. **Attachment System Enhancements**
+**Estimated Effort:** 2-3 days
+
+- [ ] Visual attachment lines (draw from attached to parent)
+- [ ] Context menu "Attach to Card" (select target)
+- [ ] Context menu "Unattach"
+- [ ] Auto-move attached cards with parent
+- [ ] Color-code attachment lines by type
+- [ ] Click line to break attachment
+
+**Why Important:** Visual aid to help track Auras/Equipment
+
+---
+
+## 🟢 LOW PRIORITY - Advanced Features
+
+### 23. **Reveal System**
+**Estimated Effort:** 2-3 days
+**Requires:** Network multiplayer or hotseat reveal state
+
+- [ ] Context menu "Reveal to All Players"
+- [ ] Context menu "Reveal to [Player Name]"
+- [ ] RevealedZone viewer (read-only card display)
+- [ ] Track revealed state per player
+- [ ] Auto-hide revealed cards after action
+- [ ] Reveal from hand, library, top of library
+
+**Why Important:** Common MTG effect, but requires multiplayer state sync
+
+---
+
+### 24. **Related Cards & Tokens**
+**Estimated Effort:** 3-4 days
+
+- [ ] Query Scryfall for related cards (tokens, transforms, meld)
+- [ ] Context menu "View Related Cards" submenu
+- [ ] Context menu "Create Token: [Name]"
+- [ ] Context menu "Create All Tokens"
+- [ ] Display P/T and count in token menu
+- [ ] Support double-faced card transforms
+- [ ] Support meld relationships
+
+**Why Important:** Convenience feature, reduces manual token creation
+
+---
+
+### 25. **Targeting Arrows**
+**Estimated Effort:** 2-3 days
+
+- [ ] Context menu "Draw Arrow"
+- [ ] Click source card, then target
+- [ ] Draw colored arrow overlay
+- [ ] Multiple arrows per card
+- [ ] Arrow to player (for direct damage)
+- [ ] Click arrow to remove
+- [ ] Auto-clear arrows on phase change (optional)
+
+**Why Important:** Visual aid for complex board states
+
+---
+
+### 26. **Selection Enhancements**
+**Estimated Effort:** 1 day
+
+- [ ] Context menu "Select All" (in current zone)
+- [ ] Context menu "Select Row" (battlefield only)
+- [ ] Context menu "Select Column" (zone viewers)
+- [ ] Visual selection indicators
+- [ ] Batch operations on selection
+- [ ] Keyboard shortcuts for selection
+
+---
+
+### 27. **Refactor DraggableBattlefieldGrid** 🛠️ MAINTENANCE
 **Estimated Effort:** 2-3 days
 
 - [ ] Split 492-line file into smaller functions
@@ -349,7 +493,7 @@
 
 ---
 
-### 22. **Add Logging Framework** 🛠️ CODE QUALITY
+### 28. **Add Logging Framework** 🛠️ CODE QUALITY
 **Estimated Effort:** 1 day
 
 - [ ] Replace println() with SLF4J or similar
@@ -359,7 +503,7 @@
 
 ---
 
-### 23. **Centralize Magic Numbers** 🛠️ CODE QUALITY
+### 29. **Centralize Magic Numbers** 🛠️ CODE QUALITY
 **Estimated Effort:** 1 day
 
 - [ ] Move all constants to UIConstants.kt
@@ -370,7 +514,7 @@
 
 ---
 
-### 24. **Extract Sub-Composables** 🛠️ CODE QUALITY
+### 30. **Extract Sub-Composables** 🛠️ CODE QUALITY
 **Estimated Effort:** 2 days
 
 - [ ] Break down 300+ line composables
@@ -380,7 +524,7 @@
 
 ---
 
-### 25. **Add Input Debouncing** 🛠️ PERFORMANCE
+### 31. **Add Input Debouncing** 🛠️ PERFORMANCE
 **Estimated Effort:** 1 day
 
 - [ ] Add 300ms debounce to search inputs
@@ -390,7 +534,7 @@
 
 ---
 
-### 26. **Zone Dialog Performance** ⚠️ PERFORMANCE
+### 32. **Zone Dialog Performance** ⚠️ PERFORMANCE
 **Estimated Effort:** 2 days
 
 - [ ] Add virtualization for large lists
@@ -400,7 +544,7 @@
 
 ---
 
-### 27. **Chat System** (Requires networking first)
+### 33. **Chat System** (Requires networking first)
 **Estimated Effort:** 1-2 days
 
 - [ ] ChatPanel composable
@@ -414,7 +558,7 @@
 
 ## 🔵 LOW PRIORITY - Nice to Have
 
-### 28. **Testing Improvements**
+### 34. **Testing Improvements**
 **Estimated Effort:** 1-2 weeks
 
 - [ ] Add Compose UI tests
@@ -425,7 +569,7 @@
 
 ---
 
-### 29. **Card Peek**
+### 35. **Card Peek** (Duplicate - covered in #21)
 **Estimated Effort:** 1-2 days
 
 - [ ] Look at face-down cards without revealing
@@ -435,7 +579,7 @@
 
 ---
 
-### 30. **Related Cards**
+### 36. **Related Cards** (Duplicate - covered in #24)
 **Estimated Effort:** 3-4 days
 
 - [ ] Query Scryfall for related cards
@@ -445,7 +589,7 @@
 
 ---
 
-### 31. **Card Arrows**
+### 37. **Card Arrows** (Duplicate - covered in #25)
 **Estimated Effort:** 2-3 days
 
 - [ ] Draw arrows between cards
@@ -456,7 +600,7 @@
 
 ---
 
-### 32. **Animations**
+### 38. **Animations**
 **Estimated Effort:** 1-2 weeks
 
 - [ ] Card movement animations
@@ -467,7 +611,7 @@
 
 ---
 
-### 33. **Sound Effects**
+### 39. **Sound Effects**
 **Estimated Effort:** 3-4 days
 
 - [ ] Card draw sound
@@ -480,7 +624,7 @@
 
 ---
 
-### 34. **Themes**
+### 40. **Themes**
 **Estimated Effort:** 1 week
 
 - [ ] Dark mode (current)
@@ -492,7 +636,7 @@
 
 ---
 
-### 35. **Game Save/Load**
+### 41. **Game Save/Load**
 **Estimated Effort:** 3-4 days
 
 - [ ] Save game state to JSON file
@@ -503,7 +647,7 @@
 
 ---
 
-### 36. **Combat System Helpers** (Optional)
+### 42. **Combat System Helpers** (Optional)
 **Estimated Effort:** 1-2 weeks
 
 - [ ] Declare attackers UI
@@ -516,7 +660,7 @@
 
 ---
 
-### 37. **Stack Management** (Optional)
+### 43. **Stack Management** (Optional)
 **Estimated Effort:** 2-3 weeks
 
 - [ ] Stack visualization
@@ -528,7 +672,7 @@
 
 ---
 
-### 38. **Deck Builder**
+### 44. **Deck Builder**
 **Estimated Effort:** 2-3 weeks
 
 - [ ] In-app deck creation
@@ -542,7 +686,7 @@
 
 ---
 
-### 39. **Additional Deck Formats**
+### 45. **Additional Deck Formats**
 **Estimated Effort:** 1-2 weeks
 
 - [ ] .dec format
