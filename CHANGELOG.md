@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.21.1] - 2025-11-05
+
+### Fixed
+- **Critical Bug Fix** - Fixed battlefield card stacking broken in v2.20.0 performance optimization
+  - Cards were all stacking at position (0,0) without proper grid distribution
+  - Root cause: v2.20.0 used `derivedStateOf` without proper dependencies for cards parameter
+  - `derivedStateOf` only tracks Compose state, not function parameters like `cards`
+  - Solution: Changed `remember { derivedStateOf { } }.value` to `remember(cards, columns) { }`
+  - Maintains O(n) performance optimization from v2.20.0
+  - Cards now properly distribute across grid with correct stacking (3 per position)
+
+### Changed
+- **Stack Offset Adjustment** - Reduced visual stack offset from 25% to 10% of card size
+  - Previous 25% offset (42dp) caused excessive overlap between stacked cards
+  - New 10% offset (16.8dp) provides subtle visual indication without overlap
+  - Cards remain clearly distinguishable when stacked
+
 ## [2.21.0] - 2025-11-05
 
 ### Added

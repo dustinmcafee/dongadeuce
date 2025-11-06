@@ -19,8 +19,8 @@ object UIConstants {
     val SELECTION_BORDER_WIDTH = 3.dp
     val SELECTED_BORDER_WIDTH = 5.dp
 
-    // Card stacking offsets (25% of card size)
-    val STACK_OFFSET_RATIO = 0.25f
+    // Card stacking offsets (10% of card size for subtle stacking)
+    val STACK_OFFSET_RATIO = 0.10f
 
     // Drag threshold to distinguish click from drag
     val DRAG_THRESHOLD_PX = 5f

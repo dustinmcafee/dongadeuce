@@ -120,9 +120,9 @@ fun DraggableBattlefieldGrid(
         val stackIndex: Int  // 0 = bottom, 1 = middle, 2 = top
     )
 
-    // Optimize grid position calculation using derivedStateOf
-    // This ensures we only recalculate when cards actually change, not on every recomposition
-    val cardPositions = remember { derivedStateOf {
+    // Optimize grid position calculation
+    // Recalculate when cards or columns change (O(n) algorithm, not O(n²))
+    val cardPositions = remember(cards, columns) {
         val positionMap = mutableMapOf<String, Pair<Int, Int>>()
         val stackInfo = mutableMapOf<String, CardStackInfo>()
 
@@ -204,7 +204,7 @@ fun DraggableBattlefieldGrid(
         }
 
         Pair(positionMap, stackInfo)
-    } }.value
+    }
 
     val (gridPositions, stackInfoMap) = cardPositions
 
