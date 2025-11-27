@@ -8,6 +8,7 @@ data class Player(
     val name: String,
     val life: Int = GameConstants.STARTING_LIFE,
     val commanderDamage: Map<String, Int> = emptyMap(), // commanderId -> damage
+    val counters: Map<String, Int> = emptyMap(), // counterType -> count (e.g., "poison" -> 5)
     val hasLost: Boolean = false
 ) {
     fun takeDamage(amount: Int): Player {
@@ -37,5 +38,43 @@ data class Player(
             life = newLife,
             hasLost = hasLost || newLife <= 0
         )
+    }
+
+    fun addCounter(counterType: String, amount: Int = 1): Player {
+        val current = counters[counterType] ?: 0
+        val newAmount = (current + amount).coerceAtLeast(0)
+        val newCounters = if (newAmount > 0) {
+            counters + (counterType to newAmount)
+        } else {
+            counters - counterType
+        }
+        // Check for poison loss condition (10+ poison = loss)
+        val poisonLoss = counterType == "poison" && newAmount >= GameConstants.POISON_THRESHOLD
+        return copy(
+            counters = newCounters,
+            hasLost = hasLost || poisonLoss
+        )
+    }
+
+    fun removeCounter(counterType: String, amount: Int = 1): Player {
+        return addCounter(counterType, -amount)
+    }
+
+    fun setCounter(counterType: String, amount: Int): Player {
+        val newCounters = if (amount > 0) {
+            counters + (counterType to amount)
+        } else {
+            counters - counterType
+        }
+        // Check for poison loss condition (10+ poison = loss)
+        val poisonLoss = counterType == "poison" && amount >= GameConstants.POISON_THRESHOLD
+        return copy(
+            counters = newCounters,
+            hasLost = hasLost || poisonLoss
+        )
+    }
+
+    fun getCounter(counterType: String): Int {
+        return counters[counterType] ?: 0
     }
 }

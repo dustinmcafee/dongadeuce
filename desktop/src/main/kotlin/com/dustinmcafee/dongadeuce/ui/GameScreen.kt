@@ -61,6 +61,7 @@ fun GameScreen(
     var cardForPowerToughnessDialog by remember { mutableStateOf<com.dustinmcafee.dongadeuce.models.CardInstance?>(null) }
     var showAnnotationDialog by remember { mutableStateOf(false) }
     var cardForAnnotationDialog by remember { mutableStateOf<com.dustinmcafee.dongadeuce.models.CardInstance?>(null) }
+    var showDieRollerDialog by remember { mutableStateOf(false) }
 
     // Handler for card actions - delegates business logic to ViewModel
     val handleAction: (CardAction) -> Unit = { action ->
@@ -89,6 +90,13 @@ fun GameScreen(
                 // Show dialog for setting annotation
                 cardForAnnotationDialog = action.cardInstance
                 showAnnotationDialog = true
+            }
+            is CardAction.CreateCopy -> {
+                // Create a copy of the card
+                viewModel.cloneCard(
+                    cardId = action.cardInstance.instanceId,
+                    newOwnerId = action.ownerId
+                )
             }
             else -> {
                 // Delegate to ViewModel with multi-selection support
@@ -354,6 +362,7 @@ fun GameScreen(
                 onNextPhase = { viewModel.nextPhase() },
                 onPassTurn = { viewModel.passTurn() },
                 onUntapAll = { viewModel.untapAll(gameState.activePlayer.id) },
+                onRollDice = { showDieRollerDialog = true },
                 modifier = Modifier.width(250.dp)
             )
         }
@@ -475,6 +484,15 @@ fun GameScreen(
         )
     }
 
+    // Die roller dialog
+    if (showDieRollerDialog) {
+        val playerName = uiState.gameState?.activePlayer?.name ?: "Player"
+        DieRollerDialog(
+            playerName = playerName,
+            onDismiss = { showDieRollerDialog = false }
+        )
+    }
+
     // Game over dialog
     if (uiState.gameEnded) {
         val winner = uiState.allPlayers.firstOrNull { !it.hasLost }
@@ -564,6 +582,7 @@ fun HotseatPlayerSection(
     var showCommandZoneDialog by remember { mutableStateOf(false) }
     var showTokenCreationDialog by remember { mutableStateOf(false) }
     var showSetLifeDialog by remember { mutableStateOf(false) }
+    var showPlayerCountersDialog by remember { mutableStateOf(false) }
 
     Column(
         modifier = modifier.background(
@@ -629,6 +648,12 @@ fun HotseatPlayerSection(
                             Text("+", style = MaterialTheme.typography.labelSmall, color = Color.White)
                         }
                     }
+
+                    // Player counters display (clickable to open dialog)
+                    PlayerCountersDisplay(
+                        player = player,
+                        onClick = if (isActivePlayer) ({ showPlayerCountersDialog = true }) else null
+                    )
 
                     Spacer(modifier = Modifier.height(4.dp))
 
@@ -920,6 +945,96 @@ fun HotseatPlayerSection(
                 }
             )
         }
+
+        if (showPlayerCountersDialog) {
+            PlayerCountersDialog(
+                player = player,
+                onDismiss = { showPlayerCountersDialog = false },
+                onAddCounter = { counterType, amount ->
+                    viewModel.addPlayerCounter(player.id, counterType, amount)
+                },
+                onRemoveCounter = { counterType, amount ->
+                    viewModel.removePlayerCounter(player.id, counterType, amount)
+                },
+                onSetCounter = { counterType, amount ->
+                    viewModel.setPlayerCounter(player.id, counterType, amount)
+                }
+            )
+        }
+    }
+}
+
+/**
+ * Compact player counters display (shows poison/energy/experience if any)
+ */
+@Composable
+fun PlayerCountersDisplay(
+    player: Player,
+    onClick: (() -> Unit)?
+) {
+    val poisonCount = player.getCounter("poison")
+    val energyCount = player.getCounter("energy")
+    val experienceCount = player.getCounter("experience")
+    val hasCounters = poisonCount > 0 || energyCount > 0 || experienceCount > 0 || player.counters.isNotEmpty()
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(if (onClick != null) Modifier.clickable { onClick() } else Modifier)
+            .padding(vertical = 2.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        if (poisonCount > 0) {
+            CounterChip(
+                label = "Poison",
+                count = poisonCount,
+                color = Color(0xFF4CAF50), // Green for poison
+                isLethal = poisonCount >= com.dustinmcafee.dongadeuce.models.GameConstants.POISON_THRESHOLD
+            )
+        }
+        if (energyCount > 0) {
+            CounterChip(
+                label = "E",
+                count = energyCount,
+                color = Color(0xFFFF9800) // Orange for energy
+            )
+        }
+        if (experienceCount > 0) {
+            CounterChip(
+                label = "XP",
+                count = experienceCount,
+                color = Color(0xFF9C27B0) // Purple for experience
+            )
+        }
+        // Show "Counters" button if no counters yet but clickable
+        if (!hasCounters && onClick != null) {
+            Text(
+                "Counters",
+                style = MaterialTheme.typography.labelSmall,
+                color = Color.White.copy(alpha = 0.6f)
+            )
+        }
+    }
+}
+
+@Composable
+private fun CounterChip(
+    label: String,
+    count: Int,
+    color: Color,
+    isLethal: Boolean = false
+) {
+    Surface(
+        color = if (isLethal) Color(0xFFB71C1C) else color,
+        shape = MaterialTheme.shapes.small
+    ) {
+        Text(
+            text = "$label: $count",
+            style = MaterialTheme.typography.labelSmall,
+            color = Color.White,
+            modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+        )
     }
 }
 

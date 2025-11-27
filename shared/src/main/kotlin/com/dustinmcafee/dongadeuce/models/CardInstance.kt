@@ -25,7 +25,9 @@ data class CardInstance(
     val toughnessModifier: Int = 0, // Modifier to toughness
     val doesntUntap: Boolean = false, // Card doesn't untap during untap step
     val annotation: String? = null, // Custom text note on card
-    val placedTimestamp: Long = System.currentTimeMillis() // When card was placed at this position
+    val placedTimestamp: Long = System.currentTimeMillis(), // When card was placed at this position
+    val isClone: Boolean = false, // True if this is a copy/clone of another card
+    val clonedFromId: String? = null // instanceId of the original card this was cloned from
 ) {
     fun tap() = copy(isTapped = true)
     fun untap() = copy(isTapped = false)
@@ -37,4 +39,33 @@ data class CardInstance(
     }
     fun setGridPosition(x: Int, y: Int) = copy(gridX = x, gridY = y, placedTimestamp = System.currentTimeMillis())
     fun changeController(newControllerId: String) = copy(controllerId = newControllerId)
+
+    /**
+     * Create a clone/copy of this card instance
+     * The clone is a new card with a new ID, belonging to the specified player
+     * Clone starts untapped, without counters, in the specified zone
+     */
+    fun createClone(newOwnerId: String, targetZone: Zone = Zone.BATTLEFIELD): CardInstance {
+        return CardInstance(
+            instanceId = UUID.randomUUID().toString(),
+            card = this.card,
+            ownerId = newOwnerId,
+            controllerId = newOwnerId,
+            zone = targetZone,
+            isTapped = false,
+            isFlipped = false,
+            isFaceDown = false,
+            counters = emptyMap(),
+            attachedTo = null,
+            gridX = null,
+            gridY = null,
+            powerModifier = 0,
+            toughnessModifier = 0,
+            doesntUntap = false,
+            annotation = null,
+            placedTimestamp = System.currentTimeMillis(),
+            isClone = true,
+            clonedFromId = this.instanceId
+        )
+    }
 }

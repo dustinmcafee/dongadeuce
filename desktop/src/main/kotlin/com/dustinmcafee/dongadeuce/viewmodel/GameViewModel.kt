@@ -242,6 +242,77 @@ class GameViewModel {
     }
 
     /**
+     * Add player counter (poison, energy, experience, etc.)
+     */
+    fun addPlayerCounter(playerId: String, counterType: String, amount: Int = 1) {
+        _uiState.update { currentState ->
+            val gameState = currentState.gameState ?: return@update currentState
+
+            val updatedGameState = gameState.updatePlayer(playerId) { player ->
+                player.addCounter(counterType, amount)
+            }
+
+            currentState.copy(
+                gameState = updatedGameState,
+                localPlayer = if (currentState.localPlayer?.id == playerId) {
+                    updatedGameState.players.find { p -> p.id == playerId }
+                } else {
+                    currentState.localPlayer
+                },
+                opponents = currentState.opponents.map { opponent ->
+                    if (opponent.id == playerId) {
+                        updatedGameState.players.find { p -> p.id == playerId } ?: opponent
+                    } else {
+                        opponent
+                    }
+                }
+            )
+        }
+
+        // Check if game should end (poison can cause loss)
+        checkGameEnd()
+    }
+
+    /**
+     * Remove player counter (poison, energy, experience, etc.)
+     */
+    fun removePlayerCounter(playerId: String, counterType: String, amount: Int = 1) {
+        addPlayerCounter(playerId, counterType, -amount)
+    }
+
+    /**
+     * Set player counter to specific value
+     */
+    fun setPlayerCounter(playerId: String, counterType: String, amount: Int) {
+        _uiState.update { currentState ->
+            val gameState = currentState.gameState ?: return@update currentState
+
+            val updatedGameState = gameState.updatePlayer(playerId) { player ->
+                player.setCounter(counterType, amount)
+            }
+
+            currentState.copy(
+                gameState = updatedGameState,
+                localPlayer = if (currentState.localPlayer?.id == playerId) {
+                    updatedGameState.players.find { p -> p.id == playerId }
+                } else {
+                    currentState.localPlayer
+                },
+                opponents = currentState.opponents.map { opponent ->
+                    if (opponent.id == playerId) {
+                        updatedGameState.players.find { p -> p.id == playerId } ?: opponent
+                    } else {
+                        opponent
+                    }
+                }
+            )
+        }
+
+        // Check if game should end (poison can cause loss)
+        checkGameEnd()
+    }
+
+    /**
      * Mark a player as having lost (they left the game or were defeated)
      */
     fun markPlayerAsLost(playerId: String) {
@@ -1304,6 +1375,50 @@ class GameViewModel {
 
             currentState.copy(gameState = updatedGameState)
         }
+    }
+
+    /**
+     * Clone/copy a card instance
+     * Creates a new copy of the card belonging to the specified player
+     * The clone enters the battlefield (or specified zone) as a fresh copy
+     *
+     * @param cardId The card to clone
+     * @param newOwnerId The player who will own the clone
+     * @param targetZone Where the clone should be placed (default: Battlefield)
+     * @param quantity Number of copies to create (for token doublers, etc.)
+     * @return The instanceId of the created clone (or first clone if multiple)
+     */
+    fun cloneCard(
+        cardId: String,
+        newOwnerId: String,
+        targetZone: Zone = Zone.BATTLEFIELD,
+        quantity: Int = 1
+    ): String? {
+        var createdCloneId: String? = null
+
+        _uiState.update { currentState ->
+            val gameState = currentState.gameState ?: return@update currentState
+
+            // Find the original card
+            val originalCard = gameState.cardInstances.find { it.instanceId == cardId }
+                ?: return@update currentState
+
+            // Create clone(s)
+            val clones = List(quantity) {
+                originalCard.createClone(newOwnerId, targetZone)
+            }
+
+            createdCloneId = clones.firstOrNull()?.instanceId
+
+            // Add clones to the game state
+            val updatedGameState = gameState.copy(
+                cardInstances = gameState.cardInstances + clones
+            )
+
+            currentState.copy(gameState = updatedGameState)
+        }
+
+        return createdCloneId
     }
 
     /**

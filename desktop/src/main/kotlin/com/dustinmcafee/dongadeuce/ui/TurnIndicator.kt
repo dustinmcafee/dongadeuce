@@ -22,6 +22,7 @@ fun TurnIndicator(
     onNextPhase: () -> Unit,
     onPassTurn: () -> Unit,
     onUntapAll: () -> Unit,
+    onRollDice: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -51,11 +52,23 @@ fun TurnIndicator(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Button(
-                    onClick = onUntapAll,
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Untap All")
+                    Button(
+                        onClick = onUntapAll,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("Untap All")
+                    }
+
+                    OutlinedButton(
+                        onClick = onRollDice,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("Roll Dice")
+                    }
                 }
 
                 Row(

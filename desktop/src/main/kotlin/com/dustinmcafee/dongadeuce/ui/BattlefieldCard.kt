@@ -228,6 +228,21 @@ fun BattlefieldCard(
                                 )
                             }
                         }
+
+                        // Clone indicator
+                        if (cardInstance.isClone) {
+                            Surface(
+                                color = Color.Cyan.copy(alpha = 0.8f),
+                                shape = RoundedCornerShape(4.dp)
+                            ) {
+                                Text(
+                                    text = "Copy",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = Color.Black,
+                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
                     }
 
                     Spacer(modifier = Modifier.weight(1f))

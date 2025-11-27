@@ -50,6 +50,7 @@ sealed class CardAction {
     data class SetAnnotation(val cardInstance: CardInstance) : CardAction()
     data class PlayFaceDown(val cardInstance: CardInstance) : CardAction()
     data class ToggleFaceDown(val cardInstance: CardInstance) : CardAction()
+    data class CreateCopy(val cardInstance: CardInstance, val ownerId: String) : CardAction()
 }
 
 /**
@@ -258,6 +259,11 @@ private fun buildMainMenuItems(
             if (otherPlayers.isNotEmpty()) {
                 items.add(MenuItemData("Give Control ►") { onMenuStateChange(MenuState.GIVE_CONTROL) })
             }
+
+            // Create copy of the card
+            items.add(MenuItemData("Create Copy") {
+                onAction(CardAction.CreateCopy(cardInstance, cardInstance.controllerId))
+            })
 
             // Always add view details option
             items.add(MenuItemData("View Details") { onAction(CardAction.ViewDetails(cardInstance)) })
@@ -528,5 +534,6 @@ fun handleCardAction(
         }
         is CardAction.PlayFaceDown -> viewModel.playFaceDown(action.cardInstance.instanceId)
         is CardAction.ToggleFaceDown -> viewModel.toggleFaceDown(action.cardInstance.instanceId)
+        is CardAction.CreateCopy -> viewModel.cloneCard(action.cardInstance.instanceId, action.ownerId)
     }
 }

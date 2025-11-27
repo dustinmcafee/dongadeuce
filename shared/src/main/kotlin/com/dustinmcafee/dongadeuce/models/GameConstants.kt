@@ -11,7 +11,13 @@ object GameConstants {
     // Commander damage
     const val COMMANDER_DAMAGE_THRESHOLD = 21
 
+    // Player counters
+    const val POISON_THRESHOLD = 10 // 10 poison counters = loss
+
     // Deck construction
     const val DECK_SIZE = 99 // Cards in deck excluding commander
     const val TOTAL_DECK_SIZE = 100 // Cards in deck including commander
+
+    // Common player counter types
+    val PLAYER_COUNTER_TYPES = listOf("poison", "energy", "experience")
 }

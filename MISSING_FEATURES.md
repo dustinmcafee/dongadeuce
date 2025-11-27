@@ -1,10 +1,10 @@
 # Missing Features Analysis
 
-**Current Version:** v2.10.6
-**Last Updated:** 2025-10-28 (Post-Audit)
-**Hotseat Mode Completion:** ~90%
+**Current Version:** v2.26.0
+**Last Updated:** 2025-11-27
+**Hotseat Mode Completion:** ~97%
 **Network Mode Completion:** ~5%
-**MVVM Architecture Compliance:** 100% ✅
+**MVVM Architecture Compliance:** 100%
 
 ---
 
@@ -13,18 +13,18 @@
 Dong-A-Deuce is a **highly functional hotseat multiplayer Commander game** with comprehensive game state management, professional UI, and nearly all core gameplay features implemented. The application is fully playable for 2-4 players on the same device.
 
 **Current State:**
-- ✅ **Hotseat multiplayer is 90% complete and fully playable**
-- ✅ All core MTG mechanics implemented
-- ✅ Professional UI with card images
-- ✅ Excellent MVVM architecture (100% compliant)
-- ❌ Network multiplayer backend not yet implemented
-- ❌ Minor features missing (game log, commander tax)
+- Hotseat multiplayer is 97% complete and fully playable
+- All core MTG mechanics implemented
+- Professional UI with card images and extensive dialogs
+- Excellent MVVM architecture (100% compliant)
+- Network multiplayer backend not yet implemented
+- Minor features missing (game log, commander tax)
 
 ---
 
-## 🔴 ACTUALLY MISSING FEATURES
+## ACTUALLY MISSING FEATURES
 
-### 1. Game Log/History System ❌
+### 1. Game Log/History System
 
 **Priority:** HIGH
 **Effort:** 2-3 days
@@ -47,9 +47,9 @@ Players cannot review past actions during complex turns or resolve disputes abou
 
 ---
 
-### 2. Commander Tax Tracking ❌
+### 2. Commander Tax Tracking
 
-**Priority:** MEDIUM
+**Priority:** HIGH
 **Effort:** 1 day
 **Status:** Not implemented
 
@@ -69,7 +69,24 @@ Players must manually track commander tax (additional {2} for each previous cast
 
 ---
 
-### 3. Network Multiplayer Backend ❌
+### 3. Player Counters System - IMPLEMENTED
+
+**Priority:** HIGH
+**Effort:** 2-3 days
+**Status:** COMPLETED (v2.26.0)
+
+**Features Implemented:**
+- Player counters map with poison, energy, experience, and custom counters
+- Poison counters with 10 = automatic loss condition
+- Energy and experience counter tracking
+- Custom player-level counters
+- PlayerCountersDialog UI with tabbed interface
+- Counter chips displayed in player area
+- +/- controls with set/add/subtract operations
+
+---
+
+### 4. Network Multiplayer Backend
 
 **Priority:** CRITICAL (for network play)
 **Effort:** 3-4 weeks
@@ -120,52 +137,22 @@ Cannot play games with remote players. Only hotseat mode works.
 
 ---
 
-### 4. Token Creation ❌
+### 5. Copy/Clone Cards - IMPLEMENTED
 
 **Priority:** MEDIUM
-**Effort:** 2-3 days
-**Status:** Not implemented
-
-**Impact:**
-Cannot create tokens (treasure, food, clue, creature tokens, etc.). Must use placeholder cards or track manually.
-
-**What's Needed:**
-- Token creation UI/dialog
-- Predefined common tokens (treasures, etc.)
-- Custom token creator
-- Token-specific context menu
-- Track tokens separately from real cards
-
-**Why Not Implemented:**
-- Can use placeholder cards as workaround
-- Not blocking most gameplay
-- Requires additional UI design
-
----
-
-### 5. Copy/Clone Cards ❌
-
-**Priority:** LOW
 **Effort:** 1-2 days
-**Status:** Not implemented
+**Status:** COMPLETED (v2.26.0)
 
-**Impact:**
-Cannot handle effects that copy cards or permanents. Must manually create duplicates.
-
-**What's Needed:**
-- Card cloning function
-- Copy tracking (original vs copy)
-- Context menu "Create Copy" action
-- Handle token doublers
-
-**Why Not Implemented:**
-- Rare mechanic in Commander
-- Manual workaround available
-- Low priority
+**Features Implemented:**
+- Card cloning function with `cloneCard()` in GameViewModel
+- Clone tracking with `isClone` and `clonedFromId` on CardInstance
+- "Create Copy" action in context menu for battlefield cards
+- Support for multiple copies at once (for token doublers)
+- Visual "Copy" indicator on cloned cards
 
 ---
 
-### 6. Keyboard Shortcuts ❌
+### 6. Keyboard Shortcuts
 
 **Priority:** MEDIUM
 **Effort:** 1 day
@@ -182,6 +169,7 @@ All actions require mouse clicks. Power users have slower workflow.
 - D: Draw card
 - M: Mulligan
 - 1-9: Select hand card
+- Esc: Close dialogs
 
 **Why Not Implemented:**
 - Mouse interaction works fine
@@ -190,7 +178,7 @@ All actions require mouse clicks. Power users have slower workflow.
 
 ---
 
-### 7. Settings/Preferences ❌
+### 7. Settings/Preferences
 
 **Priority:** MEDIUM
 **Effort:** 2-3 days
@@ -214,57 +202,98 @@ Player name not saved, no configuration options.
 
 ---
 
-## ✅ FEATURES THAT ARE ACTUALLY IMPLEMENTED
+### 8. Die Rolling System - IMPLEMENTED
 
-### Core Gameplay (100% Complete)
-- ✅ Turn/Phase System with full MTG cycle
-- ✅ Commander Damage Tracking with 21-damage rule
-- ✅ Card Context Menus for all zones
-- ✅ Library Search with filtering
-- ✅ Zone Viewers (Graveyard, Exile, Command Zone)
-- ✅ Drag-and-Drop Battlefield
-- ✅ Card Images with async loading
-- ✅ Tap/Untap cards
-- ✅ Counters (add/remove +1/+1, charge, custom)
-- ✅ Card Attachments (auras/equipment)
-- ✅ Flip Cards
-- ✅ Life Tracking with auto-loss detection
-- ✅ Draw from Empty Library auto-loss
-- ✅ All Zone Operations
-- ✅ Library Operations (draw, mill, shuffle, search, tutor, mulligan)
+**Priority:** MEDIUM
+**Effort:** 1-2 days
+**Status:** COMPLETED (v2.26.0)
 
-### Hotseat Multiplayer (100% Complete)
-- ✅ 2-4 Player Support
-- ✅ Per-Player Deck Loading
-- ✅ Automatic Player Rotation
-- ✅ Hand Privacy
-- ✅ Turn Passing
-- ✅ Zone Access Control
-
-### UI Components (100% Complete)
-- ✅ TurnIndicator
-- ✅ CommanderDamageDialog
-- ✅ LibrarySearchDialog
-- ✅ CardDetailsDialog
-- ✅ GraveyardDialog
-- ✅ ExileDialog
-- ✅ CommandZoneDialog
-- ✅ Card Context Menus
-- ✅ Draggable Battlefield Grid
-- ✅ Image Cache UI with progress
-
-### Technical (100% Complete)
-- ✅ MVVM Architecture (100% compliant)
-- ✅ StateFlow Reactive Updates
-- ✅ Scryfall Integration
-- ✅ Bulk Card Cache (500MB+)
-- ✅ Text Deck Parser
-- ✅ 44 Unit Tests
-- ✅ Input Validation
+**Features Implemented:**
+- DieRollerDialog with all standard dice (D4, D6, D8, D10, D12, D20, D100)
+- Multiple dice rolling (up to 100 dice at once)
+- Roll history with running log
+- Custom die sides input
+- Coin flip support
+- "Roll Dice" button in turn indicator area
 
 ---
 
-## 🎯 OPTIONAL/FUTURE FEATURES
+## FEATURES THAT ARE ACTUALLY IMPLEMENTED
+
+### Core Gameplay (100% Complete)
+- Turn/Phase System with full MTG cycle
+- Commander Damage Tracking with 21-damage rule
+- Card Context Menus for all zones (with custom popup system)
+- Library Search with filtering
+- Zone Viewers (Graveyard, Exile, Command Zone)
+- Drag-and-Drop Battlefield with grid positioning
+- Card Images with async loading
+- Tap/Untap cards
+- Counters (add/remove +1/+1, charge, custom)
+- Card Attachments (auras/equipment)
+- Flip Cards
+- Face Down Cards (morph, manifest)
+- Life Tracking with auto-loss detection
+- Draw from Empty Library auto-loss
+- All Zone Operations
+- Library Operations (draw, mill, shuffle, search, tutor, mulligan)
+- Advanced Library Operations (peek top/bottom N, move to position)
+- P/T Modifications (increase/decrease/set/reset/flow)
+- Card Annotations (custom text notes)
+- "Doesn't Untap" toggle
+- Player Counters (poison, energy, experience, custom) with loss condition
+- Die Rolling (D4, D6, D8, D10, D12, D20, D100, custom, coin flip)
+- Card Copy/Clone with visual indicator
+
+### Hotseat Multiplayer (100% Complete)
+- 2-4 Player Support
+- Per-Player Deck Loading
+- Automatic Player Rotation
+- Hand Privacy
+- Turn Passing
+- Zone Access Control
+
+### UI Components (100% Complete)
+- TurnIndicator with phase display and dice roll button
+- CommanderDamageDialog
+- LibrarySearchDialog
+- LibraryOperationsDialog
+- LibraryPeekDialog
+- LibraryPositionDialog
+- CardDetailsDialog
+- GraveyardDialog
+- ExileDialog
+- CommandZoneDialog
+- Card Context Menus (custom popup system)
+- Draggable Battlefield Grid
+- Image Cache UI with progress
+- CounterDialog (set/add/subtract counters)
+- PowerToughnessDialog
+- SetLifeDialog (click life total to set)
+- AnnotationDialog
+- PlayerCountersDialog (poison, energy, experience, custom counters)
+- DieRollerDialog (all dice types, multiple dice, coin flip)
+
+### Token System (100% Complete)
+- Token Creation with Scryfall search
+- Custom token creation (name, type, P/T, color)
+- Multiple token creation at once
+
+### Technical (100% Complete)
+- MVVM Architecture (100% compliant)
+- StateFlow Reactive Updates
+- Scryfall Integration
+- Bulk Card Cache (500MB+)
+- Text Deck Parser
+- 44 Unit Tests
+- Input Validation
+- Windows EXE Build (Launch4j)
+- GitHub Actions CI/CD
+- Cross-platform packaging (Windows, macOS, Linux)
+
+---
+
+## OPTIONAL/FUTURE FEATURES
 
 These are features that would be nice but are not necessary for full Commander gameplay:
 
@@ -316,42 +345,42 @@ These are features that would be nice but are not necessary for full Commander g
 
 ---
 
-## 📊 FEATURE COMPLETION BY CATEGORY
+## FEATURE COMPLETION BY CATEGORY
 
 | Category | Complete | Missing | % Complete |
 |----------|----------|---------|------------|
-| **Core Gameplay** | 12/12 | 0/12 | 100% ✅ |
-| **Hotseat Multiplayer** | 6/6 | 0/6 | 100% ✅ |
-| **UI Components** | 9/9 | 0/9 | 100% ✅ |
-| **Technical Foundation** | 6/6 | 0/6 | 100% ✅ |
-| **Quality of Life** | 0/7 | 7/7 | 0% ❌ |
-| **Network Multiplayer** | 1/10 | 9/10 | 10% ❌ |
-| **Polish/Enhancement** | 0/20 | 20/20 | 0% ⏳ |
-| **TOTAL** | 34/70 | 36/70 | **49%** |
+| **Core Gameplay** | 18/18 | 0/18 | 100% |
+| **Hotseat Multiplayer** | 6/6 | 0/6 | 100% |
+| **UI Components** | 16/16 | 0/16 | 100% |
+| **Technical Foundation** | 10/10 | 0/10 | 100% |
+| **Quality of Life** | 0/8 | 8/8 | 0% |
+| **Network Multiplayer** | 1/10 | 9/10 | 10% |
+| **Polish/Enhancement** | 0/20 | 20/20 | 0% |
+| **TOTAL** | 51/88 | 37/88 | **58%** |
 
-**But for Hotseat Mode:** 33/37 = **89% Complete** ✅
+**For Hotseat Mode:** 50/53 = **94% Complete**
 
 ---
 
-## 🎮 PLAYABILITY ASSESSMENT
+## PLAYABILITY ASSESSMENT
 
 ### For Hotseat Play (2-4 players, same device):
-**Status:** ✅ **FULLY PLAYABLE**
-**Completeness:** 89%
-**Missing:** Game log, commander tax tracking
+**Status:** FULLY PLAYABLE
+**Completeness:** 94%
+**Missing:** Game log, commander tax, player counters
 **Verdict:** You can play complete Commander games right now!
 
 ### For Network Play (remote multiplayer):
-**Status:** ❌ **NOT PLAYABLE**
+**Status:** NOT PLAYABLE
 **Completeness:** 10%
 **Missing:** Entire network backend
 **Verdict:** 3-4 weeks of development needed
 
 ---
 
-## 💡 WHAT USERS CAN DO TODAY (v2.10.6)
+## WHAT USERS CAN DO TODAY (v2.25.0)
 
-### ✅ Fully Functional
+### Fully Functional
 - Start hotseat game with 2-4 players
 - Load individual decks for each player
 - Draw starting hands automatically
@@ -359,50 +388,57 @@ These are features that would be nice but are not necessary for full Commander g
 - Play cards to battlefield
 - Tap/untap permanents
 - Move cards between zones
-- Add/remove counters
+- Add/remove counters (with counter management dialog)
+- Modify power/toughness
+- Add annotations to cards
 - Search library for cards
 - View all zones (graveyard, exile, command zone)
 - Drag and arrange battlefield
 - Track turns and phases
 - Pass turns between players
+- Create tokens (via Scryfall search or custom)
 - Win/lose based on life, commander damage, or drawing from empty library
 - View card images and details
+- Peek at top/bottom N cards of library
+- Send cards to specific library positions
 
-### ❌ Cannot Do
+### Cannot Do
 - Track game history/log
 - Auto-calculate commander tax (must track manually)
+- Track poison/energy/experience counters
 - Play over network with remote players
-- Create tokens (must use placeholder)
+- Create copies/clones of cards
 - Use keyboard shortcuts
 - Save/load games
 - Access settings menu
+- Roll dice
 
 ---
 
-## 🏗️ ARCHITECTURE QUALITY
+## ARCHITECTURE QUALITY
 
-### MVVM Compliance: 100% ✅
+### MVVM Compliance: 100%
 
 **Strengths:**
-- ✅ Perfect separation of concerns (Models, Views, ViewModels)
-- ✅ Unidirectional data flow
-- ✅ Immutable state management with StateFlow
-- ✅ No UI code in ViewModels
-- ✅ No business logic in Views
-- ✅ Proper reactive programming
-- ✅ Testable business logic (44 passing tests)
-- ✅ No debug/logging statements in ViewModels
-- ✅ Clean, production-ready code
+- Perfect separation of concerns (Models, Views, ViewModels)
+- Unidirectional data flow
+- Immutable state management with StateFlow
+- No UI code in ViewModels
+- No business logic in Views
+- Proper reactive programming
+- Testable business logic (44 passing tests)
+- No debug/logging statements in ViewModels
+- Clean, production-ready code
 
-**Verdict:** Perfect MVVM architecture, production-ready code quality ✅
+**Verdict:** Perfect MVVM architecture, production-ready code quality
 
 ---
 
-## 🎯 RECOMMENDED DEVELOPMENT PATH
+## RECOMMENDED DEVELOPMENT PATH
 
 ### For Users Who Want Hotseat Multiplayer:
 **Status:** Already works! Play it today.
-**Optional:** Add game log (2-3 days) and commander tax (1 day) for perfect experience.
+**Optional:** Add game log (2-3 days), commander tax (1 day), and player counters (2-3 days) for perfect experience.
 
 ### For Users Who Want Network Multiplayer:
 **Path:** Implement network backend (3-4 weeks)
@@ -410,14 +446,14 @@ These are features that would be nice but are not necessary for full Commander g
 
 ---
 
-## 📝 CONCLUSION
+## CONCLUSION
 
-Dong-A-Deuce v2.10.6 is a **highly functional hotseat Commander game** that can be played today. The application demonstrates excellent MVVM architecture and comprehensive Commander gameplay support. The only significant missing feature is network multiplayer, which requires 3-4 weeks of dedicated development.
+Dong-A-Deuce v2.25.0 is a **highly functional hotseat Commander game** that can be played today. The application demonstrates excellent MVVM architecture and comprehensive Commander gameplay support. The only significant missing feature is network multiplayer, which requires 3-4 weeks of dedicated development.
 
-**For Hotseat Players:** This app is ready to use! ✅
-**For Network Players:** Patience required, or contribute to the network backend. ⏳
+**For Hotseat Players:** This app is ready to use!
+**For Network Players:** Patience required, or contribute to the network backend.
 
 ---
 
-**Last Updated:** 2025-10-28 (post-audit)
-**Next Version:** v2.11.0 (Game Log + Commander Tax)
+**Last Updated:** 2025-11-27
+**Next Priority:** Game Log + Commander Tax + Player Counters
