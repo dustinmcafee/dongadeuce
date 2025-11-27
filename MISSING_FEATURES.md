@@ -13,37 +13,32 @@
 Dong-A-Deuce is a **highly functional hotseat multiplayer Commander game** with comprehensive game state management, professional UI, and nearly all core gameplay features implemented. The application is fully playable for 2-4 players on the same device.
 
 **Current State:**
-- Hotseat multiplayer is 97% complete and fully playable
+- Hotseat multiplayer is 98% complete and fully playable
 - All core MTG mechanics implemented
 - Professional UI with card images and extensive dialogs
+- Game log/chat panel for event tracking and player communication
 - Excellent MVVM architecture (100% compliant)
 - Network multiplayer backend not yet implemented
-- Minor features missing (game log, commander tax)
+- Minor feature missing (commander tax)
 
 ---
 
 ## ACTUALLY MISSING FEATURES
 
-### 1. Game Log/History System
+### 1. Game Log/History System - IMPLEMENTED
 
 **Priority:** HIGH
 **Effort:** 2-3 days
-**Status:** Not implemented
+**Status:** COMPLETED (v2.26.0)
 
-**Impact:**
-Players cannot review past actions during complex turns or resolve disputes about game state.
-
-**What's Needed:**
-- GameEvent sealed class for all action types
-- GameLog UI component with scrollable history
-- Integration with all GameViewModel actions
+**Features Implemented:**
+- GameEvent sealed class with 21 event types (CardDrawn, CardPlayed, CardMoved, LifeChanged, CommanderDamageDealt, PhaseChanged, TurnPassed, CardCounterChanged, PlayerCounterChanged, CardTapped, UntapAll, TokenCreated, CardCloned, PlayerLost, GameStarted, DieRolled, ControlChanged, CardsMilled, LibraryShuffled, MulliganTaken, ChatMessage)
+- GameLogPanel UI component on right side of screen
+- Real-time event logging for all game actions
+- Player chat messages support
 - Timestamp and player color coding
 - Auto-scroll to latest events
-
-**Why Not Implemented:**
-- Not critical for basic gameplay
-- Can play complete games without it
-- Nice-to-have for dispute resolution
+- Event icons and background colors by type
 
 ---
 
@@ -401,17 +396,16 @@ These are features that would be nice but are not necessary for full Commander g
 - View card images and details
 - Peek at top/bottom N cards of library
 - Send cards to specific library positions
+- View game log/history of all actions
+- Send chat messages to other players
+- See die roll results in game log
 
 ### Cannot Do
-- Track game history/log
 - Auto-calculate commander tax (must track manually)
-- Track poison/energy/experience counters
 - Play over network with remote players
-- Create copies/clones of cards
 - Use keyboard shortcuts
 - Save/load games
 - Access settings menu
-- Roll dice
 
 ---
 

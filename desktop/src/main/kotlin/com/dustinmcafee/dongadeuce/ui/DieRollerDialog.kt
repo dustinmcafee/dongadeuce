@@ -36,7 +36,8 @@ data class DieRollResult(
 @Composable
 fun DieRollerDialog(
     playerName: String,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    onRollLogged: ((dieType: String, result: Int, numberOfDice: Int) -> Unit)? = null
 ) {
     var rollHistory by remember { mutableStateOf<List<DieRollResult>>(emptyList()) }
     var numberOfDice by remember { mutableStateOf("1") }
@@ -64,6 +65,9 @@ fun DieRollerDialog(
             total = rolls.sum()
         )
         rollHistory = listOf(result) + rollHistory.take(49) // Keep last 50 rolls
+
+        // Log the roll to the game log
+        onRollLogged?.invoke(dieType, result.total, count)
     }
 
     AlertDialog(
@@ -169,6 +173,9 @@ fun DieRollerDialog(
                                 total = numResult
                             )
                             rollHistory = listOf(coinResult) + rollHistory.take(49)
+
+                            // Log coin flip to game log
+                            onRollLogged?.invoke("Coin ($result)", numResult, 1)
                         },
                         modifier = Modifier.weight(1f)
                     ) {

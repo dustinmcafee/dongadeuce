@@ -9,7 +9,8 @@ data class GameState(
     val cardInstances: List<CardInstance>,
     val activePlayerIndex: Int = 0,
     val turnNumber: Int = 1,
-    val phase: GamePhase = GamePhase.UNTAP
+    val phase: GamePhase = GamePhase.UNTAP,
+    val gameLog: List<GameEvent> = emptyList()
 ) {
     val activePlayer: Player
         get() {
@@ -64,6 +65,20 @@ data class GameState(
         } else {
             copy(phase = nextPhase)
         }
+    }
+
+    /**
+     * Add an event to the game log
+     */
+    fun addEvent(event: GameEvent): GameState {
+        return copy(gameLog = gameLog + event)
+    }
+
+    /**
+     * Add multiple events to the game log
+     */
+    fun addEvents(events: List<GameEvent>): GameState {
+        return copy(gameLog = gameLog + events)
     }
 }
 

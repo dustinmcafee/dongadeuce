@@ -353,19 +353,36 @@ fun GameScreen(
             }
         }
 
-        // Turn indicator (right sidebar)
+        // Right sidebar with Turn indicator and Game Log
         val gameState = uiState.gameState
         if (gameState != null) {
-            TurnIndicator(
-                activePlayer = gameState.activePlayer,
-                currentPhase = gameState.phase,
-                turnNumber = gameState.turnNumber,
-                onNextPhase = { viewModel.nextPhase() },
-                onPassTurn = { viewModel.passTurn() },
-                onUntapAll = { viewModel.untapAll(gameState.activePlayer.id) },
-                onRollDice = { showDieRollerDialog = true },
-                modifier = Modifier.width(250.dp)
-            )
+            Column(
+                modifier = Modifier.width(280.dp).fillMaxHeight(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                // Turn indicator at top
+                TurnIndicator(
+                    activePlayer = gameState.activePlayer,
+                    currentPhase = gameState.phase,
+                    turnNumber = gameState.turnNumber,
+                    onNextPhase = { viewModel.nextPhase() },
+                    onPassTurn = { viewModel.passTurn() },
+                    onUntapAll = { viewModel.untapAll(gameState.activePlayer.id) },
+                    onRollDice = { showDieRollerDialog = true },
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                // Game log panel fills remaining space
+                GameLogPanel(
+                    gameLog = gameState.gameLog,
+                    players = gameState.players,
+                    currentPlayerId = gameState.activePlayer.id,
+                    onSendMessage = { message ->
+                        viewModel.sendChatMessage(gameState.activePlayer.id, message)
+                    },
+                    modifier = Modifier.fillMaxWidth().weight(1f)
+                )
+            }
         }
     }
 
@@ -487,10 +504,16 @@ fun GameScreen(
 
     // Die roller dialog
     if (showDieRollerDialog) {
-        val playerName = uiState.gameState?.activePlayer?.name ?: "Player"
+        val activePlayer = uiState.gameState?.activePlayer
+        val playerName = activePlayer?.name ?: "Player"
         DieRollerDialog(
             playerName = playerName,
-            onDismiss = { showDieRollerDialog = false }
+            onDismiss = { showDieRollerDialog = false },
+            onRollLogged = { dieType, result, numberOfDice ->
+                activePlayer?.let {
+                    viewModel.logDieRoll(it.id, dieType, result, numberOfDice)
+                }
+            }
         )
     }
 
