@@ -2,6 +2,7 @@
 
 package com.dustinmcafee.dongadeuce.ui
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -567,10 +568,10 @@ fun HotseatPlayerSection(
     val handCards = if (isActivePlayer) viewModel.getCards(player.id, Zone.HAND) else emptyList()
     val handCount = viewModel.getCardCount(player.id, Zone.HAND)
     val battlefieldCards = viewModel.getCards(player.id, Zone.BATTLEFIELD)
+    val commandZoneCards = viewModel.getCards(player.id, Zone.COMMAND_ZONE)
     val libraryCount = viewModel.getCardCount(player.id, Zone.LIBRARY)
     val graveyardCount = viewModel.getCardCount(player.id, Zone.GRAVEYARD)
     val exileCount = viewModel.getCardCount(player.id, Zone.EXILE)
-    val commanderCount = viewModel.getCardCount(player.id, Zone.COMMAND_ZONE)
 
     var showGraveyardDialog by remember { mutableStateOf(false) }
     var showExileDialog by remember { mutableStateOf(false) }
@@ -579,7 +580,6 @@ fun HotseatPlayerSection(
     var showLibraryPeekDialog by remember { mutableStateOf(false) }
     var libraryPeekCards by remember { mutableStateOf<List<CardInstance>>(emptyList()) }
     var libraryPeekLocation by remember { mutableStateOf(PeekLocation.TOP) }
-    var showCommandZoneDialog by remember { mutableStateOf(false) }
     var showTokenCreationDialog by remember { mutableStateOf(false) }
     var showSetLifeDialog by remember { mutableStateOf(false) }
     var showPlayerCountersDialog by remember { mutableStateOf(false) }
@@ -657,14 +657,28 @@ fun HotseatPlayerSection(
 
                     Spacer(modifier = Modifier.height(4.dp))
 
-                    // Clickable zone cards
-                    ZoneCard(
-                        "Commander",
-                        Zone.COMMAND_ZONE,
-                        commanderCount,
-                        Modifier.fillMaxWidth().height(50.dp),
-                        onClick = if (isActivePlayer) ({ showCommandZoneDialog = true }) else null
+                    // Command Zone - shows actual commander card(s)
+                    CommandZoneDisplay(
+                        commanderCards = commandZoneCards,
+                        isActivePlayer = isActivePlayer,
+                        onCardAction = onCardAction,
+                        otherPlayers = otherPlayers,
+                        dragDropState = dragDropState,
+                        onDropCards = if (isActivePlayer) {
+                            { cardIds ->
+                                dragDropState?.markHandledByZone()
+                                cardIds.forEach { cardId ->
+                                    viewModel.moveCard(cardId, Zone.COMMAND_ZONE)
+                                }
+                                dragDropState?.endDrag()
+                            }
+                        } else null,
+                        modifier = Modifier.fillMaxWidth()
                     )
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    // Clickable zone cards
                     ZoneCard(
                         "Library",
                         Zone.LIBRARY,
@@ -911,20 +925,6 @@ fun HotseatPlayerSection(
             )
         }
 
-        if (showCommandZoneDialog) {
-            CommandZoneDialog(
-                cards = viewModel.getCards(player.id, Zone.COMMAND_ZONE),
-                playerName = player.name,
-                onDismiss = { showCommandZoneDialog = false },
-                onCastToBattlefield = { cardInstance ->
-                    viewModel.moveCard(cardInstance.instanceId, Zone.BATTLEFIELD)
-                },
-                onToHand = { cardInstance ->
-                    viewModel.moveCard(cardInstance.instanceId, Zone.HAND)
-                }
-            )
-        }
-
         if (showTokenCreationDialog) {
             TokenCreationDialog(
                 viewModel = viewModel,
@@ -1035,6 +1035,189 @@ private fun CounterChip(
             color = Color.White,
             modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
         )
+    }
+}
+
+/**
+ * Command Zone display - shows the commander card(s) visually
+ */
+@Composable
+fun CommandZoneDisplay(
+    commanderCards: List<CardInstance>,
+    isActivePlayer: Boolean,
+    onCardAction: (CardAction) -> Unit,
+    otherPlayers: List<Player>,
+    dragDropState: DragDropState?,
+    onDropCards: ((List<String>) -> Unit)?,
+    modifier: Modifier = Modifier
+) {
+    var isHovering by remember { mutableStateOf(false) }
+
+    // Check if cards are being dragged over this zone
+    val isDraggingOver = dragDropState != null &&
+                        dragDropState.draggedCardIds.isNotEmpty() &&
+                        isHovering
+
+    Card(
+        modifier = modifier
+            .onGloballyPositioned { coordinates ->
+                // Register zone bounds for accurate drop detection
+                if (dragDropState != null) {
+                    val bounds = Rect(
+                        coordinates.positionInWindow().x,
+                        coordinates.positionInWindow().y,
+                        coordinates.positionInWindow().x + coordinates.size.width,
+                        coordinates.positionInWindow().y + coordinates.size.height
+                    )
+                    dragDropState.registerZoneBounds(Zone.COMMAND_ZONE, bounds)
+                }
+            }
+            .then(
+                if (onDropCards != null && dragDropState != null) {
+                    Modifier.pointerInput(Zone.COMMAND_ZONE) {
+                        awaitPointerEventScope {
+                            while (true) {
+                                val event = awaitPointerEvent()
+                                when (event.type) {
+                                    PointerEventType.Enter -> {
+                                        if (dragDropState.draggedCardIds.isNotEmpty()) {
+                                            isHovering = true
+                                            dragDropState.setHoveredZone(Zone.COMMAND_ZONE)
+                                        }
+                                    }
+                                    PointerEventType.Exit -> {
+                                        isHovering = false
+                                        if (dragDropState.hoveredZone == Zone.COMMAND_ZONE) {
+                                            dragDropState.setHoveredZone(null)
+                                        }
+                                    }
+                                    PointerEventType.Release -> {
+                                        // Only handle drop if we're hovering AND cards are being dragged
+                                        if (isHovering && dragDropState.draggedCardIds.isNotEmpty()) {
+                                            onDropCards(dragDropState.draggedCardIds.toList())
+                                            isHovering = false
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } else Modifier
+            ),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isDraggingOver) Color(0xFF4A148C).copy(alpha = 0.9f) else Color(0xFF4A148C).copy(alpha = 0.6f)
+        ),
+        border = if (isDraggingOver) BorderStroke(3.dp, Color(0xFF00FF00)) else null
+    ) {
+        Column(
+            modifier = Modifier.padding(4.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                "Command Zone",
+                style = MaterialTheme.typography.labelSmall,
+                color = Color.White.copy(alpha = 0.8f)
+            )
+
+            if (commanderCards.isEmpty()) {
+                // Empty command zone placeholder
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(80.dp)
+                        .border(1.dp, Color.White.copy(alpha = 0.3f), RoundedCornerShape(4.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        "No Commander",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.White.copy(alpha = 0.5f)
+                    )
+                }
+            } else {
+                // Show commander card(s)
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    commanderCards.forEach { commander ->
+                        CommanderCardDisplay(
+                            cardInstance = commander,
+                            isActivePlayer = isActivePlayer,
+                            onCardAction = onCardAction,
+                            otherPlayers = otherPlayers
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Individual commander card display in the command zone
+ */
+@Composable
+private fun CommanderCardDisplay(
+    cardInstance: CardInstance,
+    isActivePlayer: Boolean,
+    onCardAction: (CardAction) -> Unit,
+    otherPlayers: List<Player>
+) {
+    CardWithContextMenu(
+        cardInstance = cardInstance,
+        onAction = onCardAction,
+        otherPlayers = otherPlayers
+    ) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(100.dp)
+                .then(
+                    if (isActivePlayer) {
+                        Modifier.clickable {
+                            // Double-click to cast to battlefield
+                            onCardAction(CardAction.ToBattlefield(cardInstance))
+                        }
+                    } else Modifier
+                ),
+            colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+            border = BorderStroke(1.dp, Color(0xFFFFD700)) // Gold border for commanders
+        ) {
+            Row(
+                modifier = Modifier.fillMaxSize().padding(4.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                // Card image
+                CardImage(
+                    imageUrl = cardInstance.card.imageUri,
+                    contentDescription = cardInstance.card.name,
+                    modifier = Modifier
+                        .width(60.dp)
+                        .fillMaxHeight()
+                )
+
+                // Card info
+                Column(
+                    modifier = Modifier.weight(1f).fillMaxHeight(),
+                    verticalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        cardInstance.card.name,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color.White,
+                        maxLines = 2
+                    )
+
+                    if (isActivePlayer) {
+                        Text(
+                            "Click to cast",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color.White.copy(alpha = 0.6f)
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 
