@@ -1,9 +1,9 @@
 # Missing Features Analysis
 
-**Current Version:** v2.26.0
+**Current Version:** v2.27.0
 **Last Updated:** 2025-11-27
-**Hotseat Mode Completion:** ~97%
-**Network Mode Completion:** ~95%
+**Hotseat Mode Completion:** ~98%
+**Network Mode Completion:** ~96%
 **MVVM Architecture Compliance:** 100%
 
 ---
@@ -142,29 +142,109 @@ Players must manually track commander tax (additional {2} for each previous cast
 
 ---
 
-### 6. Keyboard Shortcuts
+### 6. Keyboard Shortcuts - IMPLEMENTED
 
 **Priority:** MEDIUM
-**Effort:** 1 day
-**Status:** Not implemented
+**Effort:** 2-3 days
+**Status:** COMPLETED (v2.27.0)
 
-**Impact:**
-All actions require mouse clicks. Power users have slower workflow.
+**Features Implemented (65+ shortcuts):**
 
-**Proposed Shortcuts:**
-- Space: Next phase
-- Enter: Pass turn
-- T: Tap selected card
-- U: Untap all
-- D: Draw card
-- M: Mulligan
-- 1-9: Select hand card
-- Esc: Close dialogs
+**Game Phases:**
+- F5: Untap, F6: Draw, F7: Main 1, F8: Combat, F9: Main 2, F10: End
+- Ctrl+Space/Tab: Next phase
+- Ctrl+Enter: Pass turn
 
-**Why Not Implemented:**
-- Mouse interaction works fine
-- Not blocking gameplay
-- Easy to add later
+**Card Actions:**
+- T: Tap/untap selected card
+- Ctrl+U: Untap all
+- Del/Ctrl+Del: Move to graveyard
+- Ctrl+X: Move to exile
+- Ctrl+H: Move to hand
+- Ctrl+B: Move to bottom of library
+- Ctrl+J: Clone card
+- Ctrl+T: Create token
+- Alt+F: Flip card
+- Ctrl+Shift+F: Play face down
+- Ctrl+Alt+A: Attach card
+- Ctrl+Alt+U: Detach card
+- Alt+N: Set annotation
+
+**Power/Toughness:**
+- Ctrl+=/+: Add power (+1/+0)
+- Ctrl+-: Remove power (-1/-0)
+- Alt+=/+: Add toughness (+0/+1)
+- Alt+-: Remove toughness (-0/-1)
+- Ctrl+Alt+=/+: Add both (+1/+1)
+- Ctrl+Alt+-: Remove both (-1/-1)
+- Ctrl+P: Set P/T dialog
+- Ctrl+Alt+0: Reset P/T
+
+**Counters:**
+- Alt+./,: Add/remove counter A (Red)
+- Ctrl+./,: Add/remove counter B (Yellow)
+- Ctrl+Shift+./,: Add/remove counter C (Green)
+- Ctrl+Shift+A: Increment all counters
+
+**Life:**
+- F12/F11: Add/remove life
+- Ctrl+L: Set life dialog
+
+**Library Operations:**
+- Ctrl+D: Draw card
+- Ctrl+E: Draw multiple (7)
+- Ctrl+Shift+D: Undo draw
+- Ctrl+M: Mulligan
+- Ctrl+S: Shuffle library
+- Ctrl+Y: Play top card
+- Alt+Y: Mill top card
+- Alt+M: Mill multiple (5)
+- Ctrl+N: Toggle reveal top card
+- Ctrl+Shift+N: Toggle look at top card
+
+**View Zones:**
+- F3: View library
+- F4: View graveyard
+- Ctrl+F3: View sideboard
+- Ctrl+W: Peek top cards
+- Ctrl+Shift+W: Peek bottom cards
+- Esc: Close dialog
+
+**Selection:**
+- Ctrl+A: Select all cards in zone
+- Ctrl+Shift+X: Select row
+
+**Arrows:**
+- Alt+A: Draw arrow
+- Ctrl+R: Remove local arrows
+
+**Gameplay:**
+- Ctrl+I: Roll dice
+- F2: Concede
+- Ctrl+Q: Leave game
+- Shift+Enter: Focus chat
+- Ctrl+K: Player counters
+- Ctrl+Shift+H: Sort hand
+- Ctrl+G: Create another token
+- Ctrl+Shift+T: Create related tokens
+
+---
+
+### 6b. Missing Keyboard Shortcuts
+
+**Priority:** LOW
+**Effort:** 1-2 days
+**Status:** Not implemented (for full parity)
+
+**Missing Shortcuts:**
+- **Mana/Color Player Counters**: W/U/B/R/G/X counter management
+- **Set Counter Dialogs**: Alt+/, Ctrl+/, Ctrl+? for setting specific counter values
+- **Move Bottom Card Operations**: Play/mill/exile from bottom of library
+- **Stack Until Found**: Ctrl+Shift+Y
+- **Sub-phases**: Upkeep, Attack, Block, Damage, End Combat phases
+- **View Rotation**: Rotate view CW/CCW
+- **Select Column**: Ctrl+Shift+C (conflicts with copy)
+- **Shuffle Top/Bottom Cards**: Shuffle portion of library
 
 ---
 
@@ -379,7 +459,7 @@ These are features that would be nice but are not necessary for full Commander g
 
 ---
 
-## WHAT USERS CAN DO TODAY (v2.26.0)
+## WHAT USERS CAN DO TODAY (v2.27.0)
 
 ### Fully Functional
 - Start hotseat game with 2-4 players
@@ -409,12 +489,13 @@ These are features that would be nice but are not necessary for full Commander g
 - Play network games with full feature parity to hotseat mode
 - Player name persists between sessions
 - Server address and port settings persist between sessions
+- Use 65+ keyboard shortcuts for fast gameplay
 
 ### Cannot Do
 - Auto-calculate commander tax (must track manually)
-- Use keyboard shortcuts
 - Save/load games
 - Access settings dialog (settings auto-persist but no UI)
+- Use ~40 advanced keyboard shortcuts (mana counters, bottom card ops, sub-phases)
 
 ---
 
@@ -451,7 +532,7 @@ These are features that would be nice but are not necessary for full Commander g
 
 ## CONCLUSION
 
-Dong-A-Deuce v2.26.0 is a **fully functional multiplayer Commander game** supporting both hotseat (same device) and network (local network) play. The application demonstrates excellent MVVM architecture and comprehensive Commander gameplay support with full feature parity between game modes.
+Dong-A-Deuce v2.27.0 is a **fully functional multiplayer Commander game** supporting both hotseat (same device) and network (local network) play. The application demonstrates excellent MVVM architecture and comprehensive Commander gameplay support with full feature parity between game modes. 65+ keyboard shortcuts are now implemented for fast gameplay.
 
 **For Hotseat Players:** This app is ready to use!
 **For Network Players:** This app is ready to use! Host or join games over local network.
@@ -459,4 +540,4 @@ Dong-A-Deuce v2.26.0 is a **fully functional multiplayer Commander game** suppor
 ---
 
 **Last Updated:** 2025-11-27
-**Next Priority:** Commander Tax + Keyboard Shortcuts + Settings
+**Next Priority:** Commander Tax + Missing Keyboard Shortcuts + Settings

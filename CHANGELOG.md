@@ -7,6 +7,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.27.0] - 2025-11-27
+
+### Added
+- **Keyboard Shortcuts System** - 65+ keyboard shortcuts for fast gameplay
+  - Game phases: F5-F10 for phases, Ctrl+Space/Tab for next phase, Ctrl+Enter for pass turn
+  - Card actions: T tap, Ctrl+U untap all, Del graveyard, Ctrl+X exile, Ctrl+H hand
+  - Power/Toughness: Ctrl/Alt +/- for P/T, Ctrl+Alt+=/- for both (+1/+1, -1/-1)
+  - Colored counters A-F: Alt+./, Ctrl+./, Ctrl+Shift+./, for add/remove
+  - Library ops: Ctrl+D draw, Ctrl+M mulligan, Ctrl+S shuffle, Ctrl+Y play top
+  - View zones: F3 library, F4 graveyard, Ctrl+F3 sideboard, Ctrl+W peek
+  - Selection: Ctrl+A select all, Ctrl+Shift+X select row
+  - Arrows: Alt+A draw arrow, Ctrl+R remove arrows
+  - Gameplay: Ctrl+I roll dice, F2 concede, Ctrl+Q leave game
+  - Numpad +/- support for all P/T modifications
+  - Shift variants for + key (Ctrl++, Alt++, Ctrl+Alt++)
+
+- **New Game Features**
+  - Arrow drawing between cards/players (Alt+A to start, Ctrl+R to clear)
+  - Sort hand alphabetically (Ctrl+Shift+H)
+  - Increment all counters on card (Ctrl+Shift+A)
+  - Create another token (Ctrl+G)
+  - Create related tokens (Ctrl+Shift+T)
+  - Toggle reveal top card to all players (Ctrl+N)
+  - Toggle look at top card privately (Ctrl+Shift+N)
+  - Flow power/toughness (+1/-1 and -1/+1 modifications)
+
+- **New Models**
+  - Arrow data class for tracking drawn arrows between cards
+  - handPosition field on CardInstance for hand sorting
+
+- **New ViewModel Methods**
+  - incrementAllCounters() - Add 1 to all counters on a card
+  - removeLocalArrows() - Clear all arrows drawn by a player
+  - sortHand() - Sort hand cards alphabetically
+  - toggleRevealTopCard() - Show top card to all players
+  - toggleLookAtTopCard() - Privately view top card
+
+### Changed
+- Player model now tracks revealTopCard and lookAtTopCard preferences
+- GameState now includes arrows list for visual arrow tracking
+- Library zone displays card back by default, actual top card when reveal/look enabled
+
 ## [2.26.0] - 2025-11-27
 
 ### Added
