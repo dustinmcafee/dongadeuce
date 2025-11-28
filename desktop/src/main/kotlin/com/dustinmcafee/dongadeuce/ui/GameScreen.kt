@@ -32,6 +32,7 @@ fun GameScreen(
     val selectionState = rememberSelectionState()
 
     val uiState by viewModel.uiState.collectAsState()
+    val revealedCardsState by viewModel.revealedCardsState.collectAsState()
     var cardDetailsToShow by remember { mutableStateOf<com.dustinmcafee.dongadeuce.models.CardInstance?>(null) }
     var showLibraryPositionDialog by remember { mutableStateOf(false) }
     var cardForLibraryPosition by remember { mutableStateOf<com.dustinmcafee.dongadeuce.models.CardInstance?>(null) }
@@ -496,6 +497,17 @@ fun GameScreen(
         )
     }
 
+    // Revealed cards dialog (shown when another player reveals cards to you)
+    revealedCardsState?.let { state ->
+        RevealedCardsDialog(
+            cards = state.cards,
+            revealingPlayerName = state.revealingPlayerName,
+            title = state.title,
+            onDismiss = { viewModel.dismissRevealedCards() },
+            onViewDetails = { card -> cardDetailsToShow = card }
+        )
+    }
+
     // Library position dialog
     if (showLibraryPositionDialog && cardForLibraryPosition != null) {
         val card = cardForLibraryPosition!!
@@ -762,7 +774,8 @@ fun GameScreen(
             onMoveAllToZone = { zone ->
                 topCards.forEach { card -> viewModel.moveCard(card.instanceId, zone) }
             },
-            onShuffleCards = { viewModel.shuffleTopCards(activePlayerId, peekCount) }
+            onShuffleCards = { viewModel.shuffleTopCards(activePlayerId, peekCount) },
+            onViewDetails = { card -> cardDetailsToShow = card }
         )
     }
 
@@ -782,7 +795,8 @@ fun GameScreen(
             onMoveAllToZone = { zone ->
                 bottomCards.forEach { card -> viewModel.moveCard(card.instanceId, zone) }
             },
-            onShuffleCards = { viewModel.shuffleBottomCards(activePlayerId, peekCount) }
+            onShuffleCards = { viewModel.shuffleBottomCards(activePlayerId, peekCount) },
+            onViewDetails = { card -> cardDetailsToShow = card }
         )
     }
 

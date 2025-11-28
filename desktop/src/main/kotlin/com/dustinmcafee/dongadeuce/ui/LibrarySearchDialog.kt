@@ -1,15 +1,15 @@
+@file:OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class)
+
 package com.dustinmcafee.dongadeuce.ui
 
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.*
 import androidx.compose.ui.unit.dp
 import com.dustinmcafee.dongadeuce.models.CardInstance
@@ -54,7 +54,8 @@ fun LibrarySearchDialog(
     onToBattlefield: (CardInstance) -> Unit,
     onToTop: (CardInstance) -> Unit,
     onToBottom: (CardInstance) -> Unit = {},
-    onShuffle: () -> Unit
+    onShuffle: () -> Unit,
+    onViewDetails: (CardInstance) -> Unit = {}
 ) {
     var searchQuery by remember { mutableStateOf("") }
 
@@ -137,55 +138,80 @@ fun LibrarySearchDialog(
                     }
                 } else {
                     // Horizontal scrollable row of columns (one per card type)
-                    val scrollState = rememberScrollState()
-                    Box(
+                    val horizontalScrollState = rememberScrollState()
+                    val columnWidth = 200.dp
+
+                    Column(
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxWidth()
-                            .horizontalScroll(scrollState)
                     ) {
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        BoxWithConstraints(
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxWidth()
                         ) {
-                            activeCategories.forEach { category ->
-                                val categoryCards = cardsByCategory[category] ?: emptyList()
+                            val columnHeight = maxHeight
 
-                                // Column for this card type
-                                Card(
-                                    modifier = Modifier
-                                        .width(200.dp)
-                                        .fillMaxHeight(),
-                                    colors = CardDefaults.cardColors(
-                                        containerColor = MaterialTheme.colorScheme.surfaceVariant
-                                    )
-                                ) {
-                                    Column(
-                                        modifier = Modifier.fillMaxSize().padding(8.dp),
-                                        verticalArrangement = Arrangement.spacedBy(4.dp)
-                                    ) {
-                                        // Column header
-                                        Text(
-                                            "${category.displayName} (${categoryCards.size})",
-                                            style = MaterialTheme.typography.titleSmall,
-                                            color = MaterialTheme.colorScheme.primary
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .horizontalScroll(horizontalScrollState)
+                            ) {
+                                activeCategories.forEach { category ->
+                                    val categoryCards = cardsByCategory[category] ?: emptyList()
+                                    val columnScrollState = rememberScrollState()
+
+                                    // Column for this card type
+                                    Card(
+                                        modifier = Modifier
+                                            .width(columnWidth)
+                                            .height(columnHeight),
+                                        colors = CardDefaults.cardColors(
+                                            containerColor = MaterialTheme.colorScheme.surfaceVariant
                                         )
-
-                                        Divider(modifier = Modifier.padding(vertical = 4.dp))
-
-                                        // Vertically scrollable list of cards
+                                    ) {
                                         Column(
-                                            modifier = Modifier
-                                                .weight(1f)
-                                                .verticalScroll(rememberScrollState()),
+                                            modifier = Modifier.fillMaxSize().padding(8.dp),
                                             verticalArrangement = Arrangement.spacedBy(4.dp)
                                         ) {
-                                            categoryCards.forEach { cardInstance ->
-                                                LibraryCardItem(
-                                                    cardInstance = cardInstance,
-                                                    onToHand = onToHand,
-                                                    onToBattlefield = onToBattlefield,
-                                                    onToTop = onToTop,
-                                                    onToBottom = onToBottom
+                                            // Column header
+                                            Text(
+                                                "${category.displayName} (${categoryCards.size})",
+                                                style = MaterialTheme.typography.titleSmall,
+                                                color = MaterialTheme.colorScheme.primary
+                                            )
+
+                                            Divider(modifier = Modifier.padding(vertical = 4.dp))
+
+                                            // Vertically scrollable list of cards with scrollbar
+                                            Box(modifier = Modifier.weight(1f)) {
+                                                Column(
+                                                    modifier = Modifier
+                                                        .fillMaxSize()
+                                                        .verticalScroll(columnScrollState)
+                                                        .padding(end = 8.dp),
+                                                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                                                ) {
+                                                    categoryCards.forEach { cardInstance ->
+                                                        LibraryCardItem(
+                                                            cardInstance = cardInstance,
+                                                            onToHand = onToHand,
+                                                            onToBattlefield = onToBattlefield,
+                                                            onToTop = onToTop,
+                                                            onToBottom = onToBottom,
+                                                            onViewDetails = onViewDetails
+                                                        )
+                                                    }
+                                                }
+                                                VerticalScrollbar(
+                                                    modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight(),
+                                                    adapter = rememberScrollbarAdapter(columnScrollState),
+                                                    style = LocalScrollbarStyle.current.copy(
+                                                        unhoverColor = androidx.compose.ui.graphics.Color.Gray,
+                                                        hoverColor = androidx.compose.ui.graphics.Color.LightGray
+                                                    )
                                                 )
                                             }
                                         }
@@ -193,6 +219,16 @@ fun LibrarySearchDialog(
                                 }
                             }
                         }
+
+                        // Horizontal scrollbar with visible colors
+                        HorizontalScrollbar(
+                            modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                            adapter = rememberScrollbarAdapter(horizontalScrollState),
+                            style = LocalScrollbarStyle.current.copy(
+                                unhoverColor = androidx.compose.ui.graphics.Color.Gray,
+                                hoverColor = androidx.compose.ui.graphics.Color.LightGray
+                            )
+                        )
                     }
                 }
 
@@ -231,10 +267,12 @@ private fun LibraryCardItem(
     onToHand: (CardInstance) -> Unit,
     onToBattlefield: (CardInstance) -> Unit,
     onToTop: (CardInstance) -> Unit,
-    onToBottom: (CardInstance) -> Unit
+    onToBottom: (CardInstance) -> Unit,
+    onViewDetails: (CardInstance) -> Unit
 ) {
     var showContextMenu by remember { mutableStateOf(false) }
     var contextMenuOffset by remember { mutableStateOf(Offset.Zero) }
+    var lastClickTime by remember { mutableStateOf(0L) }
 
     Box {
         Card(
@@ -251,7 +289,14 @@ private fun LibraryCardItem(
                         }
                     }
                 }
-                .clickable { onToHand(cardInstance) },
+                .clickable {
+                    val currentTime = System.currentTimeMillis()
+                    if (currentTime - lastClickTime < 300) {
+                        // Double-click: move to hand
+                        onToHand(cardInstance)
+                    }
+                    lastClickTime = currentTime
+                },
             colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.secondaryContainer
             )
@@ -318,6 +363,13 @@ private fun LibraryCardItem(
                 onClick = {
                     showContextMenu = false
                     onToBottom(cardInstance)
+                }
+            )
+            DropdownMenuItem(
+                text = { Text("View Details") },
+                onClick = {
+                    showContextMenu = false
+                    onViewDetails(cardInstance)
                 }
             )
         }

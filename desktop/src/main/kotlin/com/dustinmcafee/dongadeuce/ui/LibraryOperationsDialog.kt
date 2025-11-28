@@ -10,12 +10,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import com.dustinmcafee.dongadeuce.models.Player
 import com.dustinmcafee.dongadeuce.models.Zone
 
 @Composable
 fun LibraryOperationsDialog(
     playerName: String,
     librarySize: Int,
+    otherPlayers: List<Player> = emptyList(),
     onDismiss: () -> Unit,
     onViewTopCards: (Int) -> Unit,
     onViewBottomCards: (Int) -> Unit,
@@ -24,6 +26,8 @@ fun LibraryOperationsDialog(
     onMoveTopToZone: (Int, Zone) -> Unit,
     onMoveBottomToZone: (Int, Zone) -> Unit,
     onRevealTopCard: () -> Unit,
+    onRevealTopNCards: (Int, List<String>) -> Unit = { _, _ -> }, // count, targetPlayerIds (empty = all)
+    onRevealBottomNCards: (Int, List<String>) -> Unit = { _, _ -> },
     onFullSearch: () -> Unit
 ) {
     var cardCount by remember { mutableStateOf("1") }
@@ -122,7 +126,89 @@ fun LibraryOperationsDialog(
                     modifier = Modifier.fillMaxWidth(),
                     enabled = librarySize > 0
                 ) {
-                    Text("Reveal Top Card to All")
+                    Text("Toggle Reveal Top Card (Always Visible)")
+                }
+
+                // Reveal Top/Bottom N cards with player selection
+                if (otherPlayers.isNotEmpty()) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        // Reveal Top N dropdown
+                        var showRevealTopMenu by remember { mutableStateOf(false) }
+                        Box(modifier = Modifier.weight(1f)) {
+                            OutlinedButton(
+                                onClick = { showRevealTopMenu = true },
+                                modifier = Modifier.fillMaxWidth(),
+                                enabled = librarySize > 0
+                            ) {
+                                Text("Reveal Top N", style = MaterialTheme.typography.labelSmall)
+                            }
+                            DropdownMenu(
+                                expanded = showRevealTopMenu,
+                                onDismissRequest = { showRevealTopMenu = false }
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text("Reveal to All") },
+                                    onClick = {
+                                        showRevealTopMenu = false
+                                        val count = cardCount.toIntOrNull() ?: 1
+                                        onRevealTopNCards(count.coerceIn(1, librarySize), emptyList())
+                                        onDismiss()
+                                    }
+                                )
+                                otherPlayers.forEach { player ->
+                                    DropdownMenuItem(
+                                        text = { Text("Reveal to ${player.name}") },
+                                        onClick = {
+                                            showRevealTopMenu = false
+                                            val count = cardCount.toIntOrNull() ?: 1
+                                            onRevealTopNCards(count.coerceIn(1, librarySize), listOf(player.id))
+                                            onDismiss()
+                                        }
+                                    )
+                                }
+                            }
+                        }
+
+                        // Reveal Bottom N dropdown
+                        var showRevealBottomMenu by remember { mutableStateOf(false) }
+                        Box(modifier = Modifier.weight(1f)) {
+                            OutlinedButton(
+                                onClick = { showRevealBottomMenu = true },
+                                modifier = Modifier.fillMaxWidth(),
+                                enabled = librarySize > 0
+                            ) {
+                                Text("Reveal Bottom N", style = MaterialTheme.typography.labelSmall)
+                            }
+                            DropdownMenu(
+                                expanded = showRevealBottomMenu,
+                                onDismissRequest = { showRevealBottomMenu = false }
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text("Reveal to All") },
+                                    onClick = {
+                                        showRevealBottomMenu = false
+                                        val count = cardCount.toIntOrNull() ?: 1
+                                        onRevealBottomNCards(count.coerceIn(1, librarySize), emptyList())
+                                        onDismiss()
+                                    }
+                                )
+                                otherPlayers.forEach { player ->
+                                    DropdownMenuItem(
+                                        text = { Text("Reveal to ${player.name}") },
+                                        onClick = {
+                                            showRevealBottomMenu = false
+                                            val count = cardCount.toIntOrNull() ?: 1
+                                            onRevealBottomNCards(count.coerceIn(1, librarySize), listOf(player.id))
+                                            onDismiss()
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
 
                 Divider()

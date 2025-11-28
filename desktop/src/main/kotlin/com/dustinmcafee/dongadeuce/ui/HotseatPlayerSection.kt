@@ -44,6 +44,8 @@ fun HotseatPlayerSection(
 
     var showGraveyardDialog by remember { mutableStateOf(false) }
     var showExileDialog by remember { mutableStateOf(false) }
+    var showGraveyardViewerDialog by remember { mutableStateOf(false) } // Read-only for non-local player
+    var showExileViewerDialog by remember { mutableStateOf(false) } // Read-only for non-local player
     var showLibrarySearchDialog by remember { mutableStateOf(false) }
     var showLibraryOperationsDialog by remember { mutableStateOf(false) }
     var showLibraryPeekDialog by remember { mutableStateOf(false) }
@@ -97,8 +99,20 @@ fun HotseatPlayerSection(
                     dragDropState = dragDropState,
                     onShowSetLifeDialog = { showSetLifeDialog = true },
                     onShowPlayerCountersDialog = { showPlayerCountersDialog = true },
-                    onShowGraveyardDialog = { showGraveyardDialog = true },
-                    onShowExileDialog = { showExileDialog = true },
+                    onShowGraveyardDialog = {
+                        if (isLocalPlayer) {
+                            showGraveyardDialog = true
+                        } else {
+                            showGraveyardViewerDialog = true
+                        }
+                    },
+                    onShowExileDialog = {
+                        if (isLocalPlayer) {
+                            showExileDialog = true
+                        } else {
+                            showExileViewerDialog = true
+                        }
+                    },
                     onShowLibraryOperationsDialog = { showLibraryOperationsDialog = true },
                     onShowTokenCreationDialog = { showTokenCreationDialog = true },
                     modifier = Modifier.width(150.dp).fillMaxHeight().padding(4.dp)
@@ -155,6 +169,8 @@ fun HotseatPlayerSection(
         HotseatPlayerDialogs(
             player = player,
             viewModel = viewModel,
+            onCardAction = onCardAction,
+            otherPlayers = otherPlayers,
             showGraveyardDialog = showGraveyardDialog,
             onDismissGraveyard = { showGraveyardDialog = false },
             showExileDialog = showExileDialog,
@@ -184,6 +200,25 @@ fun HotseatPlayerSection(
             onDismissSetLife = { showSetLifeDialog = false },
             showPlayerCountersDialog = showPlayerCountersDialog,
             onDismissPlayerCounters = { showPlayerCountersDialog = false }
+        )
+    }
+
+    // Read-only zone viewer dialogs (for viewing other players' zones when not local player)
+    if (showGraveyardViewerDialog) {
+        GraveyardViewerDialog(
+            cards = viewModel.getCards(player.id, Zone.GRAVEYARD),
+            playerName = player.name,
+            onDismiss = { showGraveyardViewerDialog = false },
+            onViewDetails = { cardInstance -> onCardAction(CardAction.ViewDetails(cardInstance)) }
+        )
+    }
+
+    if (showExileViewerDialog) {
+        ExileViewerDialog(
+            cards = viewModel.getCards(player.id, Zone.EXILE),
+            playerName = player.name,
+            onDismiss = { showExileViewerDialog = false },
+            onViewDetails = { cardInstance -> onCardAction(CardAction.ViewDetails(cardInstance)) }
         )
     }
 }
@@ -309,7 +344,7 @@ private fun PlayerInfoSidebar(
             Zone.GRAVEYARD,
             graveyardCount,
             Modifier.fillMaxWidth().height(50.dp),
-            onClick = if (isLocalPlayer) onShowGraveyardDialog else null,
+            onClick = onShowGraveyardDialog, // Always clickable - shows read-only dialog for non-local players
             dragDropState = if (isLocalPlayer) dragDropState else null,
             onDropCards = if (isLocalPlayer) {
                 { cardIds ->
@@ -326,7 +361,7 @@ private fun PlayerInfoSidebar(
             Zone.EXILE,
             exileCount,
             Modifier.fillMaxWidth().height(50.dp),
-            onClick = if (isLocalPlayer) onShowExileDialog else null,
+            onClick = onShowExileDialog, // Always clickable - shows read-only dialog for non-local players
             dragDropState = if (isLocalPlayer) dragDropState else null,
             onDropCards = if (isLocalPlayer) {
                 { cardIds ->
@@ -359,6 +394,8 @@ private fun PlayerInfoSidebar(
 private fun HotseatPlayerDialogs(
     player: Player,
     viewModel: GameViewModel,
+    onCardAction: (CardAction) -> Unit,
+    otherPlayers: List<Player>,
     showGraveyardDialog: Boolean,
     onDismissGraveyard: () -> Unit,
     showExileDialog: Boolean,
@@ -436,6 +473,7 @@ private fun HotseatPlayerDialogs(
         LibraryOperationsDialog(
             playerName = player.name,
             librarySize = libraryCount,
+            otherPlayers = otherPlayers,
             onDismiss = onDismissLibraryOperations,
             onViewTopCards = { count ->
                 onShowLibraryPeek(viewModel.getTopCards(player.id, count), PeekLocation.TOP)
@@ -456,9 +494,18 @@ private fun HotseatPlayerDialogs(
                 viewModel.moveBottomCardsToZone(player.id, count, zone)
             },
             onRevealTopCard = {
-                val topCard = viewModel.getTopCards(player.id, 1).firstOrNull()
-                if (topCard != null) {
-                    onShowLibraryPeek(listOf(topCard), PeekLocation.TOP)
+                viewModel.toggleRevealTopCard(player.id)
+            },
+            onRevealTopNCards = { count, targetPlayerIds ->
+                val topCards = viewModel.getTopCards(player.id, count)
+                if (topCards.isNotEmpty()) {
+                    viewModel.revealCards(player.id, topCards.map { it.instanceId }, targetPlayerIds)
+                }
+            },
+            onRevealBottomNCards = { count, targetPlayerIds ->
+                val bottomCards = viewModel.getBottomCards(player.id, count)
+                if (bottomCards.isNotEmpty()) {
+                    viewModel.revealCards(player.id, bottomCards.map { it.instanceId }, targetPlayerIds)
                 }
             },
             onFullSearch = onShowLibrarySearch
@@ -493,6 +540,9 @@ private fun HotseatPlayerDialogs(
                 }
                 onDismissLibraryPeek()
                 onLibraryPeekCardsChange(emptyList())
+            },
+            onViewDetails = { cardInstance ->
+                onCardAction(CardAction.ViewDetails(cardInstance))
             }
         )
     }

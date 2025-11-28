@@ -2,14 +2,12 @@
 
 package com.dustinmcafee.dongadeuce.ui
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -19,9 +17,14 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.*
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInWindow
+import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
 import com.dustinmcafee.dongadeuce.models.*
 
 /**
@@ -565,12 +568,14 @@ private fun getCardCategory(typeLine: String?): CardTypeCategory {
 fun ViewHandDialog(
     cards: List<CardInstance>,
     playerName: String,
+    otherPlayers: List<Player> = emptyList(),
     onDismiss: () -> Unit,
     onPlayCard: (CardInstance) -> Unit,
     onDiscard: (CardInstance) -> Unit = {},
     onExile: (CardInstance) -> Unit = {},
     onToLibrary: (CardInstance) -> Unit = {},
-    onContextAction: (CardAction) -> Unit = {}
+    onContextAction: (CardAction) -> Unit = {},
+    onRevealHandTo: (List<String>) -> Unit = {} // List of player IDs to reveal to (empty = all)
 ) {
     // Group cards by type category and sort alphabetically within each group
     val cardsByCategory = remember(cards) {
@@ -617,56 +622,80 @@ fun ViewHandDialog(
                     }
                 } else {
                     // Horizontal scrollable row of columns (one per card type)
-                    val scrollState = rememberScrollState()
-                    Box(
+                    val horizontalScrollState = rememberScrollState()
+                    val columnWidth = 180.dp
+
+                    Column(
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxWidth()
-                            .horizontalScroll(scrollState)
                     ) {
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        BoxWithConstraints(
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxWidth()
                         ) {
-                            activeCategories.forEach { category ->
-                                val categoryCards = cardsByCategory[category] ?: emptyList()
+                            val columnHeight = maxHeight
 
-                                // Column for this card type
-                                Card(
-                                    modifier = Modifier
-                                        .width(180.dp)
-                                        .fillMaxHeight(),
-                                    colors = CardDefaults.cardColors(
-                                        containerColor = MaterialTheme.colorScheme.surfaceVariant
-                                    )
-                                ) {
-                                    Column(
-                                        modifier = Modifier.fillMaxSize().padding(8.dp),
-                                        verticalArrangement = Arrangement.spacedBy(4.dp)
-                                    ) {
-                                        // Column header
-                                        Text(
-                                            "${category.displayName} (${categoryCards.size})",
-                                            style = MaterialTheme.typography.titleSmall,
-                                            color = MaterialTheme.colorScheme.primary
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .horizontalScroll(horizontalScrollState)
+                            ) {
+                                activeCategories.forEach { category ->
+                                    val categoryCards = cardsByCategory[category] ?: emptyList()
+                                    val columnScrollState = rememberScrollState()
+
+                                    // Column for this card type
+                                    Card(
+                                        modifier = Modifier
+                                            .width(columnWidth)
+                                            .height(columnHeight),
+                                        colors = CardDefaults.cardColors(
+                                            containerColor = MaterialTheme.colorScheme.surfaceVariant
                                         )
-
-                                        Divider(modifier = Modifier.padding(vertical = 4.dp))
-
-                                        // Vertically scrollable list of cards
+                                    ) {
                                         Column(
-                                            modifier = Modifier
-                                                .weight(1f)
-                                                .verticalScroll(rememberScrollState()),
+                                            modifier = Modifier.fillMaxSize().padding(8.dp),
                                             verticalArrangement = Arrangement.spacedBy(4.dp)
                                         ) {
-                                            categoryCards.forEach { cardInstance ->
-                                                ViewHandCardItem(
-                                                    cardInstance = cardInstance,
-                                                    onPlayCard = onPlayCard,
-                                                    onDiscard = onDiscard,
-                                                    onExile = onExile,
-                                                    onToLibrary = onToLibrary,
-                                                    onContextAction = onContextAction
+                                            // Column header
+                                            Text(
+                                                "${category.displayName} (${categoryCards.size})",
+                                                style = MaterialTheme.typography.titleSmall,
+                                                color = MaterialTheme.colorScheme.primary
+                                            )
+
+                                            Divider(modifier = Modifier.padding(vertical = 4.dp))
+
+                                            // Vertically scrollable list of cards with scrollbar
+                                            Box(modifier = Modifier.weight(1f)) {
+                                                Column(
+                                                    modifier = Modifier
+                                                        .fillMaxSize()
+                                                        .verticalScroll(columnScrollState)
+                                                        .padding(end = 8.dp),
+                                                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                                                ) {
+                                                    categoryCards.forEach { cardInstance ->
+                                                        ViewHandCardItem(
+                                                            cardInstance = cardInstance,
+                                                            onPlayCard = onPlayCard,
+                                                            onDiscard = onDiscard,
+                                                            onExile = onExile,
+                                                            onToLibrary = onToLibrary,
+                                                            onContextAction = onContextAction
+                                                        )
+                                                    }
+                                                }
+                                                VerticalScrollbar(
+                                                    modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight(),
+                                                    adapter = rememberScrollbarAdapter(columnScrollState),
+                                                    style = LocalScrollbarStyle.current.copy(
+                                                        unhoverColor = Color.Gray,
+                                                        hoverColor = Color.LightGray
+                                                    )
                                                 )
                                             }
                                         }
@@ -674,6 +703,204 @@ fun ViewHandDialog(
                                 }
                             }
                         }
+
+                        // Horizontal scrollbar with visible colors
+                        HorizontalScrollbar(
+                            modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                            adapter = rememberScrollbarAdapter(horizontalScrollState),
+                            style = LocalScrollbarStyle.current.copy(
+                                unhoverColor = Color.Gray,
+                                hoverColor = Color.LightGray
+                            )
+                        )
+                    }
+                }
+
+                // Bottom buttons
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    // Reveal Hand dropdown
+                    if (otherPlayers.isNotEmpty()) {
+                        var showRevealMenu by remember { mutableStateOf(false) }
+                        Box {
+                            OutlinedButton(onClick = { showRevealMenu = true }) {
+                                Text("Reveal Hand")
+                            }
+                            DropdownMenu(
+                                expanded = showRevealMenu,
+                                onDismissRequest = { showRevealMenu = false }
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text("Reveal to All") },
+                                    onClick = {
+                                        showRevealMenu = false
+                                        onRevealHandTo(emptyList())
+                                    }
+                                )
+                                otherPlayers.forEach { player ->
+                                    DropdownMenuItem(
+                                        text = { Text("Reveal to ${player.name}") },
+                                        onClick = {
+                                            showRevealMenu = false
+                                            onRevealHandTo(listOf(player.id))
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    } else {
+                        Spacer(modifier = Modifier.width(1.dp))
+                    }
+
+                    TextButton(onClick = onDismiss) {
+                        Text("Close")
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Read-only dialog showing revealed cards (no interactions allowed except view details)
+ */
+@Composable
+fun RevealedCardsDialog(
+    cards: List<CardInstance>,
+    revealingPlayerName: String,
+    title: String = "revealed their hand",
+    onDismiss: () -> Unit,
+    onViewDetails: (CardInstance) -> Unit = {}
+) {
+    // Group cards by type category and sort alphabetically within each group
+    val cardsByCategory = remember(cards) {
+        cards
+            .groupBy { getCardCategory(it.card.type) }
+            .mapValues { (_, cardList) -> cardList.sortedBy { it.card.name.lowercase() } }
+    }
+
+    // Get non-empty categories in display order
+    val activeCategories = remember(cardsByCategory) {
+        CardTypeCategory.entries.filter { cardsByCategory[it]?.isNotEmpty() == true }
+    }
+
+    androidx.compose.ui.window.Dialog(
+        onDismissRequest = onDismiss
+    ) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth(0.95f)
+                .fillMaxHeight(0.85f),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surface
+            )
+        ) {
+            Column(
+                modifier = Modifier.fillMaxSize().padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                // Title
+                Text(
+                    "$revealingPlayerName $title (${cards.size} cards)",
+                    style = MaterialTheme.typography.headlineSmall
+                )
+
+                Divider()
+
+                if (cards.isEmpty()) {
+                    Box(
+                        modifier = Modifier.weight(1f).fillMaxWidth(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("No cards", style = MaterialTheme.typography.bodyMedium)
+                    }
+                } else {
+                    // Horizontal scrollable row of columns (one per card type)
+                    val horizontalScrollState = rememberScrollState()
+                    val columnWidth = 180.dp
+
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth()
+                    ) {
+                        BoxWithConstraints(
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxWidth()
+                        ) {
+                            val columnHeight = maxHeight
+
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .horizontalScroll(horizontalScrollState)
+                            ) {
+                                activeCategories.forEach { category ->
+                                    val categoryCards = cardsByCategory[category] ?: emptyList()
+                                    val columnScrollState = rememberScrollState()
+
+                                    Card(
+                                        modifier = Modifier
+                                            .width(columnWidth)
+                                            .height(columnHeight),
+                                        colors = CardDefaults.cardColors(
+                                            containerColor = MaterialTheme.colorScheme.surfaceVariant
+                                        )
+                                    ) {
+                                        Column(
+                                            modifier = Modifier.fillMaxSize().padding(8.dp),
+                                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                                        ) {
+                                            Text(
+                                                "${category.displayName} (${categoryCards.size})",
+                                                style = MaterialTheme.typography.titleSmall,
+                                                color = MaterialTheme.colorScheme.primary
+                                            )
+
+                                            Divider(modifier = Modifier.padding(vertical = 4.dp))
+
+                                            Box(modifier = Modifier.weight(1f)) {
+                                                Column(
+                                                    modifier = Modifier
+                                                        .fillMaxSize()
+                                                        .verticalScroll(columnScrollState)
+                                                        .padding(end = 8.dp),
+                                                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                                                ) {
+                                                    categoryCards.forEach { cardInstance ->
+                                                        RevealedCardItem(
+                                                            cardInstance = cardInstance,
+                                                            onViewDetails = onViewDetails
+                                                        )
+                                                    }
+                                                }
+                                                VerticalScrollbar(
+                                                    modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight(),
+                                                    adapter = rememberScrollbarAdapter(columnScrollState),
+                                                    style = LocalScrollbarStyle.current.copy(
+                                                        unhoverColor = Color.Gray,
+                                                        hoverColor = Color.LightGray
+                                                    )
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        HorizontalScrollbar(
+                            modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                            adapter = rememberScrollbarAdapter(horizontalScrollState),
+                            style = LocalScrollbarStyle.current.copy(
+                                unhoverColor = Color.Gray,
+                                hoverColor = Color.LightGray
+                            )
+                        )
                     }
                 }
 
@@ -687,6 +914,78 @@ fun ViewHandDialog(
                     }
                 }
             }
+        }
+    }
+}
+
+/**
+ * Read-only card item for revealed hand (only view details on right-click)
+ */
+@Composable
+private fun RevealedCardItem(
+    cardInstance: CardInstance,
+    onViewDetails: (CardInstance) -> Unit
+) {
+    var showContextMenu by remember { mutableStateOf(false) }
+
+    Box {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .pointerInput(cardInstance.instanceId) {
+                    awaitPointerEventScope {
+                        while (true) {
+                            val event = awaitPointerEvent()
+                            if (event.buttons.isSecondaryPressed && event.type == PointerEventType.Press) {
+                                showContextMenu = true
+                            }
+                        }
+                    }
+                },
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.secondaryContainer
+            )
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(6.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                CardImage(
+                    imageUrl = cardInstance.card.imageUri,
+                    contentDescription = cardInstance.card.name,
+                    modifier = Modifier.width(40.dp).height(56.dp)
+                )
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = cardInstance.card.name,
+                        style = MaterialTheme.typography.labelMedium,
+                        maxLines = 2
+                    )
+                    val manaCost = cardInstance.card.manaCost
+                    if (manaCost != null) {
+                        Text(
+                            text = manaCost,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
+                        )
+                    }
+                }
+            }
+        }
+
+        DropdownMenu(
+            expanded = showContextMenu,
+            onDismissRequest = { showContextMenu = false }
+        ) {
+            DropdownMenuItem(
+                text = { Text("View Details") },
+                onClick = {
+                    showContextMenu = false
+                    onViewDetails(cardInstance)
+                }
+            )
         }
     }
 }
@@ -795,6 +1094,13 @@ private fun ViewHandCardItem(
                 onClick = {
                     showContextMenu = false
                     onContextAction(CardAction.ToHand(cardInstance))
+                }
+            )
+            DropdownMenuItem(
+                text = { Text("View Details") },
+                onClick = {
+                    showContextMenu = false
+                    onContextAction(CardAction.ViewDetails(cardInstance))
                 }
             )
         }

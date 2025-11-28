@@ -19,7 +19,9 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.DpOffset
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import com.dustinmcafee.dongadeuce.models.*
 import com.dustinmcafee.dongadeuce.viewmodel.GameViewModel
 
@@ -306,6 +308,7 @@ fun CompactHandStrip(
         ViewHandDialog(
             cards = handCards,
             playerName = player.name,
+            otherPlayers = otherPlayers,
             onDismiss = { showViewHandDialog = false },
             onPlayCard = { cardInstance ->
                 viewModel?.moveCard(cardInstance.instanceId, Zone.BATTLEFIELD)
@@ -323,7 +326,10 @@ fun CompactHandStrip(
                 viewModel?.moveCard(cardInstance.instanceId, Zone.LIBRARY)
                     ?: onCardAction(CardAction.ToLibrary(cardInstance))
             },
-            onContextAction = onCardAction
+            onContextAction = onCardAction,
+            onRevealHandTo = { targetPlayerIds ->
+                viewModel?.revealHand(player.id, targetPlayerIds)
+            }
         )
     }
 
@@ -388,29 +394,62 @@ fun CompactHandStrip(
                                 )
                             }
                         } else {
-                            FlowRow(
-                                modifier = Modifier.fillMaxSize().horizontalScroll(rememberScrollState()),
-                                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                verticalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
-                                handCards.forEach { cardInstance ->
-                                    HandCardDisplay(
-                                        cardInstance = cardInstance,
-                                        onCardClick = { /* Single click - could open dialog */ },
-                                        onDoubleClick = {
-                                            // Double-click plays card to battlefield
-                                            onCardAction(CardAction.ToBattlefield(cardInstance))
-                                        },
-                                        onContextAction = onCardAction,
-                                        selectionState = selectionState,
-                                        sharedDraggedCardIds = draggedHandCardIds,
-                                        sharedDragOffset = handDragOffset,
-                                        onDragStateChange = { draggedIds, offset ->
-                                            draggedHandCardIds = draggedIds
-                                            handDragOffset = offset
-                                        },
-                                        otherPlayers = otherPlayers
-                                    )
+                            // Overlapping hand cards layout
+                            BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+                                val density = LocalDensity.current
+                                val availableWidth = with(density) { maxWidth.toPx() }
+                                val cardWidthPx = with(density) { UIConstants.HAND_CARD_WIDTH.toPx() }
+                                val minSpacing = with(density) { 4.dp.toPx() }
+
+                                // Calculate spacing between cards
+                                // If cards fit without overlap, use normal spacing
+                                // Otherwise, calculate overlap to fit all cards
+                                val totalCardWidth = cardWidthPx * handCards.size
+                                val totalSpacingNeeded = minSpacing * (handCards.size - 1).coerceAtLeast(0)
+
+                                val cardSpacingPx = if (totalCardWidth + totalSpacingNeeded <= availableWidth) {
+                                    // Cards fit - use normal spacing
+                                    cardWidthPx + minSpacing
+                                } else {
+                                    // Cards don't fit - calculate overlap
+                                    // We want: firstCardPos + (n-1) * spacing + cardWidth = availableWidth
+                                    // spacing = (availableWidth - cardWidth) / (n - 1)
+                                    if (handCards.size > 1) {
+                                        ((availableWidth - cardWidthPx) / (handCards.size - 1)).coerceAtLeast(20f)
+                                    } else {
+                                        cardWidthPx
+                                    }
+                                }
+
+                                Row(
+                                    modifier = Modifier.fillMaxSize(),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    handCards.forEachIndexed { index, cardInstance ->
+                                        Box(
+                                            modifier = Modifier
+                                                .offset(x = with(density) { ((index * cardSpacingPx) - (index * cardWidthPx)).toDp() })
+                                                .zIndex(index.toFloat())
+                                        ) {
+                                            HandCardDisplay(
+                                                cardInstance = cardInstance,
+                                                onCardClick = { /* Single click - could open dialog */ },
+                                                onDoubleClick = {
+                                                    // Double-click plays card to battlefield
+                                                    onCardAction(CardAction.ToBattlefield(cardInstance))
+                                                },
+                                                onContextAction = onCardAction,
+                                                selectionState = selectionState,
+                                                sharedDraggedCardIds = draggedHandCardIds,
+                                                sharedDragOffset = handDragOffset,
+                                                onDragStateChange = { draggedIds, offset ->
+                                                    draggedHandCardIds = draggedIds
+                                                    handDragOffset = offset
+                                                },
+                                                otherPlayers = otherPlayers
+                                            )
+                                        }
+                                    }
                                 }
                             }
                         }

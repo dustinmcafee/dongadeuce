@@ -1166,6 +1166,121 @@ class GameViewModel(
     }
 
     /**
+     * State for revealed cards dialog - holds the cards and who revealed them
+     */
+    data class RevealedCardsState(
+        val revealingPlayerName: String,
+        val cards: List<CardInstance>,
+        val targetPlayerIds: List<String>, // Empty means all players
+        val title: String // e.g., "revealed their hand" or "revealed 3 card(s)"
+    )
+
+    private val _revealedCardsState = MutableStateFlow<RevealedCardsState?>(null)
+    val revealedCardsState: StateFlow<RevealedCardsState?> = _revealedCardsState.asStateFlow()
+
+    /**
+     * Dismiss the revealed cards dialog
+     */
+    fun dismissRevealedCards() {
+        _revealedCardsState.value = null
+    }
+
+    /**
+     * Reveal hand to specified players (or all if targetPlayerIds is empty)
+     * Logs a message and shows a dialog to the target players
+     */
+    fun revealHand(playerId: String, targetPlayerIds: List<String>) {
+        _uiState.update { currentState ->
+            val gameState = currentState.gameState ?: return@update currentState
+            val player = gameState.players.find { it.id == playerId } ?: return@update currentState
+
+            // Get hand cards
+            val handCards = gameState.cardInstances
+                .filter { it.ownerId == playerId && it.zone == Zone.HAND }
+                .sortedBy { it.card.name }
+
+            // Build reveal message (without card names)
+            val targetDescription = if (targetPlayerIds.isEmpty()) {
+                "all players"
+            } else {
+                val targetNames = gameState.players
+                    .filter { it.id in targetPlayerIds }
+                    .map { it.name }
+                targetNames.joinToString(", ")
+            }
+
+            val description = "revealed their hand to $targetDescription"
+
+            // Log reveal event
+            val event = GameEvent.GenericAction(
+                playerId = playerId,
+                playerName = player.name,
+                description = description
+            )
+            val updatedGameState = gameState.addEvent(event)
+
+            // Set revealed cards state to show dialog
+            _revealedCardsState.value = RevealedCardsState(
+                revealingPlayerName = player.name,
+                cards = handCards,
+                targetPlayerIds = targetPlayerIds,
+                title = "revealed their hand"
+            )
+
+            currentState.copy(gameState = updatedGameState)
+        }
+    }
+
+    /**
+     * Reveal specific cards to specified players (or all if targetPlayerIds is empty)
+     * Used for revealing selected cards from hand or library
+     */
+    fun revealCards(playerId: String, cardIds: List<String>, targetPlayerIds: List<String>) {
+        _uiState.update { currentState ->
+            val gameState = currentState.gameState ?: return@update currentState
+            val player = gameState.players.find { it.id == playerId } ?: return@update currentState
+
+            // Get the specific cards
+            val cardsToReveal = gameState.cardInstances
+                .filter { it.instanceId in cardIds }
+                .sortedBy { it.card.name }
+
+            if (cardsToReveal.isEmpty()) return@update currentState
+
+            // Build reveal message (without card names)
+            val targetDescription = if (targetPlayerIds.isEmpty()) {
+                "all players"
+            } else {
+                val targetNames = gameState.players
+                    .filter { it.id in targetPlayerIds }
+                    .map { it.name }
+                targetNames.joinToString(", ")
+            }
+
+            val cardCountText = if (cardsToReveal.size == 1) "a card" else "${cardsToReveal.size} card(s)"
+            val description = "revealed $cardCountText to $targetDescription"
+
+            // Log reveal event
+            val event = GameEvent.GenericAction(
+                playerId = playerId,
+                playerName = player.name,
+                description = description
+            )
+            val updatedGameState = gameState.addEvent(event)
+
+            // Set revealed cards state to show dialog
+            _revealedCardsState.value = RevealedCardsState(
+                revealingPlayerName = player.name,
+                cards = cardsToReveal,
+                targetPlayerIds = targetPlayerIds,
+                title = "revealed $cardCountText"
+            )
+
+            currentState.copy(gameState = updatedGameState)
+        }
+    }
+
+    /**
      * Get all battlefield cards for a specific player (by controller)
      */
     fun getPlayerBattlefieldCards(playerId: String): List<CardInstance> {
@@ -2467,6 +2582,7 @@ class GameViewModel(
             is com.dustinmcafee.dongadeuce.ui.CardAction.AddCounter -> action.cardInstance
             is com.dustinmcafee.dongadeuce.ui.CardAction.RemoveCounter -> action.cardInstance
             is com.dustinmcafee.dongadeuce.ui.CardAction.GiveControlTo -> action.cardInstance
+            is com.dustinmcafee.dongadeuce.ui.CardAction.RevealTo -> action.cardInstance
             else -> return 0
         }
 
@@ -2507,6 +2623,14 @@ class GameViewModel(
                     is com.dustinmcafee.dongadeuce.ui.CardAction.AddCounter -> addCounter(card.instanceId, action.counterType, 1)
                     is com.dustinmcafee.dongadeuce.ui.CardAction.RemoveCounter -> removeCounter(card.instanceId, action.counterType, 1)
                     is com.dustinmcafee.dongadeuce.ui.CardAction.GiveControlTo -> giveControlTo(card.instanceId, action.newControllerId)
+                    is com.dustinmcafee.dongadeuce.ui.CardAction.RevealTo -> {
+                        // For reveal, we collect all card IDs and reveal them together
+                        val cardIdsToReveal = cardsToAct.filter { it.ownerId == authorizedPlayerId }.map { it.instanceId }
+                        if (cardIdsToReveal.isNotEmpty()) {
+                            revealCards(authorizedPlayerId, cardIdsToReveal, action.targetPlayerIds)
+                        }
+                        return cardIdsToReveal.size // Return early since we handle all at once
+                    }
                     else -> {}
                 }
                 actionCount++

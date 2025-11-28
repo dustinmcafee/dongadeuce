@@ -1,5 +1,6 @@
 package com.dustinmcafee.dongadeuce.ui
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -341,6 +342,174 @@ private fun ZoneCard(
                         }
                     }
                 }
+            }
+        }
+    }
+}
+
+/**
+ * Read-only graveyard viewer (for viewing other players' graveyards)
+ */
+@Composable
+fun GraveyardViewerDialog(
+    cards: List<CardInstance>,
+    playerName: String,
+    onDismiss: () -> Unit,
+    onViewDetails: (CardInstance) -> Unit = {}
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("$playerName's Graveyard (${cards.size} cards)") },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(500.dp)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                if (cards.isEmpty()) {
+                    Text("No cards in graveyard", style = MaterialTheme.typography.bodyMedium)
+                } else {
+                    cards.forEach { cardInstance ->
+                        ReadOnlyZoneCard(
+                            cardInstance = cardInstance,
+                            onViewDetails = onViewDetails
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Close")
+            }
+        }
+    )
+}
+
+/**
+ * Read-only exile viewer (for viewing other players' exile zones)
+ */
+@Composable
+fun ExileViewerDialog(
+    cards: List<CardInstance>,
+    playerName: String,
+    onDismiss: () -> Unit,
+    onViewDetails: (CardInstance) -> Unit = {}
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("$playerName's Exile Zone (${cards.size} cards)") },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(500.dp)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                if (cards.isEmpty()) {
+                    Text("No cards in exile", style = MaterialTheme.typography.bodyMedium)
+                } else {
+                    cards.forEach { cardInstance ->
+                        ReadOnlyZoneCard(
+                            cardInstance = cardInstance,
+                            onViewDetails = onViewDetails
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Close")
+            }
+        }
+    )
+}
+
+/**
+ * Read-only card display for zone viewers (no action buttons, just view details on click)
+ */
+@Composable
+private fun ReadOnlyZoneCard(
+    cardInstance: CardInstance,
+    onViewDetails: (CardInstance) -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onViewDetails(cardInstance) },
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // Card image thumbnail
+            CardImageThumbnail(
+                imageUrl = cardInstance.card.imageUri,
+                contentDescription = cardInstance.card.name
+            )
+
+            // Card info
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                // Card name and mana cost
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = cardInstance.card.name,
+                        style = MaterialTheme.typography.titleSmall,
+                        modifier = Modifier.weight(1f)
+                    )
+                    val manaCost = cardInstance.card.manaCost
+                    if (manaCost != null && manaCost.isNotEmpty()) {
+                        Text(
+                            text = manaCost,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                        )
+                    }
+                }
+
+                // Card type
+                val cardType = cardInstance.card.type
+                if (cardType != null && cardType.isNotEmpty()) {
+                    Text(
+                        text = cardType,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                    )
+                }
+
+                // Power/Toughness for creatures
+                val power = cardInstance.card.power
+                val toughness = cardInstance.card.toughness
+                if (power != null && toughness != null) {
+                    Text(
+                        text = "$power/$toughness",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                // Click hint
+                Text(
+                    text = "Click to view details",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                )
             }
         }
     }

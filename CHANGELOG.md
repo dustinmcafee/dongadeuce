@@ -7,23 +7,57 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.3.0] - 2025-11-28
+
+### Added
+- **Reveal Cards Feature** - Right-click to reveal selected cards to other players
+  - Reveal cards from hand to specific player or all players
+  - Reveal single card while viewing library to specific player or all players
+  - "Reveal To ▸" submenu with "Reveal to All" and individual player options
+  - Works with multi-select in hand (reveal multiple cards at once)
+
+- **Reveal Top/Bottom N Cards** - Library operations dialog enhancements
+  - "Reveal Top N" dropdown with player selection
+  - "Reveal Bottom N" dropdown with player selection
+  - Select number of cards (1-10) and target player
+  - Revealed cards shown in dialog to target player(s)
+
+- **View Other Players' Graveyard/Exile** - Zone visibility improvements
+  - Click any player's graveyard to view cards (read-only)
+  - Click any player's exile zone to view cards (read-only)
+  - Cards displayed with thumbnails and full details
+  - "Click to view details" for enlarged card view
+  - No interaction buttons (view-only for non-owners)
+
+### Changed
+- Renamed `RevealedHandState` to `RevealedCardsState` with new `title` field
+- Renamed `RevealedHandDialog` to `RevealedCardsDialog` with title support
+- Updated reveal dialog to show contextual title (e.g., "revealed 3 card(s)" vs "revealed their hand")
+
 ## [3.2.0] - 2025-11-28
 
 ### Added
 - **View Hand Dialog** - Right-click anywhere in hand area to open
-  - Cockatrice-style column layout grouped by card type
+  - Column layout grouped by card type
   - Cards sorted alphabetically within each type column
   - Right-click context menu on cards with zone actions (To Battlefield, To Graveyard, To Exile, To Library, To Hand)
   - Horizontal scrolling for many card types
   - Works in both hotseat and network modes
 
 ### Changed
-- **Library Search Dialog** - Now uses the same Cockatrice-style column layout
+- **Library Search Dialog** - Now uses column-based layout
   - Cards grouped by type into columns
   - Cards sorted alphabetically within each column
   - Right-click context menu on cards (To Hand, To Battlefield, To Top/Bottom of Library)
   - Search field still filters across all columns
   - Horizontal scrolling for large libraries
+
+- **Library Peek Dialog** (View N cards) - Now uses column-based layout
+  - Cards grouped by type into columns
+  - Cards sorted alphabetically within each column
+  - Right-click context menu on cards (To Hand, To Battlefield, To Graveyard, To Exile, Keep in Library)
+  - Batch operations preserved (All to Hand, All to GY, All to Exile, Shuffle)
+  - Horizontal scrolling for many card types
 
 ## [3.1.4] - 2025-11-28
 

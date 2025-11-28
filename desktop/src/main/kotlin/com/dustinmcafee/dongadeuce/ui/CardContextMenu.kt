@@ -51,6 +51,7 @@ sealed class CardAction {
     data class PlayFaceDown(val cardInstance: CardInstance) : CardAction()
     data class ToggleFaceDown(val cardInstance: CardInstance) : CardAction()
     data class CreateCopy(val cardInstance: CardInstance, val ownerId: String) : CardAction()
+    data class RevealTo(val cardInstance: CardInstance, val targetPlayerIds: List<String>) : CardAction()
 }
 
 /**
@@ -61,7 +62,8 @@ enum class MenuState {
     COUNTERS,
     MOVE_TO,
     GIVE_CONTROL,
-    CARD_STATE
+    CARD_STATE,
+    REVEAL_TO
 }
 
 /**
@@ -200,6 +202,7 @@ private fun buildMenuItems(
         MenuState.MOVE_TO -> buildMoveToMenuItems(cardInstance, onAction, onMenuStateChange)
         MenuState.GIVE_CONTROL -> buildGiveControlMenuItems(cardInstance, onAction, otherPlayers, onMenuStateChange)
         MenuState.CARD_STATE -> buildCardStateMenuItems(cardInstance, onAction, onMenuStateChange)
+        MenuState.REVEAL_TO -> buildRevealToMenuItems(cardInstance, onAction, otherPlayers, onMenuStateChange)
     }
 }
 
@@ -219,6 +222,7 @@ private fun buildMenuItemDatas(
         MenuState.MOVE_TO -> buildMoveToMenuItems(cardInstance, onAction, onMenuStateChange)
         MenuState.GIVE_CONTROL -> buildGiveControlMenuItems(cardInstance, onAction, otherPlayers, onMenuStateChange)
         MenuState.CARD_STATE -> buildCardStateMenuItems(cardInstance, onAction, onMenuStateChange)
+        MenuState.REVEAL_TO -> buildRevealToMenuItems(cardInstance, onAction, otherPlayers, onMenuStateChange)
     }
 }
 
@@ -275,6 +279,7 @@ private fun buildMainMenuItems(
             items.add(MenuItemData("Move To ►") { onMenuStateChange(MenuState.MOVE_TO) })
 
             if (otherPlayers.isNotEmpty()) {
+                items.add(MenuItemData("Reveal To ►") { onMenuStateChange(MenuState.REVEAL_TO) })
                 items.add(MenuItemData("Give Control ►") { onMenuStateChange(MenuState.GIVE_CONTROL) })
             }
 
@@ -311,6 +316,7 @@ private fun buildMainMenuItems(
             items.add(MenuItemData("Move To ►") { onMenuStateChange(MenuState.MOVE_TO) })
 
             if (otherPlayers.isNotEmpty()) {
+                items.add(MenuItemData("Reveal To ►") { onMenuStateChange(MenuState.REVEAL_TO) })
                 items.add(MenuItemData("Give Control ►") { onMenuStateChange(MenuState.GIVE_CONTROL) })
             }
 
@@ -491,6 +497,34 @@ private fun buildGiveControlMenuItems(
 }
 
 /**
+ * Builds the Reveal To sub-menu
+ */
+private fun buildRevealToMenuItems(
+    cardInstance: CardInstance,
+    onAction: (CardAction) -> Unit,
+    otherPlayers: List<Player>,
+    onMenuStateChange: (MenuState) -> Unit
+): List<MenuItemData> {
+    val items = mutableListOf<MenuItemData>()
+
+    items.add(MenuItemData("← Back") { onMenuStateChange(MenuState.MAIN) })
+
+    // Reveal to all players
+    items.add(MenuItemData("Reveal to All") {
+        onAction(CardAction.RevealTo(cardInstance, emptyList()))
+    })
+
+    // Reveal to individual players
+    otherPlayers.forEach { player: Player ->
+        items.add(MenuItemData("Reveal to ${player.name}") {
+            onAction(CardAction.RevealTo(cardInstance, listOf(player.id)))
+        })
+    }
+
+    return items
+}
+
+/**
  * Helper to handle common context menu actions with ViewModel
  */
 fun handleCardAction(
@@ -535,5 +569,10 @@ fun handleCardAction(
         is CardAction.PlayFaceDown -> viewModel.playFaceDown(action.cardInstance.instanceId)
         is CardAction.ToggleFaceDown -> viewModel.toggleFaceDown(action.cardInstance.instanceId)
         is CardAction.CreateCopy -> viewModel.cloneCard(action.cardInstance.instanceId, action.ownerId)
+        is CardAction.RevealTo -> viewModel.revealCards(
+            action.cardInstance.ownerId,
+            listOf(action.cardInstance.instanceId),
+            action.targetPlayerIds
+        )
     }
 }
