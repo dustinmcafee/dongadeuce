@@ -112,6 +112,9 @@ sealed class ShortcutAction(val id: String, val displayName: String, val categor
     object AlwaysRevealTopCard : ShortcutAction("alwaysRevealTopCard", "Always Reveal Top Card", "Drawing & Library")
     object AlwaysLookAtTopCard : ShortcutAction("alwaysLookAtTopCard", "Always Look At Top Card", "Drawing & Library")
 
+    // Library Search Operations
+    object StackUntilFound : ShortcutAction("stackUntilFound", "Stack Until Found...", "Drawing & Library")
+
     // Bottom Card Operations
     object DrawBottomCard : ShortcutAction("drawBottomCard", "Draw Bottom Card", "Bottom Card Operations")
     object DrawBottomMultiple : ShortcutAction("drawBottomMultiple", "Draw Multiple from Bottom", "Bottom Card Operations")
@@ -181,7 +184,7 @@ sealed class ShortcutAction(val id: String, val displayName: String, val categor
                 AddColorlessMana, RemoveColorlessMana, SetColorlessMana,
                 // Drawing & Library
                 DrawCard, DrawMultiple, UndoDraw, Mulligan, ShuffleLibrary, ShuffleTopCards, ShuffleBottomCards,
-                PlayTopCard, MillTopCard, MillMultiple, AlwaysRevealTopCard, AlwaysLookAtTopCard,
+                PlayTopCard, MillTopCard, MillMultiple, AlwaysRevealTopCard, AlwaysLookAtTopCard, StackUntilFound,
                 // Bottom Card Operations
                 DrawBottomCard, DrawBottomMultiple, MillBottomCard, MillBottomMultiple,
                 ExileBottomCard, ExileBottomMultiple, BottomToTop,

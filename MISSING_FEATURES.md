@@ -1,6 +1,6 @@
 # Missing Features Analysis
 
-**Current Version:** v2.27.0
+**Current Version:** v3.0.0
 **Last Updated:** 2025-11-27
 **Hotseat Mode Completion:** ~98%
 **Network Mode Completion:** ~96%
@@ -19,7 +19,7 @@ Dong-A-Deuce is a **highly functional multiplayer Commander game** with comprehe
 - Professional UI with card images and extensive dialogs
 - Game log/chat panel for event tracking and player communication
 - Excellent MVVM architecture (100% compliant)
-- Minor feature missing (commander tax)
+- 120+ keyboard shortcuts for fast gameplay
 
 ---
 
@@ -42,25 +42,17 @@ Dong-A-Deuce is a **highly functional multiplayer Commander game** with comprehe
 
 ---
 
-### 2. Commander Tax Tracking
+### 2. Commander Tax Tracking - WON'T IMPLEMENT
 
-**Priority:** HIGH
+**Priority:** LOW
 **Effort:** 1 day
-**Status:** Not implemented
+**Status:** Won't implement
 
-**Impact:**
-Players must manually track commander tax (additional {2} for each previous cast from command zone).
-
-**What's Needed:**
-- Add `timesCastFromCommandZone` field to CardInstance
-- Display tax amount in command zone dialog
-- Increment counter when casting from command zone
-- Show total mana cost including tax
-
-**Why Not Implemented:**
-- Players can manually track (write it down)
-- Not blocking gameplay
-- Easy to add later
+**Reason:**
+- Players can manually track commander tax (write it down or use player counters)
+- Not blocking gameplay - the game doesn't enforce mana costs anyway
+- Adding automatic tracking would require significant UI changes for marginal benefit
+- Players are already responsible for tracking their own mana and costs
 
 ---
 
@@ -148,7 +140,7 @@ Players must manually track commander tax (additional {2} for each previous cast
 **Effort:** 2-3 days
 **Status:** COMPLETED (v2.27.0)
 
-**Features Implemented (65+ shortcuts):**
+**Features Implemented (120+ shortcuts):**
 
 **Game Phases:**
 - F5: Untap, F6: Draw, F7: Main 1, F8: Combat, F9: Main 2, F10: End
@@ -234,17 +226,19 @@ Players must manually track commander tax (additional {2} for each previous cast
 
 **Priority:** LOW
 **Effort:** 1-2 days
-**Status:** Not implemented (for full parity)
+**Status:** COMPLETED (v3.0.0)
 
-**Missing Shortcuts:**
-- **Mana/Color Player Counters**: W/U/B/R/G/X counter management
-- **Set Counter Dialogs**: Alt+/, Ctrl+/, Ctrl+? for setting specific counter values
-- **Move Bottom Card Operations**: Play/mill/exile from bottom of library
-- **Stack Until Found**: Ctrl+Shift+Y
-- **Sub-phases**: Upkeep, Attack, Block, Damage, End Combat phases
-- **View Rotation**: Rotate view CW/CCW
-- **Select Column**: Ctrl+Shift+C (conflicts with copy)
-- **Shuffle Top/Bottom Cards**: Shuffle portion of library
+**Implemented Shortcuts:**
+- ✅ **Mana/Color Player Counters**: W/U/B/R/G/X counter management (18 shortcuts)
+- ✅ **Set Counter Dialogs**: Set specific counter values for counters A-F (6 shortcuts)
+- ✅ **Move Bottom Card Operations**: Draw/mill/exile from bottom of library (7 shortcuts)
+- ✅ **Sub-phases**: Upkeep, Attack, Block, Damage, End Combat phases (5 shortcuts)
+- ✅ **Shuffle Top/Bottom Cards**: Shuffle portion of library (2 shortcuts)
+- ✅ **Stack Until Found**: Reveal cards until finding a match
+
+**Won't Implement:**
+- ❌ **View Rotation**: Rotate view CW/CCW - Not applicable to our UI layout
+- ❌ **Select Column**: Ctrl+Shift+C - Our battlefield doesn't use column-based layout
 
 ---
 
@@ -447,19 +441,19 @@ These are features that would be nice but are not necessary for full Commander g
 
 ### For Hotseat Play (2-4 players, same device):
 **Status:** FULLY PLAYABLE
-**Completeness:** 97%
-**Missing:** Commander tax
+**Completeness:** 99%
+**Missing:** Nothing critical
 **Verdict:** You can play complete Commander games right now!
 
 ### For Network Play (remote multiplayer):
 **Status:** FULLY PLAYABLE
-**Completeness:** 95%
-**Missing:** Commander tax, some edge case handling
+**Completeness:** 97%
+**Missing:** Some edge case handling
 **Verdict:** You can play Commander games over local network with 2-4 players!
 
 ---
 
-## WHAT USERS CAN DO TODAY (v2.27.0)
+## WHAT USERS CAN DO TODAY (v3.0.0)
 
 ### Fully Functional
 - Start hotseat game with 2-4 players
@@ -489,13 +483,11 @@ These are features that would be nice but are not necessary for full Commander g
 - Play network games with full feature parity to hotseat mode
 - Player name persists between sessions
 - Server address and port settings persist between sessions
-- Use 65+ keyboard shortcuts for fast gameplay
+- Use 90+ keyboard shortcuts for fast gameplay
 
 ### Cannot Do
-- Auto-calculate commander tax (must track manually)
 - Save/load games
 - Access settings dialog (settings auto-persist but no UI)
-- Use ~40 advanced keyboard shortcuts (mana counters, bottom card ops, sub-phases)
 
 ---
 
@@ -522,22 +514,22 @@ These are features that would be nice but are not necessary for full Commander g
 
 ### For Users Who Want Hotseat Multiplayer:
 **Status:** Already works! Play it today.
-**Optional:** Add commander tax (1 day) for perfect experience.
+**Optional:** Settings dialog UI for a more polished experience.
 
 ### For Users Who Want Network Multiplayer:
 **Status:** Already works! Host or join games over local network.
-**Optional:** Add commander tax (1 day), keyboard shortcuts, settings persistence.
+**Optional:** Settings dialog UI, save/load game state.
 
 ---
 
 ## CONCLUSION
 
-Dong-A-Deuce v2.27.0 is a **fully functional multiplayer Commander game** supporting both hotseat (same device) and network (local network) play. The application demonstrates excellent MVVM architecture and comprehensive Commander gameplay support with full feature parity between game modes. 65+ keyboard shortcuts are now implemented for fast gameplay.
+Dong-A-Deuce v3.0.0 is a **fully functional multiplayer Commander game** supporting both hotseat (same device) and network (local network) play. The application demonstrates excellent MVVM architecture and comprehensive Commander gameplay support with full feature parity between game modes. 120+ keyboard shortcuts are now implemented for fast gameplay.
 
 **For Hotseat Players:** This app is ready to use!
 **For Network Players:** This app is ready to use! Host or join games over local network.
 
 ---
 
-**Last Updated:** 2025-11-27
-**Next Priority:** Commander Tax + Missing Keyboard Shortcuts + Settings
+**Last Updated:** 2025-11-28 (v3.0.0)
+**Next Priority:** Settings Dialog UI + Save/Load Games

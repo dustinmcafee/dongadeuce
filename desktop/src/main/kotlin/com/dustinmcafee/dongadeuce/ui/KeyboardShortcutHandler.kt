@@ -43,6 +43,9 @@ class KeyboardShortcutState(
     // Callbacks for number input operations (title, default, action)
     var onShowNumberInputDialog: (String, Int, (Int) -> Unit) -> Unit = { _, _, _ -> }
 
+    // Callback for stack until found dialog
+    var onShowStackUntilFoundDialog: () -> Unit = {}
+
     // Track if a dialog is open (shortcuts disabled except Esc)
     var isDialogOpen: Boolean = false
 
@@ -449,6 +452,7 @@ class KeyboardShortcutState(
             }
             ShortcutAction.AlwaysRevealTopCard -> viewModel.toggleRevealTopCard(activePlayer.id)
             ShortcutAction.AlwaysLookAtTopCard -> viewModel.toggleLookAtTopCard(activePlayer.id)
+            ShortcutAction.StackUntilFound -> onShowStackUntilFoundDialog()
 
             // Bottom Card Operations
             ShortcutAction.DrawBottomCard -> viewModel.drawFromBottom(activePlayer.id, 1)

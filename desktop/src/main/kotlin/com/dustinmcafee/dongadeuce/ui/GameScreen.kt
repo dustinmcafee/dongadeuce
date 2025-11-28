@@ -2,6 +2,8 @@ package com.dustinmcafee.dongadeuce.ui
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -57,6 +59,10 @@ fun GameScreen(
     var numberInputTitle by remember { mutableStateOf("") }
     var numberInputDefault by remember { mutableStateOf(1) }
     var numberInputCallback by remember { mutableStateOf<((Int) -> Unit)?>(null) }
+    // Stack until found dialog state
+    var showStackUntilFoundDialog by remember { mutableStateOf(false) }
+    var stackUntilFoundResults by remember { mutableStateOf<List<com.dustinmcafee.dongadeuce.models.CardInstance>>(emptyList()) }
+    var stackUntilFoundMatch by remember { mutableStateOf<com.dustinmcafee.dongadeuce.models.CardInstance?>(null) }
 
     // Keyboard shortcut handler
     val keyboardState = rememberKeyboardShortcutState(viewModel, selectionState)
@@ -87,7 +93,8 @@ fun GameScreen(
             showCommandZoneDialog ||
             showPeekTopDialog ||
             showPeekBottomDialog ||
-            showNumberInputDialog
+            showNumberInputDialog ||
+            showStackUntilFoundDialog
 
     // Update keyboard state with dialog status
     LaunchedEffect(isAnyDialogOpen) {
@@ -121,6 +128,11 @@ fun GameScreen(
             numberInputCallback = callback
             showNumberInputDialog = true
         }
+        keyboardState.onShowStackUntilFoundDialog = {
+            stackUntilFoundResults = emptyList()
+            stackUntilFoundMatch = null
+            showStackUntilFoundDialog = true
+        }
         keyboardState.onCloseDialog = {
             cardDetailsToShow = null
             showLibraryPositionDialog = false
@@ -138,6 +150,7 @@ fun GameScreen(
             showPeekTopDialog = false
             showPeekBottomDialog = false
             showNumberInputDialog = false
+            showStackUntilFoundDialog = false
         }
         keyboardState.onFocusChat = {
             // Focus the chat input - would need a reference to the chat input field
@@ -820,6 +833,156 @@ fun GameScreen(
                 }
             }
         )
+    }
+
+    // Stack Until Found dialog
+    if (showStackUntilFoundDialog && activePlayerId != null) {
+        var searchText by remember { mutableStateOf("") }
+        var hasSearched by remember { mutableStateOf(false) }
+
+        if (!hasSearched) {
+            // Stage 1: Enter search term
+            AlertDialog(
+                onDismissRequest = { showStackUntilFoundDialog = false },
+                title = { Text("Stack Until Found") },
+                text = {
+                    Column {
+                        Text(
+                            "Enter a card name or type to search for. Cards will be revealed from the top of your library until a match is found.",
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        )
+                        OutlinedTextField(
+                            value = searchText,
+                            onValueChange = { searchText = it },
+                            label = { Text("Search (name or type)") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            if (searchText.isNotBlank()) {
+                                // Perform search
+                                val libraryCards = uiState.gameState?.cardInstances?.filter {
+                                    it.ownerId == activePlayerId && it.zone == Zone.LIBRARY
+                                }?.reversed() ?: emptyList() // reversed so top is first
+
+                                val searchLower = searchText.lowercase()
+                                val revealed = mutableListOf<com.dustinmcafee.dongadeuce.models.CardInstance>()
+                                var matchFound: com.dustinmcafee.dongadeuce.models.CardInstance? = null
+
+                                for (card in libraryCards) {
+                                    val nameMatches = card.card.name.lowercase().contains(searchLower)
+                                    val typeMatches = card.card.type?.lowercase()?.contains(searchLower) == true
+                                    if (nameMatches || typeMatches) {
+                                        matchFound = card
+                                        break
+                                    } else {
+                                        revealed.add(card)
+                                    }
+                                }
+
+                                stackUntilFoundResults = revealed
+                                stackUntilFoundMatch = matchFound
+                                hasSearched = true
+                            }
+                        },
+                        enabled = searchText.isNotBlank()
+                    ) {
+                        Text("Search")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showStackUntilFoundDialog = false }) {
+                        Text("Cancel")
+                    }
+                }
+            )
+        } else {
+            // Stage 2: Show results
+            AlertDialog(
+                onDismissRequest = { showStackUntilFoundDialog = false },
+                title = { Text("Stack Until Found - Results") },
+                text = {
+                    Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                        if (stackUntilFoundMatch != null) {
+                            Text(
+                                "Found: ${stackUntilFoundMatch?.card?.name}",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.padding(bottom = 8.dp)
+                            )
+                        } else {
+                            Text(
+                                "No match found in library",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.padding(bottom = 8.dp)
+                            )
+                        }
+
+                        if (stackUntilFoundResults.isNotEmpty()) {
+                            Text(
+                                "Revealed ${stackUntilFoundResults.size} card(s):",
+                                style = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier.padding(bottom = 4.dp)
+                            )
+                            stackUntilFoundResults.forEach { card ->
+                                Text(
+                                    "• ${card.card.name}",
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
+                        } else if (stackUntilFoundMatch != null) {
+                            Text(
+                                "Match was on top of library (no cards revealed)",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            "Choose where to put the revealed cards:",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                },
+                confirmButton = {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        TextButton(
+                            onClick = {
+                                // Put revealed cards to graveyard
+                                stackUntilFoundResults.forEach { card ->
+                                    viewModel.moveCard(card.instanceId, Zone.GRAVEYARD)
+                                }
+                                showStackUntilFoundDialog = false
+                            }
+                        ) {
+                            Text("To Graveyard")
+                        }
+                        Button(
+                            onClick = {
+                                // Put revealed cards on bottom of library (in order)
+                                stackUntilFoundResults.forEach { card ->
+                                    viewModel.moveCardToBottomOfLibrary(card.instanceId)
+                                }
+                                showStackUntilFoundDialog = false
+                            }
+                        ) {
+                            Text("To Bottom")
+                        }
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showStackUntilFoundDialog = false }) {
+                        Text("Close")
+                    }
+                }
+            )
+        }
     }
 
     // Game over dialog

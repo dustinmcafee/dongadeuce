@@ -15,7 +15,7 @@ A lightweight, cross-platform MTG Commander game client built with Kotlin and Co
 - **Cross-platform**: Runs on Windows, macOS, and Linux
 - **Offline Card Cache**: 500MB+ Scryfall bulk data for instant deck loading
 - **Settings Persistence**: Player name and network settings saved between sessions
-- **Keyboard Shortcuts**: 65+ shortcuts for fast gameplay
+- **Keyboard Shortcuts**: 120+ shortcuts for fast gameplay
 
 ## Project Structure
 
@@ -73,7 +73,7 @@ cd dongadeuce
 ./gradlew desktop:packageDeb
 ```
 
-## Current Status (v2.27.0)
+## Current Status (v3.0.0)
 
 **Hotseat Mode:** 98% Complete - Fully Playable! ✅
 **Network Mode:** 96% Complete - Fully Playable! ✅
@@ -139,7 +139,7 @@ cd dongadeuce
 - Comprehensive input validation
 - Cross-platform packaging (Windows, macOS, Linux)
 
-**Keyboard Shortcuts (65+ implemented):**
+**Keyboard Shortcuts (120+ implemented):**
 - **Game Phases**: F5-F10 for phases, Ctrl+Space/Tab for next phase, Ctrl+Enter for pass turn
 - **Card Actions**: T to tap, Ctrl+U untap all, Del to graveyard, Ctrl+X to exile
 - **Power/Toughness**: Ctrl/Alt +/- for P/T, Ctrl+Alt+=/- for both
@@ -148,20 +148,14 @@ cd dongadeuce
 - **View Zones**: F3 library, F4 graveyard, Ctrl+W peek top
 - **Selection**: Ctrl+A select all, Ctrl+Shift+X select row
 - **Arrows**: Alt+A draw arrow, Ctrl+R remove arrows
+- **Mana Counters**: W/U/B/R/G/X for mana pool tracking
+- **Stack Until Found**: Ctrl+Shift+Y to reveal cards until match
 
 ### ❌ Not Yet Implemented
 
 **Missing Features:**
-- **Commander Tax Tracking** - Manual tracking required
 - **Game Save/Load** - Cannot save games in progress
-
-**Missing Keyboard Shortcuts (for full parity):**
-- Mana/color player counters (W/U/B/R/G/X)
-- Set counter dialogs (Alt+/, Ctrl+/, Ctrl+?)
-- Move bottom card operations
-- Stack until found (Ctrl+Shift+Y)
-- Sub-phases (Upkeep, Attack, Block, Damage, End Combat)
-- View rotation (rotate view CW/CCW)
+- **Settings Dialog UI** - Settings auto-persist but no configuration UI
 
 ### Completion Status
 - **Hotseat Mode:** ~98% complete (fully playable)
@@ -190,15 +184,15 @@ The UI includes all Commander zones:
 
 See [MISSING_FEATURES.md](MISSING_FEATURES.md) for detailed feature analysis.
 
-### Immediate Priorities (v2.28.0)
-1. **Commander Tax Tracking** - Automatic tax calculation
-2. **Missing Keyboard Shortcuts** - Complete parity with reference implementation
+### Immediate Priorities (v3.1.0)
+1. **Settings Dialog UI** - User-configurable settings
+2. **Game Save/Load** - Persist games across sessions
 
 **Result:** Feature-complete Commander experience
 
 ### Future Enhancements
-- Game Save/Load - Persist games across sessions
 - Animations - Card movement and tap animations
 - Sound Effects - Audio feedback for actions
 - Spectator Mode - Watch games in progress
+- Deck Builder - In-app deck creation and editing
 

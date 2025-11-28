@@ -40,7 +40,7 @@ compose.desktop {
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
             packageName = "Commander MTG"
-            packageVersion = "1.0.0"
+            packageVersion = project.version.toString()
 
             windows {
                 menuGroup = "Commander MTG"

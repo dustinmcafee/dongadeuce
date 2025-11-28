@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.0.0] - 2025-11-28
+
+### Added
+- **120+ Keyboard Shortcuts** - Comprehensive keyboard shortcut system for fast gameplay
+  - Mana counters: W/U/B/R/G/X keys for mana pool tracking (18 shortcuts)
+  - Set counter dialogs: Set specific values for counters A-F (6 shortcuts)
+  - Move bottom card operations: Draw/mill/exile from bottom of library (7 shortcuts)
+  - Sub-phases: Upkeep, Attack, Block, Damage, End Combat phases (5 shortcuts)
+  - Shuffle top/bottom cards: Shuffle portion of library (2 shortcuts)
+  - Stack Until Found: Ctrl+Shift+Y to reveal cards until finding a match
+  - Number input dialog for multi-card operations (replaces hardcoded defaults)
+
+- **Stack Until Found Feature**
+  - Two-stage dialog: search input then results display
+  - Search by card name or type
+  - Options to move revealed cards to graveyard or bottom of library
+  - Match card can be moved to hand or battlefield
+
+### Changed
+- **Build System**: Native package version now uses project version dynamically
+  - Fixed: .deb, .dmg, .msi files now use correct version in filenames
+  - Previously hardcoded to "1.0.0", now uses `project.version.toString()`
+
+### Fixed
+- Native distribution packages now correctly named with version (e.g., Commander.MTG-3.0.0.dmg)
+- Nullable type handling in Stack Until Found card type matching
+
 ## [2.27.0] - 2025-11-27
 
 ### Added
