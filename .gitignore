@@ -36,3 +36,6 @@ shared/build/
 
 # Resources cache
 resources/cache/
+
+# Claude Code
+.claude/
