@@ -25,8 +25,23 @@ import com.dustinmcafee.dongadeuce.api.ScryfallCard
  * This allows offline deck loading and eliminates per-card API calls
  */
 class CardCache(
-    private val cacheDir: File = File(System.getProperty("user.home"), ".commandermtg/cache")
+    private val cacheDir: File = getDefaultCacheDir()
 ) {
+    companion object {
+        private fun getDefaultCacheDir(): File {
+            val os = System.getProperty("os.name").lowercase()
+            return if (os.contains("win")) {
+                val appData = System.getenv("APPDATA")
+                if (appData != null) {
+                    File(File(appData, "DongADeuce"), "cache")
+                } else {
+                    File(File(System.getProperty("user.home"), ".commandermtg"), "cache")
+                }
+            } else {
+                File(File(System.getProperty("user.home"), ".commandermtg"), "cache")
+            }
+        }
+    }
     // Shared JSON configuration
     private val json = Json {
         ignoreUnknownKeys = true

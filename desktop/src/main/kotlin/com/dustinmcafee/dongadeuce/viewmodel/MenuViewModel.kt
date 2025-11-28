@@ -7,6 +7,7 @@ import com.dustinmcafee.dongadeuce.models.Card
 import com.dustinmcafee.dongadeuce.models.Deck
 import com.dustinmcafee.dongadeuce.models.GameState
 import com.dustinmcafee.dongadeuce.network.*
+import com.dustinmcafee.dongadeuce.settings.UserSettings
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -56,6 +57,9 @@ sealed class Screen {
 }
 
 class MenuViewModel {
+    // User settings for persistence
+    private val userSettings = UserSettings()
+
     private val _uiState = MutableStateFlow(MenuUiState())
     val uiState: StateFlow<MenuUiState> = _uiState.asStateFlow()
 
@@ -73,8 +77,24 @@ class MenuViewModel {
     fun getGameClient(): GameClient? = gameClient
 
     init {
+        // Load persisted settings
+        loadPersistedSettings()
         // Check cache status on initialization
         updateCacheStatus()
+    }
+
+    /**
+     * Load persisted settings from disk
+     */
+    private fun loadPersistedSettings() {
+        val settings = userSettings.load()
+        _uiState.update {
+            it.copy(
+                playerName = settings.playerName,
+                serverAddress = settings.serverAddress,
+                serverPort = settings.serverPort
+            )
+        }
     }
 
     /**
@@ -130,10 +150,11 @@ class MenuViewModel {
     }
 
     /**
-     * Update player name
+     * Update player name and persist
      */
     fun setPlayerName(name: String) {
         _uiState.update { it.copy(playerName = name) }
+        userSettings.setPlayerName(name)
     }
 
     /**
@@ -422,10 +443,11 @@ class MenuViewModel {
     }
 
     /**
-     * Set server address for joining
+     * Set server address for joining and persist
      */
     fun setServerAddress(address: String) {
         _uiState.update { it.copy(serverAddress = address) }
+        userSettings.setServerAddress(address)
     }
 
     /**
@@ -592,10 +614,12 @@ class MenuViewModel {
     }
 
     /**
-     * Set server port
+     * Set server port and persist
      */
     fun setServerPort(port: Int) {
-        _uiState.update { it.copy(serverPort = port.coerceIn(1024, 65535)) }
+        val validPort = port.coerceIn(1024, 65535)
+        _uiState.update { it.copy(serverPort = validPort) }
+        userSettings.setServerPort(validPort)
     }
 
     /**

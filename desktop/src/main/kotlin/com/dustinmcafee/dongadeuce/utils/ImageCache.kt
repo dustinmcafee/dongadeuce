@@ -19,10 +19,19 @@ object ImageCache {
         return client ?: HttpClient().also { client = it }
     }
 
-    // Cache directory in user's home directory
+    // Cache directory in user's home directory (cross-platform)
     private val cacheDir: File by lazy {
-        val userHome = System.getProperty("user.home")
-        val dir = File(userHome, ".commandermtg/image_cache")
+        val os = System.getProperty("os.name").lowercase()
+        val dir = if (os.contains("win")) {
+            val appData = System.getenv("APPDATA")
+            if (appData != null) {
+                File(File(appData, "DongADeuce"), "image_cache")
+            } else {
+                File(File(System.getProperty("user.home"), ".commandermtg"), "image_cache")
+            }
+        } else {
+            File(File(System.getProperty("user.home"), ".commandermtg"), "image_cache")
+        }
         dir.mkdirs()
         dir
     }

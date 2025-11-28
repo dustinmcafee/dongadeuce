@@ -6,12 +6,15 @@
 
 A lightweight, cross-platform MTG Commander game client built with Kotlin and Compose Multiplatform.
 
-## Features (Planned)
+## Features
 
 - **Commander-focused**: Designed specifically for EDH/Commander format
-- **P2P Networking**: Host or join games directly, no central server needed
+- **Hotseat Multiplayer**: 2-4 players on the same device
+- **Network Multiplayer**: Host or join games over local network
 - **Deck Import**: Load decks from text format
 - **Cross-platform**: Runs on Windows, macOS, and Linux
+- **Offline Card Cache**: 500MB+ Scryfall bulk data for instant deck loading
+- **Settings Persistence**: Player name and network settings saved between sessions
 
 ## Project Structure
 
@@ -19,14 +22,14 @@ A lightweight, cross-platform MTG Commander game client built with Kotlin and Co
 dongadeuce/
 ├── shared/              # Shared game logic and models
 │   ├── models/         # Card, Deck, GameState, Player, Zone
-│   ├── network/        # P2P networking protocol (TODO)
+│   ├── network/        # WebSocket server/client, network protocol
+│   ├── settings/       # User settings persistence
 │   └── game/           # Game logic, deck parser
 ├── desktop/            # Compose Desktop UI
 │   ├── ui/             # UI components (game screen, zones, cards)
 │   ├── viewmodel/      # ViewModels with StateFlow (MVVM architecture)
-│   ├── client/         # Network client (TODO)
-│   └── server/         # Network server/host (TODO)
-└── resources/          # Card images cache (TODO)
+│   └── utils/          # Image cache, utilities
+└── resources/          # Icons and assets
 ```
 
 ## Architecture
@@ -69,10 +72,10 @@ cd dongadeuce
 ./gradlew desktop:packageDeb
 ```
 
-## Current Status (v2.17.0)
+## Current Status (v2.26.0)
 
-**Hotseat Mode:** 95% Complete - Fully Playable! ✅
-**Network Mode:** 5% Complete - UI Only ⏳
+**Hotseat Mode:** 97% Complete - Fully Playable! ✅
+**Network Mode:** 95% Complete - Fully Playable! ✅
 
 ### ✅ Fully Implemented
 
@@ -88,16 +91,19 @@ cd dongadeuce
 - **Counters** - Add/remove +1/+1, charge, and custom counters
 - **Card Attachments** - Aura/Equipment attachment system
 - **Flip Cards** - Full flip card support
+- **Face Down Cards** - Morph/manifest support
 - **Life Tracking** - Automatic loss detection
 - **Draw from Empty Library** - Automatic loss detection
 - **All Zone Operations** - Move cards between any zones
-- **Library Operations** - Draw, mill, shuffle, search, tutor, mulligan
-- **Multi-Card Selection** - Shift+click to select multiple cards
-- **Batch Operations** - Right-click applies actions to all selected cards
-- **Card Stacking** - Grid-based stacking system (max 3 cards per stack)
-- **Token Creation** - Create tokens via Scryfall search with custom P/T
-- **Drag-and-Drop to Zones** - Drag cards from battlefield to Library/Graveyard/Exile buttons
-- **Battlefield Scrolling** - Vertical scrolling for cards placed in lower rows
+- **Library Operations** - Draw, mill, shuffle, search, tutor, mulligan, peek top/bottom N
+- **P/T Modifications** - Increase/decrease/set/reset/flow power and toughness
+- **Card Annotations** - Custom text notes on cards
+- **Token Creation** - Create tokens via Scryfall search or custom
+- **Card Copy/Clone** - Clone cards with visual indicator
+- **Player Counters** - Poison, energy, experience, and custom counters
+- **Die Rolling** - D4, D6, D8, D10, D12, D20, D100, custom dice, coin flip
+- **Game Log** - Real-time event logging with 21 event types
+- **Chat Messages** - In-game chat between players
 - **Give Control** - Transfer control of permanents between players
 
 **Hotseat Multiplayer:**
@@ -106,28 +112,42 @@ cd dongadeuce
 - **Automatic Player Rotation** - UI rotates to show active player
 - **Hand Privacy** - Only active player sees their cards
 - **Turn Passing** - Automatic player advancement
-- **Zone Access Control** - Only active player can interact
+
+**Network Multiplayer:**
+- **Host/Join Games** - WebSocket-based networking over local network
+- **Lobby System** - Player ready status, host can kick players
+- **Real-time Sync** - Full game state synchronization
+- **35+ Network Actions** - All game actions supported over network
+- **Disconnect Handling** - Game pauses on player disconnect
+- **Action Validation** - Server-side cheating prevention
+- **Unique Player Names** - Auto-rename duplicate names
+
+**Settings & Persistence:**
+- **Player Name** - Persisted between sessions
+- **Server Address** - Last used address saved
+- **Server Port** - Custom port configuration
+- **Cross-platform Storage** - Windows: %APPDATA%, Linux/macOS: ~/.commandermtg
 
 **Technical:**
-- MVVM architecture with StateFlow
+- MVVM architecture with StateFlow (100% compliant)
+- Ktor WebSocket server and client
 - Scryfall API integration
 - Bulk card cache with progress UI
 - Text-based deck parser
 - 44 passing unit tests
 - Comprehensive input validation
+- Cross-platform packaging (Windows, macOS, Linux)
 
 ### ❌ Not Yet Implemented
 
 **Missing Features:**
-- **Game Log/History** - No action history (2-3 days work)
 - **Commander Tax Tracking** - Manual tracking required (1 day work)
-- **Network Multiplayer Backend** - UI exists but no server/client (3-4 weeks work)
-- **Keyboard Shortcuts** - All actions require mouse
-- **Copy/Clone Cards** - No support for card copying effects
+- **Keyboard Shortcuts** - All actions require mouse (2-3 days work)
+- **Game Save/Load** - Cannot save games in progress
 
 ### Completion Status
-- **Hotseat Mode:** ~95% complete (playable, missing game log + commander tax)
-- **Network Mode:** ~5% complete (UI only, no backend)
+- **Hotseat Mode:** ~97% complete (fully playable)
+- **Network Mode:** ~95% complete (fully playable)
 
 ## Tech Stack
 
@@ -150,32 +170,18 @@ The UI includes all Commander zones:
 
 ## Next Steps
 
-See [TODO.md](TODO.md) for detailed development roadmap.
+See [MISSING_FEATURES.md](MISSING_FEATURES.md) for detailed feature analysis.
 
-### Immediate Priorities (v2.18.0 - 1 week)
-1. **Game Log/History System** - Track all game actions for review (2-3 days)
-2. **Commander Tax Tracking** - Automatic tax calculation (1 day)
-3. **Keyboard Shortcuts** - Speed up common actions (1 day)
+### Immediate Priorities (v2.27.0)
+1. **Commander Tax Tracking** - Automatic tax calculation (1 day)
+2. **Keyboard Shortcuts** - Speed up common actions (2-3 days)
+   - See [KEYBOARD_SHORTCUTS_PLAN.md](KEYBOARD_SHORTCUTS_PLAN.md) for implementation plan
 
-**Result:** Feature-complete hotseat multiplayer
+**Result:** Feature-complete Commander experience
 
-### Medium Term (v2.19.0 - 1-2 weeks)
-4. Settings/Preferences - Player name persistence, defaults
-5. Copy/Clone Cards - Support for card copying effects
-6. Animations - Card movement and tap animations
-7. Sound Effects - Audio feedback for actions
-
-**Result:** Polished hotseat experience
-
-### Long Term (v3.0.0 - 3-4 weeks)
-8. **Network Multiplayer Backend** - The big one
-   - GameServer.kt with Ktor WebSockets
-   - GameClient.kt with Ktor WebSockets
-   - GameMessage.kt network protocol
-   - State synchronization
-   - Integration with ViewModels
-9. Chat System - In-game chat with commands
-10. Spectator Mode - Watch games in progress
-
-**Result:** Full network multiplayer
+### Future Enhancements
+- Game Save/Load - Persist games across sessions
+- Animations - Card movement and tap animations
+- Sound Effects - Audio feedback for actions
+- Spectator Mode - Watch games in progress
 

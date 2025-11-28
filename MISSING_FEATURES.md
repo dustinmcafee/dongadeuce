@@ -168,27 +168,26 @@ All actions require mouse clicks. Power users have slower workflow.
 
 ---
 
-### 7. Settings/Preferences
+### 7. Settings/Preferences - PARTIALLY IMPLEMENTED
 
 **Priority:** MEDIUM
 **Effort:** 2-3 days
-**Status:** Not implemented
+**Status:** PARTIALLY COMPLETED (v2.26.0)
 
-**Impact:**
-Player name not saved, no configuration options.
+**Features Implemented:**
+- UserSettings.kt with JSON persistence
+- Player name persistence (saved between sessions)
+- Server address persistence (last used address saved)
+- Server port persistence (custom port saved)
+- Cross-platform storage:
+  - Windows: %APPDATA%/DongADeuce/settings.json
+  - Linux/macOS: ~/.commandermtg/settings.json
 
-**What's Needed:**
-- Settings dialog
-- Player name persistence
+**Still Needed:**
+- Settings dialog UI
 - Default deck directory
-- Network port configuration
 - Auto-untap toggle
 - Confirm destructive actions toggle
-
-**Why Not Implemented:**
-- Defaults work for most users
-- Configuration can be done each session
-- QoL feature, not critical
 
 ---
 
@@ -355,12 +354,12 @@ These are features that would be nice but are not necessary for full Commander g
 | **Network Multiplayer** | 9/10 | 1/10 | 90% |
 | **UI Components** | 16/16 | 0/16 | 100% |
 | **Technical Foundation** | 10/10 | 0/10 | 100% |
-| **Quality of Life** | 0/8 | 8/8 | 0% |
+| **Quality of Life** | 3/8 | 5/8 | 38% |
 | **Polish/Enhancement** | 0/20 | 20/20 | 0% |
-| **TOTAL** | 59/88 | 29/88 | **67%** |
+| **TOTAL** | 62/88 | 26/88 | **70%** |
 
-**For Hotseat Mode:** 50/53 = **94% Complete**
-**For Network Mode:** 59/63 = **94% Complete**
+**For Hotseat Mode:** 53/56 = **95% Complete**
+**For Network Mode:** 62/66 = **94% Complete**
 
 ---
 
@@ -408,12 +407,14 @@ These are features that would be nice but are not necessary for full Commander g
 - Send chat messages to other players
 - See die roll results in game log
 - Play network games with full feature parity to hotseat mode
+- Player name persists between sessions
+- Server address and port settings persist between sessions
 
 ### Cannot Do
 - Auto-calculate commander tax (must track manually)
 - Use keyboard shortcuts
 - Save/load games
-- Access settings menu
+- Access settings dialog (settings auto-persist but no UI)
 
 ---
 
