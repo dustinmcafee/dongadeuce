@@ -60,17 +60,43 @@ sealed class ShortcutAction(val id: String, val displayName: String, val categor
     // Card Counters (A-F colored counters)
     object AddCounterA : ShortcutAction("addCounterA", "Add Counter (A/Red)", "Card Counters")
     object RemoveCounterA : ShortcutAction("removeCounterA", "Remove Counter (A/Red)", "Card Counters")
+    object SetCounterA : ShortcutAction("setCounterA", "Set Counter (A/Red)...", "Card Counters")
     object AddCounterB : ShortcutAction("addCounterB", "Add Counter (B/Yellow)", "Card Counters")
     object RemoveCounterB : ShortcutAction("removeCounterB", "Remove Counter (B/Yellow)", "Card Counters")
+    object SetCounterB : ShortcutAction("setCounterB", "Set Counter (B/Yellow)...", "Card Counters")
     object AddCounterC : ShortcutAction("addCounterC", "Add Counter (C/Green)", "Card Counters")
     object RemoveCounterC : ShortcutAction("removeCounterC", "Remove Counter (C/Green)", "Card Counters")
+    object SetCounterC : ShortcutAction("setCounterC", "Set Counter (C/Green)...", "Card Counters")
     object AddCounterD : ShortcutAction("addCounterD", "Add Counter (D/Cyan)", "Card Counters")
     object RemoveCounterD : ShortcutAction("removeCounterD", "Remove Counter (D/Cyan)", "Card Counters")
+    object SetCounterD : ShortcutAction("setCounterD", "Set Counter (D/Cyan)...", "Card Counters")
     object AddCounterE : ShortcutAction("addCounterE", "Add Counter (E/Purple)", "Card Counters")
     object RemoveCounterE : ShortcutAction("removeCounterE", "Remove Counter (E/Purple)", "Card Counters")
+    object SetCounterE : ShortcutAction("setCounterE", "Set Counter (E/Purple)...", "Card Counters")
     object AddCounterF : ShortcutAction("addCounterF", "Add Counter (F/Magenta)", "Card Counters")
     object RemoveCounterF : ShortcutAction("removeCounterF", "Remove Counter (F/Magenta)", "Card Counters")
+    object SetCounterF : ShortcutAction("setCounterF", "Set Counter (F/Magenta)...", "Card Counters")
     object IncrementAllCounters : ShortcutAction("incrementAllCounters", "Increment All Card Counters", "Card Counters")
+
+    // Mana Counters (Player-level mana pool tracking)
+    object AddWhiteMana : ShortcutAction("addWhiteMana", "Add White Mana", "Mana Counters")
+    object RemoveWhiteMana : ShortcutAction("removeWhiteMana", "Remove White Mana", "Mana Counters")
+    object SetWhiteMana : ShortcutAction("setWhiteMana", "Set White Mana...", "Mana Counters")
+    object AddBlueMana : ShortcutAction("addBlueMana", "Add Blue Mana", "Mana Counters")
+    object RemoveBlueMana : ShortcutAction("removeBlueMana", "Remove Blue Mana", "Mana Counters")
+    object SetBlueMana : ShortcutAction("setBlueMana", "Set Blue Mana...", "Mana Counters")
+    object AddBlackMana : ShortcutAction("addBlackMana", "Add Black Mana", "Mana Counters")
+    object RemoveBlackMana : ShortcutAction("removeBlackMana", "Remove Black Mana", "Mana Counters")
+    object SetBlackMana : ShortcutAction("setBlackMana", "Set Black Mana...", "Mana Counters")
+    object AddRedMana : ShortcutAction("addRedMana", "Add Red Mana", "Mana Counters")
+    object RemoveRedMana : ShortcutAction("removeRedMana", "Remove Red Mana", "Mana Counters")
+    object SetRedMana : ShortcutAction("setRedMana", "Set Red Mana...", "Mana Counters")
+    object AddGreenMana : ShortcutAction("addGreenMana", "Add Green Mana", "Mana Counters")
+    object RemoveGreenMana : ShortcutAction("removeGreenMana", "Remove Green Mana", "Mana Counters")
+    object SetGreenMana : ShortcutAction("setGreenMana", "Set Green Mana...", "Mana Counters")
+    object AddColorlessMana : ShortcutAction("addColorlessMana", "Add Colorless Mana", "Mana Counters")
+    object RemoveColorlessMana : ShortcutAction("removeColorlessMana", "Remove Colorless Mana", "Mana Counters")
+    object SetColorlessMana : ShortcutAction("setColorlessMana", "Set Colorless Mana...", "Mana Counters")
 
     // Drawing & Library
     object DrawCard : ShortcutAction("drawCard", "Draw Card", "Drawing & Library")
@@ -139,9 +165,20 @@ sealed class ShortcutAction(val id: String, val displayName: String, val categor
                 // Life & Counters
                 AddLife, RemoveLife, SetLife, AddCounter, RemoveCounter,
                 // Card Counters (A-F)
-                AddCounterA, RemoveCounterA, AddCounterB, RemoveCounterB, AddCounterC, RemoveCounterC,
-                AddCounterD, RemoveCounterD, AddCounterE, RemoveCounterE, AddCounterF, RemoveCounterF,
+                AddCounterA, RemoveCounterA, SetCounterA,
+                AddCounterB, RemoveCounterB, SetCounterB,
+                AddCounterC, RemoveCounterC, SetCounterC,
+                AddCounterD, RemoveCounterD, SetCounterD,
+                AddCounterE, RemoveCounterE, SetCounterE,
+                AddCounterF, RemoveCounterF, SetCounterF,
                 IncrementAllCounters,
+                // Mana Counters
+                AddWhiteMana, RemoveWhiteMana, SetWhiteMana,
+                AddBlueMana, RemoveBlueMana, SetBlueMana,
+                AddBlackMana, RemoveBlackMana, SetBlackMana,
+                AddRedMana, RemoveRedMana, SetRedMana,
+                AddGreenMana, RemoveGreenMana, SetGreenMana,
+                AddColorlessMana, RemoveColorlessMana, SetColorlessMana,
                 // Drawing & Library
                 DrawCard, DrawMultiple, UndoDraw, Mulligan, ShuffleLibrary, ShuffleTopCards, ShuffleBottomCards,
                 PlayTopCard, MillTopCard, MillMultiple, AlwaysRevealTopCard, AlwaysLookAtTopCard,

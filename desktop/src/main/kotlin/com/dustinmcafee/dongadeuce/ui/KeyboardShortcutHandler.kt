@@ -260,6 +260,13 @@ class KeyboardShortcutState(
                 if (selectedCards.isEmpty()) return false
                 selectedCards.forEach { viewModel.removeCounter(it.instanceId, "A") }
             }
+            ShortcutAction.SetCounterA -> {
+                val card = selectedCard ?: return false
+                val currentCount = card.counters["A"] ?: 0
+                onShowNumberInputDialog("Set Counter A (Red)", currentCount) { count ->
+                    viewModel.setCounter(card.instanceId, "A", count)
+                }
+            }
             ShortcutAction.AddCounterB -> {
                 if (selectedCards.isEmpty()) return false
                 selectedCards.forEach { viewModel.addCounter(it.instanceId, "B") }
@@ -267,6 +274,13 @@ class KeyboardShortcutState(
             ShortcutAction.RemoveCounterB -> {
                 if (selectedCards.isEmpty()) return false
                 selectedCards.forEach { viewModel.removeCounter(it.instanceId, "B") }
+            }
+            ShortcutAction.SetCounterB -> {
+                val card = selectedCard ?: return false
+                val currentCount = card.counters["B"] ?: 0
+                onShowNumberInputDialog("Set Counter B (Yellow)", currentCount) { count ->
+                    viewModel.setCounter(card.instanceId, "B", count)
+                }
             }
             ShortcutAction.AddCounterC -> {
                 if (selectedCards.isEmpty()) return false
@@ -276,6 +290,13 @@ class KeyboardShortcutState(
                 if (selectedCards.isEmpty()) return false
                 selectedCards.forEach { viewModel.removeCounter(it.instanceId, "C") }
             }
+            ShortcutAction.SetCounterC -> {
+                val card = selectedCard ?: return false
+                val currentCount = card.counters["C"] ?: 0
+                onShowNumberInputDialog("Set Counter C (Green)", currentCount) { count ->
+                    viewModel.setCounter(card.instanceId, "C", count)
+                }
+            }
             ShortcutAction.AddCounterD -> {
                 if (selectedCards.isEmpty()) return false
                 selectedCards.forEach { viewModel.addCounter(it.instanceId, "D") }
@@ -283,6 +304,13 @@ class KeyboardShortcutState(
             ShortcutAction.RemoveCounterD -> {
                 if (selectedCards.isEmpty()) return false
                 selectedCards.forEach { viewModel.removeCounter(it.instanceId, "D") }
+            }
+            ShortcutAction.SetCounterD -> {
+                val card = selectedCard ?: return false
+                val currentCount = card.counters["D"] ?: 0
+                onShowNumberInputDialog("Set Counter D (Cyan)", currentCount) { count ->
+                    viewModel.setCounter(card.instanceId, "D", count)
+                }
             }
             ShortcutAction.AddCounterE -> {
                 if (selectedCards.isEmpty()) return false
@@ -292,6 +320,13 @@ class KeyboardShortcutState(
                 if (selectedCards.isEmpty()) return false
                 selectedCards.forEach { viewModel.removeCounter(it.instanceId, "E") }
             }
+            ShortcutAction.SetCounterE -> {
+                val card = selectedCard ?: return false
+                val currentCount = card.counters["E"] ?: 0
+                onShowNumberInputDialog("Set Counter E (Purple)", currentCount) { count ->
+                    viewModel.setCounter(card.instanceId, "E", count)
+                }
+            }
             ShortcutAction.AddCounterF -> {
                 if (selectedCards.isEmpty()) return false
                 selectedCards.forEach { viewModel.addCounter(it.instanceId, "F") }
@@ -300,9 +335,72 @@ class KeyboardShortcutState(
                 if (selectedCards.isEmpty()) return false
                 selectedCards.forEach { viewModel.removeCounter(it.instanceId, "F") }
             }
+            ShortcutAction.SetCounterF -> {
+                val card = selectedCard ?: return false
+                val currentCount = card.counters["F"] ?: 0
+                onShowNumberInputDialog("Set Counter F (Magenta)", currentCount) { count ->
+                    viewModel.setCounter(card.instanceId, "F", count)
+                }
+            }
             ShortcutAction.IncrementAllCounters -> {
                 if (selectedCards.isEmpty()) return false
                 selectedCards.forEach { viewModel.incrementAllCounters(it.instanceId) }
+            }
+
+            // Mana Counters (Player-level mana pool tracking)
+            ShortcutAction.AddWhiteMana -> viewModel.addPlayerCounter(activePlayer.id, "white", 1)
+            ShortcutAction.RemoveWhiteMana -> viewModel.removePlayerCounter(activePlayer.id, "white", 1)
+            ShortcutAction.SetWhiteMana -> {
+                val playerId = activePlayer.id
+                val currentCount = activePlayer.getCounter("white")
+                onShowNumberInputDialog("Set White Mana", currentCount) { count ->
+                    viewModel.setPlayerCounter(playerId, "white", count)
+                }
+            }
+            ShortcutAction.AddBlueMana -> viewModel.addPlayerCounter(activePlayer.id, "blue", 1)
+            ShortcutAction.RemoveBlueMana -> viewModel.removePlayerCounter(activePlayer.id, "blue", 1)
+            ShortcutAction.SetBlueMana -> {
+                val playerId = activePlayer.id
+                val currentCount = activePlayer.getCounter("blue")
+                onShowNumberInputDialog("Set Blue Mana", currentCount) { count ->
+                    viewModel.setPlayerCounter(playerId, "blue", count)
+                }
+            }
+            ShortcutAction.AddBlackMana -> viewModel.addPlayerCounter(activePlayer.id, "black", 1)
+            ShortcutAction.RemoveBlackMana -> viewModel.removePlayerCounter(activePlayer.id, "black", 1)
+            ShortcutAction.SetBlackMana -> {
+                val playerId = activePlayer.id
+                val currentCount = activePlayer.getCounter("black")
+                onShowNumberInputDialog("Set Black Mana", currentCount) { count ->
+                    viewModel.setPlayerCounter(playerId, "black", count)
+                }
+            }
+            ShortcutAction.AddRedMana -> viewModel.addPlayerCounter(activePlayer.id, "red", 1)
+            ShortcutAction.RemoveRedMana -> viewModel.removePlayerCounter(activePlayer.id, "red", 1)
+            ShortcutAction.SetRedMana -> {
+                val playerId = activePlayer.id
+                val currentCount = activePlayer.getCounter("red")
+                onShowNumberInputDialog("Set Red Mana", currentCount) { count ->
+                    viewModel.setPlayerCounter(playerId, "red", count)
+                }
+            }
+            ShortcutAction.AddGreenMana -> viewModel.addPlayerCounter(activePlayer.id, "green", 1)
+            ShortcutAction.RemoveGreenMana -> viewModel.removePlayerCounter(activePlayer.id, "green", 1)
+            ShortcutAction.SetGreenMana -> {
+                val playerId = activePlayer.id
+                val currentCount = activePlayer.getCounter("green")
+                onShowNumberInputDialog("Set Green Mana", currentCount) { count ->
+                    viewModel.setPlayerCounter(playerId, "green", count)
+                }
+            }
+            ShortcutAction.AddColorlessMana -> viewModel.addPlayerCounter(activePlayer.id, "colorless", 1)
+            ShortcutAction.RemoveColorlessMana -> viewModel.removePlayerCounter(activePlayer.id, "colorless", 1)
+            ShortcutAction.SetColorlessMana -> {
+                val playerId = activePlayer.id
+                val currentCount = activePlayer.getCounter("colorless")
+                onShowNumberInputDialog("Set Colorless Mana", currentCount) { count ->
+                    viewModel.setPlayerCounter(playerId, "colorless", count)
+                }
             }
 
             // Drawing & Library
