@@ -1,6 +1,6 @@
 # Dong-A-Deuce - Development TODO
 
-**Current Version:** v3.1.2
+**Current Version:** v3.1.3
 **Hotseat Mode:** 99% complete (fully playable!)
 **Network Mode:** 97% complete (fully playable!)
 **Last Updated:** 2025-11-28
