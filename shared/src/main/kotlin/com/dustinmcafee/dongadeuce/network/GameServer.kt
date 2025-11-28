@@ -503,6 +503,20 @@ class GameServer(
                 }
             }
 
+            is NetworkAction.ToggleRevealTopCard,
+            is NetworkAction.ToggleLookAtTopCard -> {
+                val targetPlayerId = when (action) {
+                    is NetworkAction.ToggleRevealTopCard -> action.playerId
+                    is NetworkAction.ToggleLookAtTopCard -> action.playerId
+                    else -> return ValidationResult(true)
+                }
+                if (targetPlayerId != playerId) {
+                    ValidationResult(false, "Cannot toggle library visibility for another player")
+                } else {
+                    ValidationResult(true)
+                }
+            }
+
             // Actions on your own cards - can do anytime
             is NetworkAction.DrawCard -> {
                 if (action.playerId != playerId) {
@@ -692,6 +706,38 @@ class GameServer(
                 )
                 state.updatePlayer(action.playerId) { p ->
                     p.copy(hasLost = true, life = 0)
+                }.addEvent(event)
+            }
+
+            is NetworkAction.ToggleRevealTopCard -> {
+                val targetPlayer = state.players.find { it.id == action.playerId } ?: return state
+                val newRevealState = !targetPlayer.revealTopCard
+                val event = GameEvent.GenericAction(
+                    playerId = action.playerId,
+                    playerName = targetPlayer.name,
+                    description = if (newRevealState) "is now revealing top card of library" else "stopped revealing top card of library"
+                )
+                state.updatePlayer(action.playerId) { p ->
+                    p.copy(
+                        revealTopCard = newRevealState,
+                        lookAtTopCard = if (newRevealState) true else p.lookAtTopCard
+                    )
+                }.addEvent(event)
+            }
+
+            is NetworkAction.ToggleLookAtTopCard -> {
+                val targetPlayer = state.players.find { it.id == action.playerId } ?: return state
+                val newLookState = !targetPlayer.lookAtTopCard
+                val event = GameEvent.GenericAction(
+                    playerId = action.playerId,
+                    playerName = targetPlayer.name,
+                    description = if (newLookState) "is now looking at top card of library" else "stopped looking at top card of library"
+                )
+                state.updatePlayer(action.playerId) { p ->
+                    p.copy(
+                        lookAtTopCard = newLookState,
+                        revealTopCard = if (!newLookState) false else p.revealTopCard
+                    )
                 }.addEvent(event)
             }
 

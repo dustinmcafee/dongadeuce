@@ -40,6 +40,7 @@ fun HotseatPlayerSection(
     val libraryCount = viewModel.getCardCount(player.id, Zone.LIBRARY)
     val graveyardCount = viewModel.getCardCount(player.id, Zone.GRAVEYARD)
     val exileCount = viewModel.getCardCount(player.id, Zone.EXILE)
+    val topCard = viewModel.getTopCards(player.id, 1).firstOrNull()
 
     var showGraveyardDialog by remember { mutableStateOf(false) }
     var showExileDialog by remember { mutableStateOf(false) }
@@ -89,6 +90,7 @@ fun HotseatPlayerSection(
                     isLocalPlayer = isLocalPlayer,
                     commandZoneCards = commandZoneCards,
                     libraryCount = libraryCount,
+                    topCard = topCard,
                     graveyardCount = graveyardCount,
                     exileCount = exileCount,
                     onCardAction = onCardAction,
@@ -198,6 +200,7 @@ private fun PlayerInfoSidebar(
     isLocalPlayer: Boolean,
     commandZoneCards: List<CardInstance>,
     libraryCount: Int,
+    topCard: CardInstance?,
     graveyardCount: Int,
     exileCount: Int,
     onCardAction: (CardAction) -> Unit,
@@ -275,12 +278,19 @@ private fun PlayerInfoSidebar(
 
         Spacer(modifier = Modifier.height(4.dp))
 
-        // Clickable zone cards
+        // Clickable zone cards - Library with card back image
+        // Determine the image to show: revealed card, looked-at card, or card back
+        val libraryImageUrl = when {
+            player.revealTopCard && topCard != null -> topCard.card.imageUri
+            player.lookAtTopCard && isLocalPlayer && topCard != null -> topCard.card.imageUri
+            else -> "https://cards.scryfall.io/back.png"  // Standard card back
+        }
+
         ZoneCard(
             "Library",
             Zone.LIBRARY,
             libraryCount,
-            Modifier.fillMaxWidth().height(50.dp),
+            Modifier.fillMaxWidth().height(80.dp),  // Taller to show card image better
             onClick = null, // No single-click action
             onDoubleClick = if (isLocalPlayer) ({ viewModel.drawCard(player.id) }) else null,
             onRightClick = if (isLocalPlayer) onShowLibraryOperationsDialog else null,
@@ -293,7 +303,8 @@ private fun PlayerInfoSidebar(
                     }
                     dragDropState?.endDrag()
                 }
-            } else null
+            } else null,
+            imageUrl = libraryImageUrl
         )
         ZoneCard(
             "Graveyard",

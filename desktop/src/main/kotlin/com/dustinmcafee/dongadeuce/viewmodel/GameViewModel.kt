@@ -1303,6 +1303,82 @@ class GameViewModel(
     }
 
     /**
+     * Increment all counters on a card by 1
+     */
+    fun incrementAllCounters(cardId: String) {
+        _uiState.update { currentState ->
+            val gameState = currentState.gameState ?: return@update currentState
+            val card = gameState.cardInstances.find { it.instanceId == cardId } ?: return@update currentState
+
+            if (card.counters.isEmpty()) return@update currentState
+
+            val player = gameState.players.find { it.id == card.controllerId } ?: return@update currentState
+
+            var updatedGameState = gameState.updateCardInstance(cardId) { c ->
+                c.copy(counters = c.counters.mapValues { (_, count) -> count + 1 })
+            }
+
+            // Log counter change event
+            val event = GameEvent.GenericAction(
+                playerId = player.id,
+                playerName = player.name,
+                description = "incremented all counters on ${card.card.name}"
+            )
+            updatedGameState = updatedGameState.addEvent(event)
+
+            currentState.copy(gameState = updatedGameState)
+        }
+    }
+
+    /**
+     * Remove all local arrows for a player
+     */
+    fun removeLocalArrows(playerId: String) {
+        _uiState.update { currentState ->
+            val gameState = currentState.gameState ?: return@update currentState
+
+            val updatedGameState = gameState.copy(
+                arrows = gameState.arrows.filter { it.fromPlayerId != playerId }
+            )
+
+            currentState.copy(gameState = updatedGameState)
+        }
+    }
+
+    /**
+     * Sort hand cards alphabetically by name
+     */
+    fun sortHand(playerId: String) {
+        _uiState.update { currentState ->
+            val gameState = currentState.gameState ?: return@update currentState
+            val player = gameState.players.find { it.id == playerId } ?: return@update currentState
+
+            // Get hand cards sorted by name
+            val handCards = gameState.cardInstances
+                .filter { it.ownerId == playerId && it.zone == Zone.HAND }
+                .sortedBy { it.card.name }
+
+            // Update their order/position
+            var updatedGameState = gameState
+            handCards.forEachIndexed { index, card ->
+                updatedGameState = updatedGameState.updateCardInstance(card.instanceId) { c ->
+                    c.copy(handPosition = index)
+                }
+            }
+
+            // Log event
+            val event = GameEvent.GenericAction(
+                playerId = player.id,
+                playerName = player.name,
+                description = "sorted their hand"
+            )
+            updatedGameState = updatedGameState.addEvent(event)
+
+            currentState.copy(gameState = updatedGameState)
+        }
+    }
+
+    /**
      * Modify a card's power
      */
     fun modifyPower(cardId: String, amount: Int) {
@@ -2385,5 +2461,77 @@ class GameViewModel(
         }
 
         return actionCount
+    }
+
+    /**
+     * Toggle always reveal top card of library (visible to all players)
+     */
+    fun toggleRevealTopCard(playerId: String) {
+        if (isNetworkGame) {
+            sendNetworkAction(NetworkAction.ToggleRevealTopCard(playerId))
+            return
+        }
+
+        _uiState.update { currentState ->
+            val gameState = currentState.gameState ?: return@update currentState
+            val playerIndex = gameState.players.indexOfFirst { it.id == playerId }
+            if (playerIndex == -1) return@update currentState
+
+            val player = gameState.players[playerIndex]
+            val newRevealState = !player.revealTopCard
+            val updatedPlayer = player.copy(
+                revealTopCard = newRevealState,
+                // If revealing to all, also enable look at (can't reveal without looking)
+                lookAtTopCard = if (newRevealState) true else player.lookAtTopCard
+            )
+            val updatedPlayers = gameState.players.toMutableList()
+            updatedPlayers[playerIndex] = updatedPlayer
+
+            val event = GameEvent.GenericAction(
+                playerId = playerId,
+                playerName = player.name,
+                description = if (newRevealState) "is now revealing top card of library" else "stopped revealing top card of library"
+            )
+
+            currentState.copy(
+                gameState = gameState.copy(players = updatedPlayers).addEvent(event)
+            )
+        }
+    }
+
+    /**
+     * Toggle always look at top card of library (visible only to owner)
+     */
+    fun toggleLookAtTopCard(playerId: String) {
+        if (isNetworkGame) {
+            sendNetworkAction(NetworkAction.ToggleLookAtTopCard(playerId))
+            return
+        }
+
+        _uiState.update { currentState ->
+            val gameState = currentState.gameState ?: return@update currentState
+            val playerIndex = gameState.players.indexOfFirst { it.id == playerId }
+            if (playerIndex == -1) return@update currentState
+
+            val player = gameState.players[playerIndex]
+            val newLookState = !player.lookAtTopCard
+            val updatedPlayer = player.copy(
+                lookAtTopCard = newLookState,
+                // If stopping look, also stop reveal (can't reveal without looking)
+                revealTopCard = if (!newLookState) false else player.revealTopCard
+            )
+            val updatedPlayers = gameState.players.toMutableList()
+            updatedPlayers[playerIndex] = updatedPlayer
+
+            val event = GameEvent.GenericAction(
+                playerId = playerId,
+                playerName = player.name,
+                description = if (newLookState) "is now looking at top card of library" else "stopped looking at top card of library"
+            )
+
+            currentState.copy(
+                gameState = gameState.copy(players = updatedPlayers).addEvent(event)
+            )
+        }
     }
 }

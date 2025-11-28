@@ -32,8 +32,13 @@ class KeyboardShortcutState(
     var onShowAnnotationDialog: (CardInstance) -> Unit = {}
     var onShowTokenDialog: () -> Unit = {}
     var onShowPlayerCountersDialog: () -> Unit = {}
+    var onShowSideboardDialog: () -> Unit = {}
     var onCloseDialog: () -> Unit = {}
     var onFocusChat: () -> Unit = {}
+    var onLeaveGame: () -> Unit = {}
+    var onStartDrawArrow: () -> Unit = {}
+    var onCreateAnotherToken: () -> Unit = {}
+    var onCreateRelatedTokens: () -> Unit = {}
 
     // Track if a dialog is open (shortcuts disabled except Esc)
     var isDialogOpen: Boolean = false
@@ -48,7 +53,7 @@ class KeyboardShortcutState(
         // Only handle key down events
         if (event.type != KeyEventType.KeyDown) return false
 
-        println("KeyboardShortcut: Received key ${event.key}, ctrl=${event.isCtrlPressed}, alt=${event.isAltPressed}, shift=${event.isShiftPressed}")
+        println("KeyboardShortcut: Received key ${event.key} (nativeKeyCode=${event.nativeKeyEvent}), ctrl=${event.isCtrlPressed}, alt=${event.isAltPressed}, shift=${event.isShiftPressed}")
 
         // If text input is focused, only handle Esc
         if (isTextInputFocused) {
@@ -133,6 +138,10 @@ class KeyboardShortcutState(
                 if (selectedCards.isEmpty()) return false
                 selectedCards.forEach { viewModel.flipCard(it.instanceId) }
             }
+            ShortcutAction.PlayFaceDown -> {
+                if (selectedCards.isEmpty()) return false
+                selectedCards.forEach { viewModel.playFaceDown(it.instanceId) }
+            }
             ShortcutAction.CloneCard -> {
                 if (selectedCards.isEmpty()) return false
                 selectedCards.forEach { viewModel.cloneCard(it.instanceId, activePlayer.id) }
@@ -140,6 +149,15 @@ class KeyboardShortcutState(
             ShortcutAction.CreateToken -> onShowTokenDialog()
             ShortcutAction.SetAnnotation -> {
                 selectedCard?.let { onShowAnnotationDialog(it) } ?: return false
+            }
+            ShortcutAction.AttachCard -> {
+                // Attach requires showing a dialog to select target - not implemented via shortcut yet
+                // Would need onShowAttachDialog callback
+                return false
+            }
+            ShortcutAction.DetachCard -> {
+                if (selectedCards.isEmpty()) return false
+                selectedCards.forEach { viewModel.detachCard(it.instanceId) }
             }
             ShortcutAction.MoveToGraveyard -> {
                 if (selectedCards.isEmpty()) return false
@@ -156,6 +174,13 @@ class KeyboardShortcutState(
             ShortcutAction.MoveToHand -> {
                 if (selectedCards.isEmpty()) return false
                 selectedCards.forEach { viewModel.moveCard(it.instanceId, Zone.HAND) }
+            }
+            ShortcutAction.MoveTopToBottom -> {
+                // Move top card of library to bottom of library
+                val topCard = gameState.cardInstances.find {
+                    it.ownerId == activePlayer.id && it.zone == Zone.LIBRARY
+                }
+                topCard?.let { viewModel.moveCardToBottomOfLibrary(it.instanceId) } ?: return false
             }
 
             // Power/Toughness (apply to all selected cards)
@@ -196,6 +221,14 @@ class KeyboardShortcutState(
                 if (selectedCards.isEmpty()) return false
                 selectedCards.forEach { viewModel.resetPowerToughness(it.instanceId) }
             }
+            ShortcutAction.FlowPower -> {
+                if (selectedCards.isEmpty()) return false
+                selectedCards.forEach { viewModel.flowPower(it.instanceId) }
+            }
+            ShortcutAction.FlowToughness -> {
+                if (selectedCards.isEmpty()) return false
+                selectedCards.forEach { viewModel.flowToughness(it.instanceId) }
+            }
 
             // Life & Counters
             ShortcutAction.AddLife -> viewModel.changeLife(activePlayer.id, 1)
@@ -208,6 +241,60 @@ class KeyboardShortcutState(
             ShortcutAction.RemoveCounter -> {
                 if (selectedCards.isEmpty()) return false
                 selectedCards.forEach { viewModel.removeCounter(it.instanceId, "+1/+1") }
+            }
+
+            // Card Counters (A-F colored counters)
+            ShortcutAction.AddCounterA -> {
+                if (selectedCards.isEmpty()) return false
+                selectedCards.forEach { viewModel.addCounter(it.instanceId, "A") }
+            }
+            ShortcutAction.RemoveCounterA -> {
+                if (selectedCards.isEmpty()) return false
+                selectedCards.forEach { viewModel.removeCounter(it.instanceId, "A") }
+            }
+            ShortcutAction.AddCounterB -> {
+                if (selectedCards.isEmpty()) return false
+                selectedCards.forEach { viewModel.addCounter(it.instanceId, "B") }
+            }
+            ShortcutAction.RemoveCounterB -> {
+                if (selectedCards.isEmpty()) return false
+                selectedCards.forEach { viewModel.removeCounter(it.instanceId, "B") }
+            }
+            ShortcutAction.AddCounterC -> {
+                if (selectedCards.isEmpty()) return false
+                selectedCards.forEach { viewModel.addCounter(it.instanceId, "C") }
+            }
+            ShortcutAction.RemoveCounterC -> {
+                if (selectedCards.isEmpty()) return false
+                selectedCards.forEach { viewModel.removeCounter(it.instanceId, "C") }
+            }
+            ShortcutAction.AddCounterD -> {
+                if (selectedCards.isEmpty()) return false
+                selectedCards.forEach { viewModel.addCounter(it.instanceId, "D") }
+            }
+            ShortcutAction.RemoveCounterD -> {
+                if (selectedCards.isEmpty()) return false
+                selectedCards.forEach { viewModel.removeCounter(it.instanceId, "D") }
+            }
+            ShortcutAction.AddCounterE -> {
+                if (selectedCards.isEmpty()) return false
+                selectedCards.forEach { viewModel.addCounter(it.instanceId, "E") }
+            }
+            ShortcutAction.RemoveCounterE -> {
+                if (selectedCards.isEmpty()) return false
+                selectedCards.forEach { viewModel.removeCounter(it.instanceId, "E") }
+            }
+            ShortcutAction.AddCounterF -> {
+                if (selectedCards.isEmpty()) return false
+                selectedCards.forEach { viewModel.addCounter(it.instanceId, "F") }
+            }
+            ShortcutAction.RemoveCounterF -> {
+                if (selectedCards.isEmpty()) return false
+                selectedCards.forEach { viewModel.removeCounter(it.instanceId, "F") }
+            }
+            ShortcutAction.IncrementAllCounters -> {
+                if (selectedCards.isEmpty()) return false
+                selectedCards.forEach { viewModel.incrementAllCounters(it.instanceId) }
             }
 
             // Drawing & Library
@@ -232,21 +319,74 @@ class KeyboardShortcutState(
             }
             ShortcutAction.MillTopCard -> viewModel.millCards(activePlayer.id, 1)
             ShortcutAction.MillMultiple -> viewModel.millCards(activePlayer.id, 5) // Default to 5
+            ShortcutAction.AlwaysRevealTopCard -> viewModel.toggleRevealTopCard(activePlayer.id)
+            ShortcutAction.AlwaysLookAtTopCard -> viewModel.toggleLookAtTopCard(activePlayer.id)
 
             // View Zones
             ShortcutAction.ViewLibrary -> onShowLibraryDialog()
             ShortcutAction.ViewGraveyard -> onShowGraveyardDialog()
             ShortcutAction.ViewExile -> onShowExileDialog()
             ShortcutAction.ViewCommandZone -> onShowCommandZoneDialog()
+            ShortcutAction.ViewSideboard -> onShowSideboardDialog()
             ShortcutAction.PeekTopCards -> onShowPeekTopDialog()
             ShortcutAction.PeekBottomCards -> onShowPeekBottomDialog()
             ShortcutAction.CloseDialog -> onCloseDialog()
 
+            // Selection
+            ShortcutAction.SelectAll -> {
+                // Select all cards in the same zone as the first selected card
+                val firstCard = selectedCard
+                if (firstCard != null) {
+                    val zoneCards = gameState.cardInstances.filter {
+                        it.ownerId == activePlayer.id && it.zone == firstCard.zone
+                    }
+                    selectionState.selectAll(zoneCards.map { it.instanceId })
+                } else {
+                    // Select all cards on battlefield
+                    val battlefieldCards = gameState.cardInstances.filter {
+                        it.ownerId == activePlayer.id && it.zone == Zone.BATTLEFIELD
+                    }
+                    selectionState.selectAll(battlefieldCards.map { it.instanceId })
+                }
+            }
+            ShortcutAction.SelectRow -> {
+                // Select all cards in the same row (gridY) as the first selected card
+                val firstCard = selectedCard
+                if (firstCard != null && firstCard.zone == Zone.BATTLEFIELD && firstCard.gridY != null) {
+                    val rowCards = gameState.cardInstances.filter {
+                        it.ownerId == activePlayer.id &&
+                        it.zone == Zone.BATTLEFIELD &&
+                        it.gridY == firstCard.gridY
+                    }
+                    selectionState.selectAll(rowCards.map { it.instanceId })
+                } else return false
+            }
+            ShortcutAction.SelectColumn -> {
+                // Select all cards in the same column (gridX) as the first selected card
+                val firstCard = selectedCard
+                if (firstCard != null && firstCard.zone == Zone.BATTLEFIELD && firstCard.gridX != null) {
+                    val columnCards = gameState.cardInstances.filter {
+                        it.ownerId == activePlayer.id &&
+                        it.zone == Zone.BATTLEFIELD &&
+                        it.gridX == firstCard.gridX
+                    }
+                    selectionState.selectAll(columnCards.map { it.instanceId })
+                } else return false
+            }
+
+            // Arrows
+            ShortcutAction.DrawArrow -> onStartDrawArrow()
+            ShortcutAction.RemoveArrows -> viewModel.removeLocalArrows(activePlayer.id)
+
             // Gameplay
             ShortcutAction.RollDice -> onShowDieRollerDialog()
             ShortcutAction.Concede -> viewModel.concede(activePlayer.id)
+            ShortcutAction.LeaveGame -> onLeaveGame()
             ShortcutAction.FocusChat -> onFocusChat()
             ShortcutAction.OpenPlayerCounters -> onShowPlayerCountersDialog()
+            ShortcutAction.SortHand -> viewModel.sortHand(activePlayer.id)
+            ShortcutAction.CreateAnotherToken -> onCreateAnotherToken()
+            ShortcutAction.CreateRelatedTokens -> onCreateRelatedTokens()
         }
 
         return true
@@ -301,8 +441,26 @@ class KeyboardShortcutState(
         Key.Y -> KeyBinding.KEY_Y
         Key.Z -> KeyBinding.KEY_Z
         Key.Zero -> KeyBinding.KEY_0
+        Key.One -> KeyBinding.KEY_1
+        Key.Two -> KeyBinding.KEY_2
+        Key.Three -> KeyBinding.KEY_3
+        Key.Four -> KeyBinding.KEY_4
+        Key.Five -> KeyBinding.KEY_5
+        Key.Six -> KeyBinding.KEY_6
+        Key.Seven -> KeyBinding.KEY_7
+        Key.Eight -> KeyBinding.KEY_8
+        Key.Nine -> KeyBinding.KEY_9
         Key.Equals -> KeyBinding.KEY_EQUALS
         Key.Minus -> KeyBinding.KEY_MINUS
+        Key.Period -> KeyBinding.KEY_PERIOD
+        Key.Comma -> KeyBinding.KEY_COMMA
+        Key.Slash -> KeyBinding.KEY_SLASH
+        Key.Semicolon -> KeyBinding.KEY_SEMICOLON
+        Key.LeftBracket -> KeyBinding.KEY_BRACKET_LEFT
+        Key.RightBracket -> KeyBinding.KEY_BRACKET_RIGHT
+        Key.Backslash -> KeyBinding.KEY_BACKSLASH
+        Key.NumPadAdd -> KeyBinding.KEY_NUMPAD_ADD
+        Key.NumPadSubtract -> KeyBinding.KEY_NUMPAD_SUBTRACT
         else -> -1
     }
 }

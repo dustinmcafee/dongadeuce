@@ -262,6 +262,17 @@ sealed class GameEvent {
         override val playerName: String,
         val message: String
     ) : GameEvent()
+
+    /**
+     * Generic action for miscellaneous game events
+     */
+    @Serializable
+    data class GenericAction(
+        override val timestamp: Long = System.currentTimeMillis(),
+        override val playerId: String,
+        override val playerName: String,
+        val description: String
+    ) : GameEvent()
 }
 
 /**
@@ -301,6 +312,7 @@ fun GameEvent.toDisplayString(): String {
         is GameEvent.LibraryShuffled -> "$playerName shuffled their library"
         is GameEvent.MulliganTaken -> "$playerName took a mulligan (new hand size: $newHandSize)"
         is GameEvent.ChatMessage -> "$playerName: $message"
+        is GameEvent.GenericAction -> "$playerName $description"
     }
 }
 

@@ -47,6 +47,7 @@ fun PlayerArea(
     val commanderCount = viewModel.getCardCount(player.id, Zone.COMMAND_ZONE)
     val battlefieldCards = viewModel.getCards(player.id, Zone.BATTLEFIELD)
     val handCards = viewModel.getCards(player.id, Zone.HAND)
+    val topCard = viewModel.getTopCards(player.id, 1).firstOrNull()
 
     // Dialogs
     PlayerAreaDialogs(
@@ -110,6 +111,7 @@ fun PlayerArea(
             player = player,
             viewModel = viewModel,
             libraryCount = libraryCount,
+            topCard = topCard,
             graveyardCount = graveyardCount,
             exileCount = exileCount,
             commanderCount = commanderCount,
@@ -298,6 +300,7 @@ private fun PlayerZonesRow(
     player: Player,
     viewModel: GameViewModel,
     libraryCount: Int,
+    topCard: CardInstance?,
     graveyardCount: Int,
     exileCount: Int,
     commanderCount: Int,
@@ -414,11 +417,18 @@ private fun PlayerZonesRow(
             modifier = Modifier.width(200.dp).fillMaxHeight(),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
+            // Determine the image to show: revealed card, looked-at card, or card back
+            val libraryImageUrl = when {
+                player.revealTopCard && topCard != null -> topCard.card.imageUri
+                player.lookAtTopCard && topCard != null -> topCard.card.imageUri  // PlayerArea is always for local player
+                else -> "https://cards.scryfall.io/back.png"  // Standard card back
+            }
+
             ZoneCard(
-                "Library",
-                Zone.LIBRARY,
-                libraryCount,
-                Modifier.weight(1f).fillMaxWidth(),
+                label = "Library",
+                zone = Zone.LIBRARY,
+                cardCount = libraryCount,
+                modifier = Modifier.weight(1f).fillMaxWidth(),
                 onClick = onShowLibrarySearchDialog,
                 dragDropState = dragDropState,
                 onDropCards = { cardIds ->
@@ -427,7 +437,8 @@ private fun PlayerZonesRow(
                         viewModel.moveCardToTopOfLibrary(cardId)
                     }
                     dragDropState?.endDrag()
-                }
+                },
+                imageUrl = libraryImageUrl
             )
             Row(
                 modifier = Modifier.fillMaxWidth().weight(1f),

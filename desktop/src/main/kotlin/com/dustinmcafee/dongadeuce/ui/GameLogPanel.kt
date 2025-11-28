@@ -280,6 +280,7 @@ private fun getEventIcon(event: GameEvent): String {
         is GameEvent.LibraryShuffled -> "\uD83C\uDCCF"
         is GameEvent.MulliganTaken -> "\uD83D\uDD04"
         is GameEvent.ChatMessage -> "\uD83D\uDCAC"
+        is GameEvent.GenericAction -> "\u2139\uFE0F"
     }
 }
 

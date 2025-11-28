@@ -2,6 +2,18 @@ package com.dustinmcafee.dongadeuce.models
 
 import kotlinx.serialization.Serializable
 
+/**
+ * Represents an arrow drawn between two cards or from a card to a player
+ */
+@Serializable
+data class Arrow(
+    val id: String,
+    val fromPlayerId: String, // Player who drew the arrow
+    val fromCardId: String?,  // Source card (null if from player)
+    val toCardId: String?,    // Target card (null if to player)
+    val toPlayerId: String?   // Target player (null if to card)
+)
+
 @Serializable
 data class GameState(
     val gameId: String,
@@ -10,7 +22,9 @@ data class GameState(
     val activePlayerIndex: Int = 0,
     val turnNumber: Int = 1,
     val phase: GamePhase = GamePhase.UNTAP,
-    val gameLog: List<GameEvent> = emptyList()
+    val gameLog: List<GameEvent> = emptyList(),
+    // Arrows: List of (fromPlayerId, fromCardId, toPlayerId, toCardId)
+    val arrows: List<Arrow> = emptyList()
 ) {
     val activePlayer: Player
         get() {

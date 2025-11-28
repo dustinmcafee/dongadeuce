@@ -21,13 +21,17 @@ sealed class ShortcutAction(val id: String, val displayName: String, val categor
     object UntapAll : ShortcutAction("untapAll", "Untap All", "Card Actions")
     object ToggleDoesntUntap : ShortcutAction("toggleDoesntUntap", "Toggle Doesn't Untap", "Card Actions")
     object FlipCard : ShortcutAction("flipCard", "Flip Card", "Card Actions")
+    object PlayFaceDown : ShortcutAction("playFaceDown", "Play Face Down", "Card Actions")
     object CloneCard : ShortcutAction("cloneCard", "Clone Card", "Card Actions")
     object CreateToken : ShortcutAction("createToken", "Create Token", "Card Actions")
     object SetAnnotation : ShortcutAction("setAnnotation", "Set Annotation", "Card Actions")
+    object AttachCard : ShortcutAction("attachCard", "Attach Card", "Card Actions")
+    object DetachCard : ShortcutAction("detachCard", "Detach Card", "Card Actions")
     object MoveToGraveyard : ShortcutAction("moveToGraveyard", "Move to Graveyard", "Card Actions")
     object MoveToBottomLibrary : ShortcutAction("moveToBottomLibrary", "Move to Bottom of Library", "Card Actions")
     object MoveToExile : ShortcutAction("moveToExile", "Move to Exile", "Card Actions")
     object MoveToHand : ShortcutAction("moveToHand", "Move to Hand", "Card Actions")
+    object MoveTopToBottom : ShortcutAction("moveTopToBottom", "Move Top Card to Bottom", "Card Actions")
 
     // Power/Toughness
     object AddPower : ShortcutAction("addPower", "Add Power (+1/+0)", "Power/Toughness")
@@ -38,13 +42,30 @@ sealed class ShortcutAction(val id: String, val displayName: String, val categor
     object RemoveBothPT : ShortcutAction("removeBothPT", "Remove Both (-1/-1)", "Power/Toughness")
     object SetPowerToughness : ShortcutAction("setPowerToughness", "Set Power/Toughness", "Power/Toughness")
     object ResetPowerToughness : ShortcutAction("resetPowerToughness", "Reset Power/Toughness", "Power/Toughness")
+    object FlowPower : ShortcutAction("flowPower", "Flow to Power (+1/-1)", "Power/Toughness")
+    object FlowToughness : ShortcutAction("flowToughness", "Flow to Toughness (-1/+1)", "Power/Toughness")
 
     // Life & Counters
     object AddLife : ShortcutAction("addLife", "Add Life (+1)", "Life & Counters")
     object RemoveLife : ShortcutAction("removeLife", "Remove Life (-1)", "Life & Counters")
     object SetLife : ShortcutAction("setLife", "Set Life Total", "Life & Counters")
-    object AddCounter : ShortcutAction("addCounter", "Add Counter", "Life & Counters")
-    object RemoveCounter : ShortcutAction("removeCounter", "Remove Counter", "Life & Counters")
+    object AddCounter : ShortcutAction("addCounter", "Add Counter (+1/+1)", "Life & Counters")
+    object RemoveCounter : ShortcutAction("removeCounter", "Remove Counter (+1/+1)", "Life & Counters")
+
+    // Card Counters (A-F colored counters)
+    object AddCounterA : ShortcutAction("addCounterA", "Add Counter (A/Red)", "Card Counters")
+    object RemoveCounterA : ShortcutAction("removeCounterA", "Remove Counter (A/Red)", "Card Counters")
+    object AddCounterB : ShortcutAction("addCounterB", "Add Counter (B/Yellow)", "Card Counters")
+    object RemoveCounterB : ShortcutAction("removeCounterB", "Remove Counter (B/Yellow)", "Card Counters")
+    object AddCounterC : ShortcutAction("addCounterC", "Add Counter (C/Green)", "Card Counters")
+    object RemoveCounterC : ShortcutAction("removeCounterC", "Remove Counter (C/Green)", "Card Counters")
+    object AddCounterD : ShortcutAction("addCounterD", "Add Counter (D/Cyan)", "Card Counters")
+    object RemoveCounterD : ShortcutAction("removeCounterD", "Remove Counter (D/Cyan)", "Card Counters")
+    object AddCounterE : ShortcutAction("addCounterE", "Add Counter (E/Purple)", "Card Counters")
+    object RemoveCounterE : ShortcutAction("removeCounterE", "Remove Counter (E/Purple)", "Card Counters")
+    object AddCounterF : ShortcutAction("addCounterF", "Add Counter (F/Magenta)", "Card Counters")
+    object RemoveCounterF : ShortcutAction("removeCounterF", "Remove Counter (F/Magenta)", "Card Counters")
+    object IncrementAllCounters : ShortcutAction("incrementAllCounters", "Increment All Card Counters", "Card Counters")
 
     // Drawing & Library
     object DrawCard : ShortcutAction("drawCard", "Draw Card", "Drawing & Library")
@@ -55,21 +76,37 @@ sealed class ShortcutAction(val id: String, val displayName: String, val categor
     object PlayTopCard : ShortcutAction("playTopCard", "Play Top Card", "Drawing & Library")
     object MillTopCard : ShortcutAction("millTopCard", "Mill Top Card", "Drawing & Library")
     object MillMultiple : ShortcutAction("millMultiple", "Mill Multiple Cards", "Drawing & Library")
+    object AlwaysRevealTopCard : ShortcutAction("alwaysRevealTopCard", "Always Reveal Top Card", "Drawing & Library")
+    object AlwaysLookAtTopCard : ShortcutAction("alwaysLookAtTopCard", "Always Look At Top Card", "Drawing & Library")
 
     // View Zones
     object ViewLibrary : ShortcutAction("viewLibrary", "View Library", "View Zones")
     object ViewGraveyard : ShortcutAction("viewGraveyard", "View Graveyard", "View Zones")
     object ViewExile : ShortcutAction("viewExile", "View Exile", "View Zones")
     object ViewCommandZone : ShortcutAction("viewCommandZone", "View Command Zone", "View Zones")
+    object ViewSideboard : ShortcutAction("viewSideboard", "View Sideboard", "View Zones")
     object PeekTopCards : ShortcutAction("peekTopCards", "Peek Top Cards", "View Zones")
     object PeekBottomCards : ShortcutAction("peekBottomCards", "Peek Bottom Cards", "View Zones")
     object CloseDialog : ShortcutAction("closeDialog", "Close Dialog", "View Zones")
 
+    // Selection
+    object SelectAll : ShortcutAction("selectAll", "Select All Cards in Zone", "Selection")
+    object SelectRow : ShortcutAction("selectRow", "Select All Cards in Row", "Selection")
+    object SelectColumn : ShortcutAction("selectColumn", "Select All Cards in Column", "Selection")
+
+    // Arrows
+    object DrawArrow : ShortcutAction("drawArrow", "Draw Arrow...", "Arrows")
+    object RemoveArrows : ShortcutAction("removeArrows", "Remove Local Arrows", "Arrows")
+
     // Gameplay
     object RollDice : ShortcutAction("rollDice", "Roll Dice", "Gameplay")
     object Concede : ShortcutAction("concede", "Concede", "Gameplay")
+    object LeaveGame : ShortcutAction("leaveGame", "Leave Game", "Gameplay")
     object FocusChat : ShortcutAction("focusChat", "Focus Chat", "Gameplay")
     object OpenPlayerCounters : ShortcutAction("openPlayerCounters", "Player Counters", "Gameplay")
+    object SortHand : ShortcutAction("sortHand", "Sort Hand", "Gameplay")
+    object CreateAnotherToken : ShortcutAction("createAnotherToken", "Create Another Token", "Gameplay")
+    object CreateRelatedTokens : ShortcutAction("createRelatedTokens", "Create All Related Tokens", "Gameplay")
 
     companion object {
         val all: List<ShortcutAction> by lazy {
@@ -77,18 +114,28 @@ sealed class ShortcutAction(val id: String, val displayName: String, val categor
                 // Game Phases
                 UntapPhase, DrawPhase, FirstMainPhase, CombatPhase, SecondMainPhase, EndPhase, NextPhase, PassTurn,
                 // Card Actions
-                TapUntapCard, UntapAll, ToggleDoesntUntap, FlipCard, CloneCard, CreateToken, SetAnnotation,
-                MoveToGraveyard, MoveToBottomLibrary, MoveToExile, MoveToHand,
+                TapUntapCard, UntapAll, ToggleDoesntUntap, FlipCard, PlayFaceDown, CloneCard, CreateToken, SetAnnotation,
+                AttachCard, DetachCard, MoveToGraveyard, MoveToBottomLibrary, MoveToExile, MoveToHand, MoveTopToBottom,
                 // Power/Toughness
-                AddPower, RemovePower, AddToughness, RemoveToughness, AddBothPT, RemoveBothPT, SetPowerToughness, ResetPowerToughness,
+                AddPower, RemovePower, AddToughness, RemoveToughness, AddBothPT, RemoveBothPT,
+                SetPowerToughness, ResetPowerToughness, FlowPower, FlowToughness,
                 // Life & Counters
                 AddLife, RemoveLife, SetLife, AddCounter, RemoveCounter,
+                // Card Counters (A-F)
+                AddCounterA, RemoveCounterA, AddCounterB, RemoveCounterB, AddCounterC, RemoveCounterC,
+                AddCounterD, RemoveCounterD, AddCounterE, RemoveCounterE, AddCounterF, RemoveCounterF,
+                IncrementAllCounters,
                 // Drawing & Library
                 DrawCard, DrawMultiple, UndoDraw, Mulligan, ShuffleLibrary, PlayTopCard, MillTopCard, MillMultiple,
+                AlwaysRevealTopCard, AlwaysLookAtTopCard,
                 // View Zones
-                ViewLibrary, ViewGraveyard, ViewExile, ViewCommandZone, PeekTopCards, PeekBottomCards, CloseDialog,
+                ViewLibrary, ViewGraveyard, ViewExile, ViewCommandZone, ViewSideboard, PeekTopCards, PeekBottomCards, CloseDialog,
+                // Selection
+                SelectAll, SelectRow, SelectColumn,
+                // Arrows
+                DrawArrow, RemoveArrows,
                 // Gameplay
-                RollDice, Concede, FocusChat, OpenPlayerCounters
+                RollDice, Concede, LeaveGame, FocusChat, OpenPlayerCounters, SortHand, CreateAnotherToken, CreateRelatedTokens
             )
         }
 
@@ -168,8 +215,26 @@ data class KeyBinding(
 
         // Numbers and symbols
         const val KEY_0 = 48
+        const val KEY_1 = 49
+        const val KEY_2 = 50
+        const val KEY_3 = 51
+        const val KEY_4 = 52
+        const val KEY_5 = 53
+        const val KEY_6 = 54
+        const val KEY_7 = 55
+        const val KEY_8 = 56
+        const val KEY_9 = 57
         const val KEY_EQUALS = 61  // = key
         const val KEY_MINUS = 45   // - key
+        const val KEY_PERIOD = 46  // . key
+        const val KEY_COMMA = 44   // , key
+        const val KEY_SLASH = 47   // / key
+        const val KEY_SEMICOLON = 59  // ; key
+        const val KEY_BRACKET_LEFT = 91  // [ key
+        const val KEY_BRACKET_RIGHT = 93  // ] key
+        const val KEY_BACKSLASH = 92  // \ key
+        const val KEY_NUMPAD_ADD = 107  // Numpad +
+        const val KEY_NUMPAD_SUBTRACT = 109  // Numpad -
 
         fun keyCodeToName(keyCode: Int): String = when (keyCode) {
             KEY_F1 -> "F1"
@@ -192,9 +257,17 @@ data class KeyBinding(
             KEY_BACKSPACE -> "Backspace"
             KEY_EQUALS -> "="
             KEY_MINUS -> "-"
-            KEY_0 -> "0"
+            KEY_PERIOD -> "."
+            KEY_COMMA -> ","
+            KEY_SLASH -> "/"
+            KEY_SEMICOLON -> ";"
+            KEY_BRACKET_LEFT -> "["
+            KEY_BRACKET_RIGHT -> "]"
+            KEY_BACKSLASH -> "\\"
+            KEY_NUMPAD_ADD -> "Num+"
+            KEY_NUMPAD_SUBTRACT -> "Num-"
             in KEY_A..KEY_Z -> ('A' + (keyCode - KEY_A)).toString()
-            in 48..57 -> (keyCode - 48).toString()
+            in KEY_0..KEY_9 -> (keyCode - KEY_0).toString()
             else -> "Key$keyCode"
         }
     }
@@ -221,22 +294,38 @@ object DefaultShortcuts {
         KeyBinding(KeyBinding.KEY_U, ctrl = true) to ShortcutAction.UntapAll,
         KeyBinding(KeyBinding.KEY_U, alt = true) to ShortcutAction.ToggleDoesntUntap,
         KeyBinding(KeyBinding.KEY_F, alt = true) to ShortcutAction.FlipCard,
+        KeyBinding(KeyBinding.KEY_F, ctrl = true, shift = true) to ShortcutAction.PlayFaceDown,
         KeyBinding(KeyBinding.KEY_J, ctrl = true) to ShortcutAction.CloneCard,
         KeyBinding(KeyBinding.KEY_T, ctrl = true) to ShortcutAction.CreateToken,
         KeyBinding(KeyBinding.KEY_N, alt = true) to ShortcutAction.SetAnnotation,
+        KeyBinding(KeyBinding.KEY_A, ctrl = true, alt = true) to ShortcutAction.AttachCard,
+        KeyBinding(KeyBinding.KEY_U, ctrl = true, alt = true) to ShortcutAction.DetachCard,
         KeyBinding(KeyBinding.KEY_DELETE) to ShortcutAction.MoveToGraveyard,
         KeyBinding(KeyBinding.KEY_DELETE, ctrl = true) to ShortcutAction.MoveToGraveyard,
         KeyBinding(KeyBinding.KEY_B, ctrl = true) to ShortcutAction.MoveToBottomLibrary,
         KeyBinding(KeyBinding.KEY_X, ctrl = true) to ShortcutAction.MoveToExile,
         KeyBinding(KeyBinding.KEY_H, ctrl = true) to ShortcutAction.MoveToHand,
+        KeyBinding(KeyBinding.KEY_B, ctrl = true, shift = true) to ShortcutAction.MoveTopToBottom,
 
         // Power/Toughness
         KeyBinding(KeyBinding.KEY_EQUALS, ctrl = true) to ShortcutAction.AddPower,
+        KeyBinding(KeyBinding.KEY_EQUALS, ctrl = true, shift = true) to ShortcutAction.AddPower, // Ctrl++ (shift+=)
+        KeyBinding(KeyBinding.KEY_NUMPAD_ADD, ctrl = true) to ShortcutAction.AddPower, // Ctrl+Numpad+
         KeyBinding(KeyBinding.KEY_MINUS, ctrl = true) to ShortcutAction.RemovePower,
+        KeyBinding(KeyBinding.KEY_MINUS, ctrl = true, shift = true) to ShortcutAction.RemovePower, // Ctrl+Shift+-
+        KeyBinding(KeyBinding.KEY_NUMPAD_SUBTRACT, ctrl = true) to ShortcutAction.RemovePower, // Ctrl+Numpad-
         KeyBinding(KeyBinding.KEY_EQUALS, alt = true) to ShortcutAction.AddToughness,
+        KeyBinding(KeyBinding.KEY_EQUALS, alt = true, shift = true) to ShortcutAction.AddToughness, // Alt++ (shift+=)
+        KeyBinding(KeyBinding.KEY_NUMPAD_ADD, alt = true) to ShortcutAction.AddToughness, // Alt+Numpad+
         KeyBinding(KeyBinding.KEY_MINUS, alt = true) to ShortcutAction.RemoveToughness,
+        KeyBinding(KeyBinding.KEY_MINUS, alt = true, shift = true) to ShortcutAction.RemoveToughness, // Alt+Shift+-
+        KeyBinding(KeyBinding.KEY_NUMPAD_SUBTRACT, alt = true) to ShortcutAction.RemoveToughness, // Alt+Numpad-
         KeyBinding(KeyBinding.KEY_EQUALS, ctrl = true, alt = true) to ShortcutAction.AddBothPT,
+        KeyBinding(KeyBinding.KEY_EQUALS, ctrl = true, alt = true, shift = true) to ShortcutAction.AddBothPT, // Ctrl+Alt++ (shift+=)
+        KeyBinding(KeyBinding.KEY_NUMPAD_ADD, ctrl = true, alt = true) to ShortcutAction.AddBothPT, // Ctrl+Alt+Numpad+
         KeyBinding(KeyBinding.KEY_MINUS, ctrl = true, alt = true) to ShortcutAction.RemoveBothPT,
+        KeyBinding(KeyBinding.KEY_MINUS, ctrl = true, alt = true, shift = true) to ShortcutAction.RemoveBothPT, // Ctrl+Alt+Shift+-
+        KeyBinding(KeyBinding.KEY_NUMPAD_SUBTRACT, ctrl = true, alt = true) to ShortcutAction.RemoveBothPT, // Ctrl+Alt+Numpad-
         KeyBinding(KeyBinding.KEY_P, ctrl = true) to ShortcutAction.SetPowerToughness,
         KeyBinding(KeyBinding.KEY_0, ctrl = true, alt = true) to ShortcutAction.ResetPowerToughness,
 
@@ -244,6 +333,20 @@ object DefaultShortcuts {
         KeyBinding(KeyBinding.KEY_F12) to ShortcutAction.AddLife,
         KeyBinding(KeyBinding.KEY_F11) to ShortcutAction.RemoveLife,
         KeyBinding(KeyBinding.KEY_L, ctrl = true) to ShortcutAction.SetLife,
+
+        // Card Counters (A-F colored counters) - matching Cockatrice
+        // Counter A (Red): Alt+. / Alt+,
+        KeyBinding(KeyBinding.KEY_PERIOD, alt = true) to ShortcutAction.AddCounterA,
+        KeyBinding(KeyBinding.KEY_COMMA, alt = true) to ShortcutAction.RemoveCounterA,
+        // Counter B (Yellow): Ctrl+. / Ctrl+,
+        KeyBinding(KeyBinding.KEY_PERIOD, ctrl = true) to ShortcutAction.AddCounterB,
+        KeyBinding(KeyBinding.KEY_COMMA, ctrl = true) to ShortcutAction.RemoveCounterB,
+        // Counter C (Green): Ctrl+Shift+. / Ctrl+Shift+, (approximation of Ctrl+> / Ctrl+<)
+        KeyBinding(KeyBinding.KEY_PERIOD, ctrl = true, shift = true) to ShortcutAction.AddCounterC,
+        KeyBinding(KeyBinding.KEY_COMMA, ctrl = true, shift = true) to ShortcutAction.RemoveCounterC,
+        // Counters D, E, F don't have default shortcuts in Cockatrice
+        // Increment All Card Counters
+        KeyBinding(KeyBinding.KEY_A, ctrl = true, shift = true) to ShortcutAction.IncrementAllCounters,
 
         // Drawing & Library
         KeyBinding(KeyBinding.KEY_D, ctrl = true) to ShortcutAction.DrawCard,
@@ -254,19 +357,36 @@ object DefaultShortcuts {
         KeyBinding(KeyBinding.KEY_Y, ctrl = true) to ShortcutAction.PlayTopCard,
         KeyBinding(KeyBinding.KEY_Y, alt = true) to ShortcutAction.MillTopCard,
         KeyBinding(KeyBinding.KEY_M, alt = true) to ShortcutAction.MillMultiple,
+        KeyBinding(KeyBinding.KEY_N, ctrl = true) to ShortcutAction.AlwaysRevealTopCard,
+        KeyBinding(KeyBinding.KEY_N, ctrl = true, shift = true) to ShortcutAction.AlwaysLookAtTopCard,
 
         // View Zones
         KeyBinding(KeyBinding.KEY_F3) to ShortcutAction.ViewLibrary,
         KeyBinding(KeyBinding.KEY_F4) to ShortcutAction.ViewGraveyard,
+        KeyBinding(KeyBinding.KEY_F3, ctrl = true) to ShortcutAction.ViewSideboard,
         KeyBinding(KeyBinding.KEY_W, ctrl = true) to ShortcutAction.PeekTopCards,
         KeyBinding(KeyBinding.KEY_W, ctrl = true, shift = true) to ShortcutAction.PeekBottomCards,
         KeyBinding(KeyBinding.KEY_ESCAPE) to ShortcutAction.CloseDialog,
 
+        // Selection
+        KeyBinding(KeyBinding.KEY_A, ctrl = true) to ShortcutAction.SelectAll,
+        KeyBinding(KeyBinding.KEY_X, ctrl = true, shift = true) to ShortcutAction.SelectRow,
+        // Note: Ctrl+Shift+C conflicts with copy, using different binding
+        // KeyBinding(KeyBinding.KEY_C, ctrl = true, shift = true) to ShortcutAction.SelectColumn,
+
+        // Arrows
+        KeyBinding(KeyBinding.KEY_A, alt = true) to ShortcutAction.DrawArrow,
+        KeyBinding(KeyBinding.KEY_R, ctrl = true) to ShortcutAction.RemoveArrows,
+
         // Gameplay
         KeyBinding(KeyBinding.KEY_I, ctrl = true) to ShortcutAction.RollDice,
         KeyBinding(KeyBinding.KEY_F2) to ShortcutAction.Concede,
+        KeyBinding(KeyBinding.KEY_Q, ctrl = true) to ShortcutAction.LeaveGame,
         KeyBinding(KeyBinding.KEY_ENTER, shift = true) to ShortcutAction.FocusChat,
-        KeyBinding(KeyBinding.KEY_K, ctrl = true) to ShortcutAction.OpenPlayerCounters
+        KeyBinding(KeyBinding.KEY_K, ctrl = true) to ShortcutAction.OpenPlayerCounters,
+        KeyBinding(KeyBinding.KEY_H, ctrl = true, shift = true) to ShortcutAction.SortHand,
+        KeyBinding(KeyBinding.KEY_G, ctrl = true) to ShortcutAction.CreateAnotherToken,
+        KeyBinding(KeyBinding.KEY_T, ctrl = true, shift = true) to ShortcutAction.CreateRelatedTokens
     )
 
     /**

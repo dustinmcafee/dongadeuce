@@ -423,4 +423,18 @@ sealed class NetworkAction {
         val playerId: String,
         val message: String
     ) : NetworkAction()
+
+    // ==================== Library Visibility ====================
+
+    /**
+     * Toggle always reveal top card (visible to all players)
+     */
+    @Serializable
+    data class ToggleRevealTopCard(val playerId: String) : NetworkAction()
+
+    /**
+     * Toggle always look at top card (visible only to owner)
+     */
+    @Serializable
+    data class ToggleLookAtTopCard(val playerId: String) : NetworkAction()
 }

@@ -214,6 +214,7 @@ private fun getEventIcon(event: GameEvent): String {
         is GameEvent.LibraryShuffled -> "\uD83C\uDCCF" // Cards
         is GameEvent.MulliganTaken -> "\uD83D\uDD04" // Refresh
         is GameEvent.ChatMessage -> "\uD83D\uDCAC" // Speech bubble
+        is GameEvent.GenericAction -> "\u2139\uFE0F" // Info
     }
 }
 

@@ -128,6 +128,13 @@ fun GameScreen(
             showPeekTopDialog = false
             showPeekBottomDialog = false
         }
+        keyboardState.onFocusChat = {
+            // Focus the chat input - would need a reference to the chat input field
+            // This would require passing focusRequester through the compose hierarchy
+        }
+        keyboardState.onLeaveGame = {
+            onReturnToMenu()
+        }
     }
 
     // Handler for card actions - delegates business logic to ViewModel

@@ -2,6 +2,7 @@
 
 package com.dustinmcafee.dongadeuce.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -36,7 +37,8 @@ fun ZoneCard(
     onDoubleClick: (() -> Unit)? = null,
     onRightClick: (() -> Unit)? = null,
     dragDropState: DragDropState? = null,
-    onDropCards: ((List<String>) -> Unit)? = null
+    onDropCards: ((List<String>) -> Unit)? = null,
+    imageUrl: String? = null  // Optional image to display in the zone (e.g., card back for library)
 ) {
     var isHovering by remember { mutableStateOf(false) }
     var lastClickTime by remember { mutableStateOf(0L) }
@@ -143,21 +145,258 @@ fun ZoneCard(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(8.dp),
+                .padding(4.dp),
             contentAlignment = Alignment.Center
         ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(label, style = MaterialTheme.typography.labelLarge)
-                if (cardCount > 0) {
-                    Text("($cardCount)", style = MaterialTheme.typography.bodySmall)
-                }
-                if (isDraggingOver) {
-                    Text(
-                        "Drop here",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.primary
+            if (imageUrl != null) {
+                // Show image with count overlay
+                Box(modifier = Modifier.fillMaxSize()) {
+                    CardImage(
+                        imageUrl = imageUrl,
+                        contentDescription = label,
+                        modifier = Modifier.fillMaxSize()
                     )
+                    // Count overlay at bottom
+                    Surface(
+                        modifier = Modifier.align(Alignment.BottomCenter).padding(2.dp),
+                        shape = RoundedCornerShape(4.dp),
+                        color = Color.Black.copy(alpha = 0.7f)
+                    ) {
+                        Text(
+                            "$label ($cardCount)",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color.White,
+                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                        )
+                    }
+                    // Drop indicator overlay
+                    if (isDraggingOver) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(Color(0x8800FF00)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                "Drop here",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = Color.White
+                            )
+                        }
+                    }
                 }
+            } else {
+                // Standard text-based display
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(label, style = MaterialTheme.typography.labelLarge)
+                    if (cardCount > 0) {
+                        Text("($cardCount)", style = MaterialTheme.typography.bodySmall)
+                    }
+                    if (isDraggingOver) {
+                        Text(
+                            "Drop here",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Library zone card that can optionally show the top card
+ * Supports "reveal top card" (visible to all) and "look at top card" (visible to owner only)
+ */
+@Composable
+fun LibraryZoneCard(
+    cardCount: Int,
+    topCard: CardInstance?,
+    revealTopCard: Boolean,
+    lookAtTopCard: Boolean,
+    isOwner: Boolean,
+    modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null,
+    dragDropState: DragDropState? = null,
+    onDropCards: ((List<String>) -> Unit)? = null
+) {
+    var isHovering by remember { mutableStateOf(false) }
+    var lastClickTime by remember { mutableStateOf(0L) }
+
+    val isDraggingOver = dragDropState != null &&
+                        dragDropState.draggedCardIds.isNotEmpty() &&
+                        isHovering
+
+    // Determine if we should show the top card
+    val showTopCard = topCard != null && (revealTopCard || (lookAtTopCard && isOwner))
+
+    Card(
+        modifier = modifier
+            .onGloballyPositioned { coordinates ->
+                if (dragDropState != null) {
+                    val bounds = Rect(
+                        coordinates.positionInWindow().x,
+                        coordinates.positionInWindow().y,
+                        coordinates.positionInWindow().x + coordinates.size.width,
+                        coordinates.positionInWindow().y + coordinates.size.height
+                    )
+                    dragDropState.registerZoneBounds(Zone.LIBRARY, bounds)
+                }
+            }
+            .border(
+                width = if (isDraggingOver) 3.dp else 1.dp,
+                color = if (isDraggingOver) Color(0xFF00FF00) else MaterialTheme.colorScheme.outline,
+                shape = RoundedCornerShape(8.dp)
+            )
+            .then(
+                if (onClick != null) {
+                    Modifier.pointerInput(Unit) {
+                        awaitPointerEventScope {
+                            while (true) {
+                                val event = awaitPointerEvent()
+                                if (event.changes.any { !it.pressed && it.previousPressed }) {
+                                    val change = event.changes.first { !it.pressed && it.previousPressed }
+                                    change.consume()
+                                    onClick()
+                                }
+                            }
+                        }
+                    }
+                } else Modifier
+            )
+            .then(
+                if (onDropCards != null && dragDropState != null) {
+                    Modifier.pointerInput(Unit) {
+                        awaitPointerEventScope {
+                            while (true) {
+                                val event = awaitPointerEvent()
+                                when (event.type) {
+                                    PointerEventType.Enter -> {
+                                        if (dragDropState.draggedCardIds.isNotEmpty()) {
+                                            isHovering = true
+                                            dragDropState.setHoveredZone(Zone.LIBRARY)
+                                        }
+                                    }
+                                    PointerEventType.Exit -> {
+                                        isHovering = false
+                                        if (dragDropState.hoveredZone == Zone.LIBRARY) {
+                                            dragDropState.setHoveredZone(null)
+                                        }
+                                    }
+                                    PointerEventType.Release -> {
+                                        if (isHovering && dragDropState.draggedCardIds.isNotEmpty()) {
+                                            onDropCards(dragDropState.draggedCardIds.toList())
+                                            isHovering = false
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } else Modifier
+            ),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isDraggingOver)
+                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+            else
+                MaterialTheme.colorScheme.surface
+        )
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(4.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            // Always show the library with card image
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.fillMaxSize()
+            ) {
+                // Card image - show card back or revealed top card
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                        .padding(2.dp)
+                ) {
+                    if (showTopCard && topCard != null) {
+                        // Show the revealed top card
+                        if (topCard.card.imageUri != null) {
+                            CardImage(
+                                imageUrl = topCard.card.imageUri,
+                                contentDescription = topCard.card.name,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        } else {
+                            // Fallback text for cards without images
+                            Card(
+                                modifier = Modifier.fillMaxSize(),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.secondaryContainer
+                                )
+                            ) {
+                                Box(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        topCard.card.name,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                    )
+                                }
+                            }
+                        }
+
+                        // Indicator badge for reveal/look mode
+                        Surface(
+                            modifier = Modifier.align(Alignment.TopEnd).padding(2.dp),
+                            shape = RoundedCornerShape(4.dp),
+                            color = if (revealTopCard)
+                                Color(0xFF4CAF50).copy(alpha = 0.9f)  // Green for revealed
+                            else
+                                Color(0xFF2196F3).copy(alpha = 0.9f)  // Blue for look only
+                        ) {
+                            Text(
+                                if (revealTopCard) "R" else "L",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color.White,
+                                modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                            )
+                        }
+                    } else {
+                        // Show standard Magic card back
+                        CardImage(
+                            imageUrl = "https://cards.scryfall.io/back.png",
+                            contentDescription = "Library",
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
+
+                    // Drop indicator overlay
+                    if (isDraggingOver) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(Color(0x8800FF00)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                "Drop here",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = Color.White
+                            )
+                        }
+                    }
+                }
+
+                // Card count at bottom
+                Text(
+                    "Library ($cardCount)",
+                    style = MaterialTheme.typography.labelSmall
+                )
             }
         }
     }
