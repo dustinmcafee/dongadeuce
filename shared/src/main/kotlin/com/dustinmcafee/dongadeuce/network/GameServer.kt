@@ -325,7 +325,7 @@ class GameServer(
         if (nonHostPlayers.any { !it.isReady }) return false
 
         // Create initial game state
-        val playerList = players.values.mapIndexed { index, lobbyPlayer ->
+        val playerList = players.values.map { lobbyPlayer ->
             Player(
                 id = lobbyPlayer.id,
                 name = lobbyPlayer.name,
@@ -409,7 +409,7 @@ class GameServer(
         if (!_gameStarted.value || _isPaused.value) return
 
         val currentState = _gameState.value ?: return
-        val player = currentState.players.find { it.id == playerId } ?: return
+        if (currentState.players.none { it.id == playerId }) return
 
         // Validate the action
         val validationResult = validateAction(action, playerId, currentState)
@@ -449,7 +449,7 @@ class GameServer(
      */
     private suspend fun handleGameAction(action: NetworkAction, playerId: String, actionId: Long) {
         val currentState = _gameState.value ?: return
-        val player = currentState.players.find { it.id == playerId } ?: return
+        if (currentState.players.none { it.id == playerId }) return
 
         // Validate the action
         val validationResult = validateAction(action, playerId, currentState)

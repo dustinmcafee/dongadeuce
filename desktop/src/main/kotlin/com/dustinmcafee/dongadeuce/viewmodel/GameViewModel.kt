@@ -1092,7 +1092,7 @@ class GameViewModel(
             }
 
             // Log commander damage event (only if damage increased)
-            if (damageChange > 0 && commanderOwner != null && commander != null) {
+            if (damageChange > 0 && commander != null && commanderOwner != null) {
                 val event = GameEvent.CommanderDamageDealt(
                     playerId = commanderOwner.id,
                     playerName = commanderOwner.name,
@@ -1771,11 +1771,10 @@ class GameViewModel(
             return
         }
 
-        // Get hand cards atomically
+        // Validate player exists
         val currentState = _uiState.value
         val gameState = currentState.gameState ?: return
-        val player = gameState.players.find { it.id == playerId } ?: return
-        val handCards = gameState.cardInstances.filter { it.ownerId == playerId && it.zone == Zone.HAND }
+        gameState.players.find { it.id == playerId } ?: return
 
         // Move all hand cards to library (without individual logging)
         _uiState.update { state ->

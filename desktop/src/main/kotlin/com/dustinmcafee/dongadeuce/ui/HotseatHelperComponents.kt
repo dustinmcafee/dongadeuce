@@ -341,7 +341,6 @@ fun CompactHandStrip(
                                     onCardAction(CardAction.ToBattlefield(cardInstance))
                                 },
                                 onContextAction = onCardAction,
-                                dragDropState = dragDropState,
                                 selectionState = selectionState,
                                 sharedDraggedCardIds = draggedHandCardIds,
                                 sharedDragOffset = handDragOffset,

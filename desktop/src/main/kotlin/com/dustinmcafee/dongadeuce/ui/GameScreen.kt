@@ -15,13 +15,11 @@ import com.dustinmcafee.dongadeuce.viewmodel.GameViewModel
 
 @Composable
 fun GameScreen(
-    loadedDeck: com.dustinmcafee.dongadeuce.models.Deck? = null,
     hotseatDecks: Map<Int, com.dustinmcafee.dongadeuce.models.Deck> = emptyMap(),
     playerCount: Int = 2, // Total players (including local player): 2, 3, or 4
     isHotseatMode: Boolean = false,
     viewModel: GameViewModel = remember { GameViewModel() },
     // Network mode parameters
-    networkGameState: com.dustinmcafee.dongadeuce.models.GameState? = null,
     isPaused: Boolean = false,
     pauseReason: String? = null,
     isHost: Boolean = false,
@@ -234,7 +232,6 @@ fun GameScreen(
                 val gameState = uiState.gameState
                 val allPlayers = gameState?.players ?: emptyList()
                 val activePlayerId = gameState?.activePlayer?.id
-                val localPlayerId = uiState.localPlayer?.id
 
                 if (isHotseatMode) {
                     // Hotseat mode: Rotate so active player is always at bottom
@@ -456,7 +453,6 @@ fun GameScreen(
                 GameLogPanel(
                     gameLog = gameState.gameLog,
                     players = gameState.players,
-                    currentPlayerId = gameState.activePlayer.id,
                     onSendMessage = { message ->
                         viewModel.sendChatMessage(gameState.activePlayer.id, message)
                     },

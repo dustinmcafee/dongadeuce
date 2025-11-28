@@ -25,7 +25,6 @@ fun PowerToughnessDialog(
     onFlowT: () -> Unit
 ) {
     var powerInput by remember { mutableStateOf("1") }
-    var toughnessInput by remember { mutableStateOf("1") }
     var setP by remember { mutableStateOf(basePower ?: "0") }
     var setT by remember { mutableStateOf(baseToughness ?: "0") }
 

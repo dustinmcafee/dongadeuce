@@ -551,7 +551,6 @@ private fun PlayerHandDisplay(
                                     viewModel.moveCard(cardInstance.instanceId, Zone.BATTLEFIELD)
                                 },
                                 onContextAction = onCardAction,
-                                dragDropState = dragDropState,
                                 selectionState = selectionState,
                                 sharedDraggedCardIds = draggedHandCardIds,
                                 sharedDragOffset = handDragOffset,

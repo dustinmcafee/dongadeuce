@@ -26,7 +26,6 @@ import java.util.*
 fun GameLogPanel(
     gameLog: List<GameEvent>,
     players: List<Player>,
-    currentPlayerId: String,
     onSendMessage: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {

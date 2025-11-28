@@ -40,12 +40,10 @@ fun MainScreen(
             }
 
             GameScreen(
-                loadedDeck = uiState.loadedDeck,
                 hotseatDecks = if (uiState.hotseatMode) uiState.hotseatDecks else emptyMap(),
                 playerCount = uiState.playerCount,
                 isHotseatMode = uiState.hotseatMode,
                 viewModel = gameViewModel,
-                networkGameState = uiState.networkGameState,
                 isPaused = uiState.isPaused,
                 pauseReason = uiState.pauseReason,
                 isHost = menuViewModel.isHost(),

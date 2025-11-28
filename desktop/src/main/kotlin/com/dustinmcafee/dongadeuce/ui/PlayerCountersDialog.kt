@@ -74,8 +74,7 @@ fun PlayerCountersDialog(
                     3 -> CustomCounterSection(
                         player = player,
                         onAdd = onAddCounter,
-                        onRemove = onRemoveCounter,
-                        onSet = onSetCounter
+                        onRemove = onRemoveCounter
                     )
                 }
             }
@@ -242,8 +241,7 @@ private fun GenericCounterSection(
 private fun CustomCounterSection(
     player: Player,
     onAdd: (String, Int) -> Unit,
-    onRemove: (String, Int) -> Unit,
-    onSet: (String, Int) -> Unit
+    onRemove: (String, Int) -> Unit
 ) {
     var customCounterName by remember { mutableStateOf("") }
     var customAmount by remember { mutableStateOf("1") }

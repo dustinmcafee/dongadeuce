@@ -249,8 +249,6 @@ private fun DieButton(
 
 @Composable
 private fun RollResultCard(result: DieRollResult) {
-    val isHighlight = result == result // Always true, but we can use this for animation later
-
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(

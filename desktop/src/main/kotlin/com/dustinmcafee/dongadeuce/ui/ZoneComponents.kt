@@ -222,7 +222,6 @@ fun LibraryZoneCard(
     onDropCards: ((List<String>) -> Unit)? = null
 ) {
     var isHovering by remember { mutableStateOf(false) }
-    var lastClickTime by remember { mutableStateOf(0L) }
 
     val isDraggingOver = dragDropState != null &&
                         dragDropState.draggedCardIds.isNotEmpty() &&
@@ -535,7 +534,6 @@ fun HandCardDisplay(
     onCardClick: (CardInstance) -> Unit,
     onDoubleClick: () -> Unit = {},
     onContextAction: (CardAction) -> Unit,
-    dragDropState: DragDropState? = null,
     selectionState: SelectionState? = null,
     sharedDraggedCardIds: Set<String> = emptySet(),
     sharedDragOffset: Offset = Offset.Zero,

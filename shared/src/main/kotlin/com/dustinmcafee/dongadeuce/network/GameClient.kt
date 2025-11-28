@@ -206,7 +206,7 @@ class GameClient {
      * Handle disconnect
      */
     private fun handleDisconnect(reason: String) {
-        _connectionState.value = ConnectionState.Disconnected
+        _connectionState.value = ConnectionState.Error(reason)
         session = null
     }
 

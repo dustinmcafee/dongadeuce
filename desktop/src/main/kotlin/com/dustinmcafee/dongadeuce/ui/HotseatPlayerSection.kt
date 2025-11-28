@@ -86,7 +86,6 @@ fun HotseatPlayerSection(
                 PlayerInfoSidebar(
                     player = player,
                     viewModel = viewModel,
-                    isActivePlayer = isActivePlayer,
                     isLocalPlayer = isLocalPlayer,
                     commandZoneCards = commandZoneCards,
                     libraryCount = libraryCount,
@@ -196,7 +195,6 @@ fun HotseatPlayerSection(
 private fun PlayerInfoSidebar(
     player: Player,
     viewModel: GameViewModel,
-    isActivePlayer: Boolean,
     isLocalPlayer: Boolean,
     commandZoneCards: List<CardInstance>,
     libraryCount: Int,

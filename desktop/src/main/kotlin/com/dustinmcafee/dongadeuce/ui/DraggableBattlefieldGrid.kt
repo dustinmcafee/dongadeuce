@@ -364,7 +364,7 @@ fun DraggableBattlefieldGrid(
                                                     targetPositions = emptyMap()
 
                                                     // Clear shared state
-                                                    dragDropState?.endDrag()
+                                                    dragDropState.endDrag()
                                                     return@detectDragGestures
                                                 }
 
