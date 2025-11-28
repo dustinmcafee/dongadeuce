@@ -110,6 +110,8 @@ class KeyboardShortcutState(
         val uiState = viewModel.uiState.value
         val gameState = uiState.gameState ?: return false
         val activePlayer = gameState.players.getOrNull(gameState.activePlayerIndex) ?: return false
+        // Local player - used for actions that should work regardless of whose turn it is
+        val localPlayer = uiState.localPlayer ?: activePlayer
 
         // Get all selected cards from UI selection state
         val selectedCardIds = selectionState.selectedCards
@@ -140,7 +142,7 @@ class KeyboardShortcutState(
                 if (selectedCards.isEmpty()) return false
                 selectedCards.forEach { viewModel.toggleTap(it.instanceId) }
             }
-            ShortcutAction.UntapAll -> viewModel.untapAll(activePlayer.id)
+            ShortcutAction.UntapAll -> viewModel.untapAll(localPlayer.id)
             ShortcutAction.ToggleDoesntUntap -> {
                 if (selectedCards.isEmpty()) return false
                 selectedCards.forEach { viewModel.toggleDoesntUntap(it.instanceId) }
@@ -155,7 +157,7 @@ class KeyboardShortcutState(
             }
             ShortcutAction.CloneCard -> {
                 if (selectedCards.isEmpty()) return false
-                selectedCards.forEach { viewModel.cloneCard(it.instanceId, activePlayer.id) }
+                selectedCards.forEach { viewModel.cloneCard(it.instanceId, localPlayer.id) }
             }
             ShortcutAction.CreateToken -> onShowTokenDialog()
             ShortcutAction.SetAnnotation -> {
@@ -189,7 +191,7 @@ class KeyboardShortcutState(
             ShortcutAction.MoveTopToBottom -> {
                 // Move top card of library to bottom of library
                 val topCard = gameState.cardInstances.find {
-                    it.ownerId == activePlayer.id && it.zone == Zone.LIBRARY
+                    it.ownerId == localPlayer.id && it.zone == Zone.LIBRARY
                 }
                 topCard?.let { viewModel.moveCardToBottomOfLibrary(it.instanceId) } ?: return false
             }
@@ -241,9 +243,9 @@ class KeyboardShortcutState(
                 selectedCards.forEach { viewModel.flowToughness(it.instanceId) }
             }
 
-            // Life & Counters
-            ShortcutAction.AddLife -> viewModel.changeLife(activePlayer.id, 1)
-            ShortcutAction.RemoveLife -> viewModel.changeLife(activePlayer.id, -1)
+            // Life & Counters (use localPlayer - affects your own life)
+            ShortcutAction.AddLife -> viewModel.changeLife(localPlayer.id, 1)
+            ShortcutAction.RemoveLife -> viewModel.changeLife(localPlayer.id, -1)
             ShortcutAction.SetLife -> onShowSetLifeDialog()
             ShortcutAction.AddCounter -> {
                 if (selectedCards.isEmpty()) return false
@@ -350,66 +352,66 @@ class KeyboardShortcutState(
                 selectedCards.forEach { viewModel.incrementAllCounters(it.instanceId) }
             }
 
-            // Mana Counters (Player-level mana pool tracking)
-            ShortcutAction.AddWhiteMana -> viewModel.addPlayerCounter(activePlayer.id, "white", 1)
-            ShortcutAction.RemoveWhiteMana -> viewModel.removePlayerCounter(activePlayer.id, "white", 1)
+            // Mana Counters (Player-level mana pool tracking - use localPlayer)
+            ShortcutAction.AddWhiteMana -> viewModel.addPlayerCounter(localPlayer.id, "white", 1)
+            ShortcutAction.RemoveWhiteMana -> viewModel.removePlayerCounter(localPlayer.id, "white", 1)
             ShortcutAction.SetWhiteMana -> {
-                val playerId = activePlayer.id
-                val currentCount = activePlayer.getCounter("white")
+                val playerId = localPlayer.id
+                val currentCount = localPlayer.getCounter("white")
                 onShowNumberInputDialog("Set White Mana", currentCount) { count ->
                     viewModel.setPlayerCounter(playerId, "white", count)
                 }
             }
-            ShortcutAction.AddBlueMana -> viewModel.addPlayerCounter(activePlayer.id, "blue", 1)
-            ShortcutAction.RemoveBlueMana -> viewModel.removePlayerCounter(activePlayer.id, "blue", 1)
+            ShortcutAction.AddBlueMana -> viewModel.addPlayerCounter(localPlayer.id, "blue", 1)
+            ShortcutAction.RemoveBlueMana -> viewModel.removePlayerCounter(localPlayer.id, "blue", 1)
             ShortcutAction.SetBlueMana -> {
-                val playerId = activePlayer.id
-                val currentCount = activePlayer.getCounter("blue")
+                val playerId = localPlayer.id
+                val currentCount = localPlayer.getCounter("blue")
                 onShowNumberInputDialog("Set Blue Mana", currentCount) { count ->
                     viewModel.setPlayerCounter(playerId, "blue", count)
                 }
             }
-            ShortcutAction.AddBlackMana -> viewModel.addPlayerCounter(activePlayer.id, "black", 1)
-            ShortcutAction.RemoveBlackMana -> viewModel.removePlayerCounter(activePlayer.id, "black", 1)
+            ShortcutAction.AddBlackMana -> viewModel.addPlayerCounter(localPlayer.id, "black", 1)
+            ShortcutAction.RemoveBlackMana -> viewModel.removePlayerCounter(localPlayer.id, "black", 1)
             ShortcutAction.SetBlackMana -> {
-                val playerId = activePlayer.id
-                val currentCount = activePlayer.getCounter("black")
+                val playerId = localPlayer.id
+                val currentCount = localPlayer.getCounter("black")
                 onShowNumberInputDialog("Set Black Mana", currentCount) { count ->
                     viewModel.setPlayerCounter(playerId, "black", count)
                 }
             }
-            ShortcutAction.AddRedMana -> viewModel.addPlayerCounter(activePlayer.id, "red", 1)
-            ShortcutAction.RemoveRedMana -> viewModel.removePlayerCounter(activePlayer.id, "red", 1)
+            ShortcutAction.AddRedMana -> viewModel.addPlayerCounter(localPlayer.id, "red", 1)
+            ShortcutAction.RemoveRedMana -> viewModel.removePlayerCounter(localPlayer.id, "red", 1)
             ShortcutAction.SetRedMana -> {
-                val playerId = activePlayer.id
-                val currentCount = activePlayer.getCounter("red")
+                val playerId = localPlayer.id
+                val currentCount = localPlayer.getCounter("red")
                 onShowNumberInputDialog("Set Red Mana", currentCount) { count ->
                     viewModel.setPlayerCounter(playerId, "red", count)
                 }
             }
-            ShortcutAction.AddGreenMana -> viewModel.addPlayerCounter(activePlayer.id, "green", 1)
-            ShortcutAction.RemoveGreenMana -> viewModel.removePlayerCounter(activePlayer.id, "green", 1)
+            ShortcutAction.AddGreenMana -> viewModel.addPlayerCounter(localPlayer.id, "green", 1)
+            ShortcutAction.RemoveGreenMana -> viewModel.removePlayerCounter(localPlayer.id, "green", 1)
             ShortcutAction.SetGreenMana -> {
-                val playerId = activePlayer.id
-                val currentCount = activePlayer.getCounter("green")
+                val playerId = localPlayer.id
+                val currentCount = localPlayer.getCounter("green")
                 onShowNumberInputDialog("Set Green Mana", currentCount) { count ->
                     viewModel.setPlayerCounter(playerId, "green", count)
                 }
             }
-            ShortcutAction.AddColorlessMana -> viewModel.addPlayerCounter(activePlayer.id, "colorless", 1)
-            ShortcutAction.RemoveColorlessMana -> viewModel.removePlayerCounter(activePlayer.id, "colorless", 1)
+            ShortcutAction.AddColorlessMana -> viewModel.addPlayerCounter(localPlayer.id, "colorless", 1)
+            ShortcutAction.RemoveColorlessMana -> viewModel.removePlayerCounter(localPlayer.id, "colorless", 1)
             ShortcutAction.SetColorlessMana -> {
-                val playerId = activePlayer.id
-                val currentCount = activePlayer.getCounter("colorless")
+                val playerId = localPlayer.id
+                val currentCount = localPlayer.getCounter("colorless")
                 onShowNumberInputDialog("Set Colorless Mana", currentCount) { count ->
                     viewModel.setPlayerCounter(playerId, "colorless", count)
                 }
             }
 
-            // Drawing & Library
-            ShortcutAction.DrawCard -> viewModel.drawCard(activePlayer.id)
+            // Drawing & Library (use localPlayer - should work on your own cards regardless of turn)
+            ShortcutAction.DrawCard -> viewModel.drawCard(localPlayer.id)
             ShortcutAction.DrawMultiple -> {
-                val playerId = activePlayer.id
+                val playerId = localPlayer.id
                 onShowNumberInputDialog("Draw Cards", 7) { count ->
                     viewModel.drawCards(playerId, count)
                 }
@@ -417,66 +419,66 @@ class KeyboardShortcutState(
             ShortcutAction.UndoDraw -> {
                 // Put the last drawn card back on top of library
                 val handCards = gameState.cardInstances.filter {
-                    it.ownerId == activePlayer.id && it.zone == Zone.HAND
+                    it.ownerId == localPlayer.id && it.zone == Zone.HAND
                 }
                 handCards.lastOrNull()?.let {
                     viewModel.moveCardToLibraryPosition(it.instanceId, 0)
                 } ?: return false
             }
-            ShortcutAction.Mulligan -> viewModel.mulligan(activePlayer.id)
-            ShortcutAction.ShuffleLibrary -> viewModel.shuffleLibrary(activePlayer.id)
+            ShortcutAction.Mulligan -> viewModel.mulligan(localPlayer.id)
+            ShortcutAction.ShuffleLibrary -> viewModel.shuffleLibrary(localPlayer.id)
             ShortcutAction.ShuffleTopCards -> {
-                val playerId = activePlayer.id
+                val playerId = localPlayer.id
                 onShowNumberInputDialog("Shuffle Top Cards", 5) { count ->
                     viewModel.shuffleTopCards(playerId, count)
                 }
             }
             ShortcutAction.ShuffleBottomCards -> {
-                val playerId = activePlayer.id
+                val playerId = localPlayer.id
                 onShowNumberInputDialog("Shuffle Bottom Cards", 5) { count ->
                     viewModel.shuffleBottomCards(playerId, count)
                 }
             }
             ShortcutAction.PlayTopCard -> {
                 val topCard = gameState.cardInstances.find {
-                    it.ownerId == activePlayer.id && it.zone == Zone.LIBRARY
+                    it.ownerId == localPlayer.id && it.zone == Zone.LIBRARY
                 }
                 topCard?.let { viewModel.moveCard(it.instanceId, Zone.BATTLEFIELD) } ?: return false
             }
-            ShortcutAction.MillTopCard -> viewModel.millCards(activePlayer.id, 1)
+            ShortcutAction.MillTopCard -> viewModel.millCards(localPlayer.id, 1)
             ShortcutAction.MillMultiple -> {
-                val playerId = activePlayer.id
+                val playerId = localPlayer.id
                 onShowNumberInputDialog("Mill Cards", 5) { count ->
                     viewModel.millCards(playerId, count)
                 }
             }
-            ShortcutAction.AlwaysRevealTopCard -> viewModel.toggleRevealTopCard(activePlayer.id)
-            ShortcutAction.AlwaysLookAtTopCard -> viewModel.toggleLookAtTopCard(activePlayer.id)
+            ShortcutAction.AlwaysRevealTopCard -> viewModel.toggleRevealTopCard(localPlayer.id)
+            ShortcutAction.AlwaysLookAtTopCard -> viewModel.toggleLookAtTopCard(localPlayer.id)
             ShortcutAction.StackUntilFound -> onShowStackUntilFoundDialog()
 
-            // Bottom Card Operations
-            ShortcutAction.DrawBottomCard -> viewModel.drawFromBottom(activePlayer.id, 1)
+            // Bottom Card Operations (use localPlayer)
+            ShortcutAction.DrawBottomCard -> viewModel.drawFromBottom(localPlayer.id, 1)
             ShortcutAction.DrawBottomMultiple -> {
-                val playerId = activePlayer.id
+                val playerId = localPlayer.id
                 onShowNumberInputDialog("Draw from Bottom", 7) { count ->
                     viewModel.drawFromBottom(playerId, count)
                 }
             }
-            ShortcutAction.MillBottomCard -> viewModel.millFromBottom(activePlayer.id, 1)
+            ShortcutAction.MillBottomCard -> viewModel.millFromBottom(localPlayer.id, 1)
             ShortcutAction.MillBottomMultiple -> {
-                val playerId = activePlayer.id
+                val playerId = localPlayer.id
                 onShowNumberInputDialog("Mill from Bottom", 5) { count ->
                     viewModel.millFromBottom(playerId, count)
                 }
             }
-            ShortcutAction.ExileBottomCard -> viewModel.exileFromBottom(activePlayer.id, 1)
+            ShortcutAction.ExileBottomCard -> viewModel.exileFromBottom(localPlayer.id, 1)
             ShortcutAction.ExileBottomMultiple -> {
-                val playerId = activePlayer.id
+                val playerId = localPlayer.id
                 onShowNumberInputDialog("Exile from Bottom", 5) { count ->
                     viewModel.exileFromBottom(playerId, count)
                 }
             }
-            ShortcutAction.BottomToTop -> viewModel.moveBottomCardToTop(activePlayer.id)
+            ShortcutAction.BottomToTop -> viewModel.moveBottomCardToTop(localPlayer.id)
 
             // View Zones
             ShortcutAction.ViewLibrary -> onShowLibraryDialog()
@@ -488,19 +490,19 @@ class KeyboardShortcutState(
             ShortcutAction.PeekBottomCards -> onShowPeekBottomDialog()
             ShortcutAction.CloseDialog -> onCloseDialog()
 
-            // Selection
+            // Selection (use localPlayer - selects your own cards)
             ShortcutAction.SelectAll -> {
                 // Select all cards in the same zone as the first selected card
                 val firstCard = selectedCard
                 if (firstCard != null) {
                     val zoneCards = gameState.cardInstances.filter {
-                        it.ownerId == activePlayer.id && it.zone == firstCard.zone
+                        it.ownerId == localPlayer.id && it.zone == firstCard.zone
                     }
                     selectionState.selectAll(zoneCards.map { it.instanceId })
                 } else {
                     // Select all cards on battlefield
                     val battlefieldCards = gameState.cardInstances.filter {
-                        it.ownerId == activePlayer.id && it.zone == Zone.BATTLEFIELD
+                        it.ownerId == localPlayer.id && it.zone == Zone.BATTLEFIELD
                     }
                     selectionState.selectAll(battlefieldCards.map { it.instanceId })
                 }
@@ -510,7 +512,7 @@ class KeyboardShortcutState(
                 val firstCard = selectedCard
                 if (firstCard != null && firstCard.zone == Zone.BATTLEFIELD && firstCard.gridY != null) {
                     val rowCards = gameState.cardInstances.filter {
-                        it.ownerId == activePlayer.id &&
+                        it.ownerId == localPlayer.id &&
                         it.zone == Zone.BATTLEFIELD &&
                         it.gridY == firstCard.gridY
                     }
@@ -522,7 +524,7 @@ class KeyboardShortcutState(
                 val firstCard = selectedCard
                 if (firstCard != null && firstCard.zone == Zone.BATTLEFIELD && firstCard.gridX != null) {
                     val columnCards = gameState.cardInstances.filter {
-                        it.ownerId == activePlayer.id &&
+                        it.ownerId == localPlayer.id &&
                         it.zone == Zone.BATTLEFIELD &&
                         it.gridX == firstCard.gridX
                     }
@@ -530,17 +532,17 @@ class KeyboardShortcutState(
                 } else return false
             }
 
-            // Arrows
+            // Arrows (use localPlayer)
             ShortcutAction.DrawArrow -> onStartDrawArrow()
-            ShortcutAction.RemoveArrows -> viewModel.removeLocalArrows(activePlayer.id)
+            ShortcutAction.RemoveArrows -> viewModel.removeLocalArrows(localPlayer.id)
 
-            // Gameplay
+            // Gameplay (use localPlayer for personal actions, activePlayer for turn-based)
             ShortcutAction.RollDice -> onShowDieRollerDialog()
-            ShortcutAction.Concede -> viewModel.concede(activePlayer.id)
+            ShortcutAction.Concede -> viewModel.concede(localPlayer.id)
             ShortcutAction.LeaveGame -> onLeaveGame()
             ShortcutAction.FocusChat -> onFocusChat()
             ShortcutAction.OpenPlayerCounters -> onShowPlayerCountersDialog()
-            ShortcutAction.SortHand -> viewModel.sortHand(activePlayer.id)
+            ShortcutAction.SortHand -> viewModel.sortHand(localPlayer.id)
             ShortcutAction.CreateAnotherToken -> onCreateAnotherToken()
             ShortcutAction.CreateRelatedTokens -> onCreateRelatedTokens()
         }

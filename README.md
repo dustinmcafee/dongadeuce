@@ -145,7 +145,7 @@ cd dongadeuce
 ./gradlew desktop:packageDeb
 ```
 
-## Current Status (v3.3.0)
+## Current Status (v3.3.1)
 
 **Hotseat Mode:** 98% Complete - Fully Playable! ✅
 **Network Mode:** 96% Complete - Fully Playable! ✅

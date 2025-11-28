@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.3.1] - 2025-11-28
+
+### Fixed
+- **Keyboard Shortcuts Work Off-Turn** - Fixed shortcuts not working when it's not your turn
+  - Ctrl+D to draw cards now works regardless of whose turn it is
+  - Ctrl+Shift+N to look at top card now works off-turn
+  - All library operations (shuffle, mill, peek) work off-turn
+  - Life changes, mana counters, and player counters work off-turn
+  - Card selection, untap all, and other personal actions work off-turn
+  - Turn-based actions (pass turn, change phase) still require active turn
+
 ## [3.3.0] - 2025-11-28
 
 ### Added
