@@ -9,6 +9,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import com.dustinmcafee.dongadeuce.globalKeyEventHandler
 import com.dustinmcafee.dongadeuce.models.Zone
 import com.dustinmcafee.dongadeuce.viewmodel.GameViewModel
 
@@ -42,6 +43,92 @@ fun GameScreen(
     var showAnnotationDialog by remember { mutableStateOf(false) }
     var cardForAnnotationDialog by remember { mutableStateOf<com.dustinmcafee.dongadeuce.models.CardInstance?>(null) }
     var showDieRollerDialog by remember { mutableStateOf(false) }
+    var showSetLifeDialog by remember { mutableStateOf(false) }
+    var showTokenDialog by remember { mutableStateOf(false) }
+    var showPlayerCountersDialog by remember { mutableStateOf(false) }
+    // Zone viewing dialogs
+    var showLibraryDialog by remember { mutableStateOf(false) }
+    var showGraveyardDialog by remember { mutableStateOf(false) }
+    var showExileDialog by remember { mutableStateOf(false) }
+    var showCommandZoneDialog by remember { mutableStateOf(false) }
+    var showPeekTopDialog by remember { mutableStateOf(false) }
+    var showPeekBottomDialog by remember { mutableStateOf(false) }
+    var peekCount by remember { mutableStateOf(5) } // Default peek count
+
+    // Keyboard shortcut handler
+    val keyboardState = rememberKeyboardShortcutState(viewModel, selectionState)
+
+    // Register global key handler for window-level keyboard events
+    DisposableEffect(keyboardState) {
+        globalKeyEventHandler = { event ->
+            keyboardState.handleKeyEvent(event)
+        }
+        onDispose {
+            globalKeyEventHandler = null
+        }
+    }
+
+    // Check if any dialog is currently open
+    val isAnyDialogOpen = cardDetailsToShow != null ||
+            showLibraryPositionDialog ||
+            showCounterDialog ||
+            showPowerToughnessDialog ||
+            showAnnotationDialog ||
+            showDieRollerDialog ||
+            showSetLifeDialog ||
+            showTokenDialog ||
+            showPlayerCountersDialog ||
+            showLibraryDialog ||
+            showGraveyardDialog ||
+            showExileDialog ||
+            showCommandZoneDialog ||
+            showPeekTopDialog ||
+            showPeekBottomDialog
+
+    // Update keyboard state with dialog status
+    LaunchedEffect(isAnyDialogOpen) {
+        keyboardState.isDialogOpen = isAnyDialogOpen
+    }
+
+    // Setup keyboard shortcut callbacks
+    LaunchedEffect(Unit) {
+        keyboardState.onShowDieRollerDialog = { showDieRollerDialog = true }
+        keyboardState.onShowSetLifeDialog = { showSetLifeDialog = true }
+        keyboardState.onShowTokenDialog = { showTokenDialog = true }
+        keyboardState.onShowPlayerCountersDialog = { showPlayerCountersDialog = true }
+        keyboardState.onShowPowerToughnessDialog = { card ->
+            cardForPowerToughnessDialog = card
+            showPowerToughnessDialog = true
+        }
+        keyboardState.onShowAnnotationDialog = { card ->
+            cardForAnnotationDialog = card
+            showAnnotationDialog = true
+        }
+        // Zone viewing dialog callbacks
+        keyboardState.onShowLibraryDialog = { showLibraryDialog = true }
+        keyboardState.onShowGraveyardDialog = { showGraveyardDialog = true }
+        keyboardState.onShowExileDialog = { showExileDialog = true }
+        keyboardState.onShowCommandZoneDialog = { showCommandZoneDialog = true }
+        keyboardState.onShowPeekTopDialog = { showPeekTopDialog = true }
+        keyboardState.onShowPeekBottomDialog = { showPeekBottomDialog = true }
+        keyboardState.onCloseDialog = {
+            cardDetailsToShow = null
+            showLibraryPositionDialog = false
+            showCounterDialog = false
+            showPowerToughnessDialog = false
+            showAnnotationDialog = false
+            showDieRollerDialog = false
+            showSetLifeDialog = false
+            showTokenDialog = false
+            showPlayerCountersDialog = false
+            showLibraryDialog = false
+            showGraveyardDialog = false
+            showExileDialog = false
+            showCommandZoneDialog = false
+            showPeekTopDialog = false
+            showPeekBottomDialog = false
+        }
+    }
 
     // Handler for card actions - delegates business logic to ViewModel
     val handleAction: (CardAction) -> Unit = { action ->
@@ -124,7 +211,9 @@ fun GameScreen(
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(
+        modifier = Modifier.fillMaxSize()
+    ) {
         Row(
             modifier = Modifier
                 .fillMaxSize()
@@ -498,6 +587,173 @@ fun GameScreen(
                     viewModel.logDieRoll(it.id, dieType, result, numberOfDice)
                 }
             }
+        )
+    }
+
+    // Set life dialog
+    if (showSetLifeDialog) {
+        val activePlayer = uiState.gameState?.activePlayer
+        if (activePlayer != null) {
+            SetLifeDialog(
+                playerName = activePlayer.name,
+                currentLife = activePlayer.life,
+                onDismiss = { showSetLifeDialog = false },
+                onConfirm = { newLife ->
+                    viewModel.updateLife(activePlayer.id, newLife)
+                    showSetLifeDialog = false
+                }
+            )
+        }
+    }
+
+    // Token creation dialog
+    if (showTokenDialog) {
+        val activePlayer = uiState.gameState?.activePlayer
+        if (activePlayer != null) {
+            TokenCreationDialog(
+                viewModel = viewModel,
+                onDismiss = { showTokenDialog = false },
+                onCreateToken = { tokenName, tokenType, power, toughness, color, imageUri, quantity ->
+                    viewModel.createToken(
+                        playerId = activePlayer.id,
+                        tokenName = tokenName,
+                        tokenType = tokenType,
+                        power = power,
+                        toughness = toughness,
+                        color = color,
+                        imageUri = imageUri,
+                        quantity = quantity
+                    )
+                    showTokenDialog = false
+                }
+            )
+        }
+    }
+
+    // Player counters dialog
+    if (showPlayerCountersDialog) {
+        val activePlayer = uiState.gameState?.activePlayer
+        if (activePlayer != null) {
+            PlayerCountersDialog(
+                player = activePlayer,
+                onDismiss = { showPlayerCountersDialog = false },
+                onAddCounter = { counterType, amount ->
+                    viewModel.addPlayerCounter(activePlayer.id, counterType, amount)
+                },
+                onRemoveCounter = { counterType, amount ->
+                    viewModel.removePlayerCounter(activePlayer.id, counterType, amount)
+                },
+                onSetCounter = { counterType, amount ->
+                    viewModel.setPlayerCounter(activePlayer.id, counterType, amount)
+                }
+            )
+        }
+    }
+
+    // Zone viewing dialogs - show for active player
+    val activePlayer = uiState.gameState?.activePlayer
+    val activePlayerId = activePlayer?.id
+
+    // Library search dialog
+    if (showLibraryDialog && activePlayerId != null) {
+        val libraryCards = uiState.gameState?.cardInstances?.filter {
+            it.ownerId == activePlayerId && it.zone == Zone.LIBRARY
+        } ?: emptyList()
+
+        LibrarySearchDialog(
+            cards = libraryCards,
+            playerName = activePlayer.name,
+            onDismiss = { showLibraryDialog = false },
+            onToHand = { card -> viewModel.moveCard(card.instanceId, Zone.HAND) },
+            onToBattlefield = { card -> viewModel.moveCard(card.instanceId, Zone.BATTLEFIELD) },
+            onToTop = { card -> viewModel.moveCardToTopOfLibrary(card.instanceId) },
+            onToBottom = { card -> viewModel.moveCardToBottomOfLibrary(card.instanceId) },
+            onShuffle = { viewModel.shuffleLibrary(activePlayerId) }
+        )
+    }
+
+    // Graveyard dialog
+    if (showGraveyardDialog && activePlayerId != null) {
+        val graveyardCards = uiState.gameState?.cardInstances?.filter {
+            it.ownerId == activePlayerId && it.zone == Zone.GRAVEYARD
+        } ?: emptyList()
+
+        GraveyardDialog(
+            cards = graveyardCards,
+            playerName = activePlayer.name,
+            onDismiss = { showGraveyardDialog = false },
+            onReturnToHand = { card -> viewModel.moveCard(card.instanceId, Zone.HAND) },
+            onReturnToBattlefield = { card -> viewModel.moveCard(card.instanceId, Zone.BATTLEFIELD) }
+        )
+    }
+
+    // Exile zone dialog
+    if (showExileDialog && activePlayerId != null) {
+        val exileCards = uiState.gameState?.cardInstances?.filter {
+            it.ownerId == activePlayerId && it.zone == Zone.EXILE
+        } ?: emptyList()
+
+        ExileDialog(
+            cards = exileCards,
+            playerName = activePlayer.name,
+            onDismiss = { showExileDialog = false },
+            onReturnToHand = { card -> viewModel.moveCard(card.instanceId, Zone.HAND) },
+            onReturnToBattlefield = { card -> viewModel.moveCard(card.instanceId, Zone.BATTLEFIELD) }
+        )
+    }
+
+    // Command zone dialog
+    if (showCommandZoneDialog && activePlayerId != null) {
+        val commandZoneCards = uiState.gameState?.cardInstances?.filter {
+            it.ownerId == activePlayerId && it.zone == Zone.COMMAND_ZONE
+        } ?: emptyList()
+
+        CommandZoneDialog(
+            cards = commandZoneCards,
+            playerName = activePlayer.name,
+            onDismiss = { showCommandZoneDialog = false },
+            onCastToBattlefield = { card -> viewModel.moveCard(card.instanceId, Zone.BATTLEFIELD) },
+            onToHand = { card -> viewModel.moveCard(card.instanceId, Zone.HAND) }
+        )
+    }
+
+    // Library peek top dialog
+    if (showPeekTopDialog && activePlayerId != null) {
+        val libraryCards = uiState.gameState?.cardInstances?.filter {
+            it.ownerId == activePlayerId && it.zone == Zone.LIBRARY
+        } ?: emptyList()
+        val topCards = libraryCards.take(peekCount)
+
+        LibraryPeekDialog(
+            cards = topCards,
+            playerName = activePlayer.name,
+            peekLocation = PeekLocation.TOP,
+            onDismiss = { showPeekTopDialog = false },
+            onMoveCard = { card, zone -> viewModel.moveCard(card.instanceId, zone) },
+            onMoveAllToZone = { zone ->
+                topCards.forEach { card -> viewModel.moveCard(card.instanceId, zone) }
+            },
+            onShuffleCards = { viewModel.shuffleTopCards(activePlayerId, peekCount) }
+        )
+    }
+
+    // Library peek bottom dialog
+    if (showPeekBottomDialog && activePlayerId != null) {
+        val libraryCards = uiState.gameState?.cardInstances?.filter {
+            it.ownerId == activePlayerId && it.zone == Zone.LIBRARY
+        } ?: emptyList()
+        val bottomCards = libraryCards.takeLast(peekCount)
+
+        LibraryPeekDialog(
+            cards = bottomCards,
+            playerName = activePlayer.name,
+            peekLocation = PeekLocation.BOTTOM,
+            onDismiss = { showPeekBottomDialog = false },
+            onMoveCard = { card, zone -> viewModel.moveCard(card.instanceId, zone) },
+            onMoveAllToZone = { zone ->
+                bottomCards.forEach { card -> viewModel.moveCard(card.instanceId, zone) }
+            },
+            onShuffleCards = { viewModel.shuffleBottomCards(activePlayerId, peekCount) }
         )
     }
 

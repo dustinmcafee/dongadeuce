@@ -887,6 +887,102 @@ class GameViewModel(
     }
 
     /**
+     * Set the current phase directly
+     */
+    fun setPhase(phase: com.dustinmcafee.dongadeuce.models.GamePhase) {
+        // In network mode, send action to server
+        if (isNetworkGame) {
+            sendNetworkAction(NetworkAction.SetPhase(phase))
+            return
+        }
+
+        _uiState.update { currentState ->
+            val gameState = currentState.gameState ?: return@update currentState
+            val activePlayer = gameState.activePlayer
+
+            var updatedGameState = gameState.copy(phase = phase)
+
+            // Log phase change event
+            val event = GameEvent.PhaseChanged(
+                playerId = activePlayer.id,
+                playerName = activePlayer.name,
+                newPhase = updatedGameState.phase
+            )
+            updatedGameState = updatedGameState.addEvent(event)
+
+            currentState.copy(gameState = updatedGameState)
+        }
+    }
+
+    /**
+     * Advance to next phase (alias for nextPhase for keyboard shortcuts)
+     */
+    fun advancePhase() = nextPhase()
+
+    /**
+     * Change life by a relative amount
+     */
+    fun changeLife(playerId: String, amount: Int) {
+        val currentLife = _uiState.value.gameState?.players?.find { it.id == playerId }?.life ?: return
+        updateLife(playerId, currentLife + amount)
+    }
+
+    /**
+     * Draw multiple cards
+     */
+    fun drawCards(playerId: String, count: Int) {
+        repeat(count) {
+            drawCard(playerId)
+        }
+    }
+
+    /**
+     * Concede the game
+     */
+    fun concede(playerId: String) {
+        // In network mode, send action to server
+        if (isNetworkGame) {
+            sendNetworkAction(NetworkAction.Concede(playerId))
+            return
+        }
+
+        _uiState.update { currentState ->
+            val gameState = currentState.gameState ?: return@update currentState
+            val player = gameState.players.find { it.id == playerId } ?: return@update currentState
+
+            var updatedGameState = gameState.updatePlayer(playerId) { p ->
+                p.setLife(0)
+            }
+
+            // Log player lost event
+            val event = GameEvent.PlayerLost(
+                playerId = playerId,
+                playerName = player.name,
+                reason = "Conceded"
+            )
+            updatedGameState = updatedGameState.addEvent(event)
+
+            currentState.copy(
+                gameState = updatedGameState,
+                localPlayer = if (currentState.localPlayer?.id == playerId) {
+                    updatedGameState.players.find { it.id == playerId }
+                } else {
+                    currentState.localPlayer
+                },
+                opponents = currentState.opponents.map { opponent ->
+                    if (opponent.id == playerId) {
+                        updatedGameState.players.find { it.id == playerId } ?: opponent
+                    } else {
+                        opponent
+                    }
+                }
+            )
+        }
+
+        checkGameEnd()
+    }
+
+    /**
      * Untap all permanents for a player
      */
     fun untapAll(playerId: String) {

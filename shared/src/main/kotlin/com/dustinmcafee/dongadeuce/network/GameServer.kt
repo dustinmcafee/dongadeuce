@@ -485,9 +485,19 @@ class GameServer(
         return when (action) {
             // Actions that require being the active player
             is NetworkAction.NextPhase,
-            is NetworkAction.PassTurn -> {
+            is NetworkAction.PassTurn,
+            is NetworkAction.SetPhase -> {
                 if (!isActivePlayer) {
                     ValidationResult(false, "Not your turn")
+                } else {
+                    ValidationResult(true)
+                }
+            }
+
+            // Concede - only for yourself
+            is NetworkAction.Concede -> {
+                if (action.playerId != playerId) {
+                    ValidationResult(false, "Cannot concede for another player")
                 } else {
                     ValidationResult(true)
                 }
@@ -662,6 +672,27 @@ class GameServer(
                     turnNumber = state.turnNumber + 1,
                     phase = GamePhase.UNTAP
                 ).addEvent(event)
+            }
+
+            is NetworkAction.SetPhase -> {
+                val event = GameEvent.PhaseChanged(
+                    playerId = state.activePlayer.id,
+                    playerName = state.activePlayer.name,
+                    newPhase = action.phase
+                )
+                state.copy(phase = action.phase).addEvent(event)
+            }
+
+            is NetworkAction.Concede -> {
+                val targetPlayer = state.players.find { it.id == action.playerId } ?: return state
+                val event = GameEvent.PlayerLost(
+                    playerId = action.playerId,
+                    playerName = targetPlayer.name,
+                    reason = "Conceded"
+                )
+                state.updatePlayer(action.playerId) { p ->
+                    p.copy(hasLost = true, life = 0)
+                }.addEvent(event)
             }
 
             is NetworkAction.UntapAll -> {

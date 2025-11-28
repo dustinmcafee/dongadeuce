@@ -1,5 +1,6 @@
 package com.dustinmcafee.dongadeuce.network
 
+import com.dustinmcafee.dongadeuce.models.GamePhase
 import com.dustinmcafee.dongadeuce.models.Zone
 import kotlinx.serialization.Serializable
 
@@ -322,6 +323,18 @@ sealed class NetworkAction {
      */
     @Serializable
     data object PassTurn : NetworkAction()
+
+    /**
+     * Set phase directly
+     */
+    @Serializable
+    data class SetPhase(val phase: GamePhase) : NetworkAction()
+
+    /**
+     * Concede the game
+     */
+    @Serializable
+    data class Concede(val playerId: String) : NetworkAction()
 
     /**
      * Untap all permanents for a player
