@@ -124,9 +124,11 @@ cd dongadeuce
 - **Unique Player Names** - Auto-rename duplicate names
 
 **Settings & Persistence:**
+- **Settings Dialog** - Gear icon in main menu for configuration
 - **Player Name** - Persisted between sessions
 - **Server Address** - Last used address saved
 - **Server Port** - Custom port configuration
+- **Default Deck Directory** - File picker remembers last location
 - **Cross-platform Storage** - Windows: %APPDATA%, Linux/macOS: ~/.commandermtg
 
 **Technical:**
@@ -154,8 +156,7 @@ cd dongadeuce
 ### ❌ Not Yet Implemented
 
 **Missing Features:**
-- **Game Save/Load** - Cannot save games in progress
-- **Settings Dialog UI** - Settings auto-persist but no configuration UI
+- **Game Save/Load** - Games meant to be played in one session
 
 ### Completion Status
 - **Hotseat Mode:** ~98% complete (fully playable)
@@ -182,17 +183,14 @@ The UI includes all Commander zones:
 
 ## Next Steps
 
-See [MISSING_FEATURES.md](MISSING_FEATURES.md) for detailed feature analysis.
+See [TODO.md](TODO.md) for development roadmap and feature status.
 
-### Immediate Priorities (v3.1.0)
-1. **Settings Dialog UI** - User-configurable settings
-2. **Game Save/Load** - Persist games across sessions
+### Future Enhancements (Optional Polish)
+- **Animations** - Card movement and tap animations
+- **Sound Effects** - Audio feedback for actions
+- **Themes** - Light mode, custom card backs
+- **Deck Builder** - In-app deck creation and editing
+- **Spectator Mode** - Watch games in progress
 
 **Result:** Feature-complete Commander experience
-
-### Future Enhancements
-- Animations - Card movement and tap animations
-- Sound Effects - Audio feedback for actions
-- Spectator Mode - Watch games in progress
-- Deck Builder - In-app deck creation and editing
 

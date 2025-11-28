@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.1.1] - 2025-11-28
+
+### Changed
+- Consolidated documentation: MISSING_FEATURES.md merged into TODO.md
+- Rewrote QUICKSTART.md with complete getting started guide
+- Added port forwarding instructions for internet multiplayer
+- Added VPN alternatives (Hamachi, ZeroTier, Tailscale)
+
+## [3.1.0] - 2025-11-28
+
+### Added
+- **Settings Dialog** - Gear icon in top-right of main menu opens settings
+  - Player name configuration
+  - Default server address and port
+  - Default deck directory (file picker remembers location)
+  - All settings persist to JSON file
+
+### Changed
+- File picker now uses last selected directory as default
+- Settings are immediately saved when dialog closes
+- Consolidated MISSING_FEATURES.md into TODO.md
+- Updated QUICKSTART.md with port forwarding instructions for internet play
+
 ## [3.0.0] - 2025-11-28
 
 ### Added

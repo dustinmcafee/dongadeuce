@@ -6,84 +6,205 @@
 ./gradlew desktop:run
 ```
 
-This will launch the Dong-A-Deuce application.
+This will launch Dong-A-Deuce, a multiplayer Commander/EDH game client.
+
+## First Time Setup
+
+1. **Download Card Cache** (Recommended)
+   - On the main menu, click "Download Cache" under Card Cache
+   - This downloads ~500MB of card data from Scryfall for instant deck loading
+   - Without cache, cards load individually from the API (slower)
+
+2. **Configure Settings** (Optional)
+   - Click the gear icon (⚙️) in the top-right corner
+   - Set your player name, default server settings, and deck directory
 
 ## Loading a Deck
 
-Three example deck files are included in the project root:
+Example deck files are included in the project root:
 - `edgar_markov_deck.txt` - Edgar Markov Vampire tribal
 - `first_sliver_deck.txt` - The First Sliver
 
-To load a deck:
-1. Launch the application
-2. Click "Load Deck"
-3. Navigate to one of the `.txt` files
-4. The commander name will appear in the UI
+Deck format (text file):
+```
+1 Commander Name
+1 Card Name
+1 Another Card
+...
+```
 
-## Starting a Game
+## Game Modes
 
-### Host a Game (Local)
-1. Load your deck
-2. Click "Host Game"
-3. Click "Start Game" (for now, single player testing)
+### Local Hotseat (2-4 Players, Same Device)
+1. Select "Local Hotseat" mode
+2. Choose player count (2, 3, or 4)
+3. Load a deck for each player
+4. Click "Start Game"
 
-### Game Controls
+### Network Multiplayer (2-4 Players, Over Network)
 
-**Life Tracking:**
-- Click `-` to decrease life by 1
-- Click `+` to increase life by 1
+**To Host:**
+1. Select "Network" mode
+2. Enter your name and load your deck
+3. Click "Host Game"
+4. Share the server address with other players
+5. Wait for players to join and ready up
+6. Click "Start Game"
 
-**Game Zones:**
-- All zones are visible with card counts
-- Command Zone: Your commander
-- Library: Your deck
-- Hand: Cards in hand
-- Battlefield: Permanents in play
-- Graveyard: Cards in graveyard
-- Exile: Exiled cards
+**To Join:**
+1. Select "Network" mode
+2. Enter your name and load your deck
+3. Click "Join Game"
+4. Enter the host's address and port
+5. Click "Connect", then "Ready!"
 
-## What Works Now
+## Game Controls
 
-✅ Menu system with deck loading
-✅ Host/Join lobby screens (UI only, networking TODO)
-✅ Game screen with all zones
-✅ Life tracking
-✅ MVVM architecture with reactive state
-✅ Text-based deck file parsing
+### Mouse Controls
+- **Double-click** battlefield card: Tap/untap
+- **Double-click** hand card: Play to battlefield
+- **Right-click** any card: Context menu with all actions
+- **Drag** cards on battlefield: Reposition
+- **Drag** from hand: Play to battlefield
+- **Click** zone buttons: View zone contents
 
-## What's Coming Next
+### Essential Keyboard Shortcuts
 
-- P2P networking with Ktor WebSockets
-- Card data from Scryfall API
-- Visual card rendering
-- Drag-and-drop card movement
-- Draw, play, tap/untap actions
-- Multiplayer gameplay
+**Phases:**
+- `F5-F10`: Jump to phase (Untap, Draw, Main1, Combat, Main2, End)
+- `Ctrl+Enter`: Pass turn
 
-## Project Structure
+**Card Actions:**
+- `T`: Tap/untap selected card
+- `Ctrl+U`: Untap all your permanents
+- `Del`: Move to graveyard
+- `Ctrl+X`: Move to exile
+- `Ctrl+H`: Return to hand
 
-- `shared/` - Game logic, models, networking
-- `desktop/` - Compose UI and ViewModels
-- `resources/` - Card images cache (when implemented)
+**Library:**
+- `Ctrl+D`: Draw a card
+- `Ctrl+M`: Mulligan
+- `Ctrl+S`: Shuffle library
+- `F3`: View library
+
+**Counters:**
+- `Ctrl+=`: Add +1/+0
+- `Alt+=`: Add +0/+1
+- `Ctrl+Alt+=`: Add +1/+1
+
+**Other:**
+- `Ctrl+T`: Create token
+- `Ctrl+I`: Roll dice
+- `Shift+Enter`: Focus chat
+- `Esc`: Close dialog
+
+See full list: 120+ shortcuts available (press `?` or check MISSING_FEATURES.md)
+
+## Game Zones
+
+- **Command Zone**: Your commander (click to cast)
+- **Library**: Draw deck (click for operations)
+- **Hand**: Your cards (visible only to you)
+- **Battlefield**: Permanents in play (drag to arrange)
+- **Graveyard**: Destroyed/discarded cards
+- **Exile**: Exiled cards
+
+## Features
+
+- Full Commander rules (40 life, 21 commander damage)
+- Card images from Scryfall with offline cache
+- Drag-and-drop battlefield with grid positioning
+- Token creation (Scryfall search or custom)
+- Card counters (+1/+1, charge, custom)
+- Power/toughness modifications
+- Card attachments (auras/equipment)
+- Die rolling (D4-D100, coin flip)
+- Game log with chat
+- 120+ keyboard shortcuts
 
 ## Building Distributions
 
 ```bash
-# macOS .dmg
+# macOS
 ./gradlew desktop:packageDmg
 
-# Windows .msi
+# Windows
 ./gradlew desktop:packageMsi
 
-# Linux .deb
+# Linux
 ./gradlew desktop:packageDeb
 ```
 
-## Development
+## Project Structure
 
-The project uses MVVM architecture:
-- **Models**: Domain objects in `shared/models/`
-- **ViewModels**: State management in `desktop/viewmodel/`
-- **Views**: Composable UI in `desktop/ui/`
+```
+dongadeuce/
+├── shared/          # Game logic, models, networking
+│   ├── models/      # Card, Deck, Player, GameState
+│   ├── network/     # WebSocket server/client
+│   └── settings/    # User settings, keyboard shortcuts
+├── desktop/         # Compose Desktop UI
+│   ├── ui/          # UI components
+│   └── viewmodel/   # MVVM ViewModels
+└── resources/       # Icons and assets
+```
 
-State flows from ViewModel → UI using Kotlin StateFlow.
+## Playing Over the Internet
+
+To play with friends over the internet (not just local network):
+
+### Host Setup (Port Forwarding)
+
+1. **Find your local IP:**
+   - Windows: Run `ipconfig` in Command Prompt, look for "IPv4 Address"
+   - macOS/Linux: Run `ifconfig` or `ip addr`, look for your local IP (usually 192.168.x.x)
+
+2. **Set up port forwarding on your router:**
+   - Log into your router (usually http://192.168.1.1 or http://192.168.0.1)
+   - Find "Port Forwarding" or "Virtual Server" settings
+   - Add a new rule:
+     - External Port: 8080 (or your chosen port)
+     - Internal Port: 8080
+     - Internal IP: Your computer's local IP
+     - Protocol: TCP
+   - Save and apply
+
+3. **Find your public IP:**
+   - Visit https://whatismyip.com or search "what is my ip"
+
+4. **Share with players:**
+   - Give them your public IP and port (e.g., `123.45.67.89:8080`)
+
+### Client Setup
+
+1. Enter the host's **public IP address** and port
+2. Click "Connect"
+
+### Alternative: Use a VPN
+
+Services like Hamachi, ZeroTier, or Tailscale create a virtual LAN:
+1. All players install the same VPN software
+2. Create/join the same network
+3. Use the VPN-assigned IP addresses to connect
+
+## Troubleshooting
+
+**Cards not loading?**
+- Download the card cache from the main menu
+- Check your internet connection
+
+**Can't connect to host?**
+- Verify port forwarding is set up correctly
+- Check Windows Firewall / macOS Firewall allows the app
+- Try temporarily disabling firewall to test
+- Ensure the host's router port forwarding is active
+- Use a VPN service as an alternative
+
+**Connection refused?**
+- The host may not have started hosting yet
+- Port forwarding may not be configured correctly
+- Try a different port (change in Settings)
+
+**Game is slow?**
+- Download the card cache for faster loading
+- Close other applications using network bandwidth

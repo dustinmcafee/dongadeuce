@@ -2,6 +2,8 @@ package com.dustinmcafee.dongadeuce.ui
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -10,6 +12,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.dustinmcafee.dongadeuce.viewmodel.MenuViewModel
 import com.dustinmcafee.dongadeuce.viewmodel.Screen
+import java.io.File
 import javax.swing.JFileChooser
 import javax.swing.filechooser.FileNameExtensionFilter
 
@@ -74,11 +77,39 @@ fun MenuScreen(
     viewModel: MenuViewModel,
     uiState: com.dustinmcafee.dongadeuce.viewmodel.MenuUiState
 ) {
+    var showSettingsDialog by remember { mutableStateOf(false) }
+
+    // Settings Dialog
+    if (showSettingsDialog) {
+        SettingsDialog(
+            userSettings = viewModel.userSettings,
+            currentPlayerName = uiState.playerName,
+            currentServerAddress = uiState.serverAddress,
+            currentServerPort = uiState.serverPort,
+            onPlayerNameChange = { viewModel.setPlayerName(it) },
+            onServerAddressChange = { viewModel.setServerAddress(it) },
+            onServerPortChange = { viewModel.setServerPort(it) },
+            onDismiss = { showSettingsDialog = false }
+        )
+    }
+
     Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
+        modifier = Modifier.fillMaxSize()
     ) {
+        // Settings button in top-right corner
+        IconButton(
+            onClick = { showSettingsDialog = true },
+            modifier = Modifier.align(Alignment.TopEnd).padding(16.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.Settings,
+                contentDescription = "Settings"
+            )
+        }
+
+        // Main content centered
         Column(
+            modifier = Modifier.align(Alignment.Center),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
@@ -326,12 +357,20 @@ fun MenuScreen(
 
                 OutlinedButton(
                     onClick = {
-                        // Open file chooser
+                        // Open file chooser with default directory if set
+                        val defaultDir = viewModel.userSettings.getLastDeckDirectory()
                         val fileChooser = JFileChooser().apply {
                             fileFilter = FileNameExtensionFilter("Text files", "txt")
+                            if (!defaultDir.isNullOrBlank()) {
+                                currentDirectory = File(defaultDir)
+                            }
                         }
                         val result = fileChooser.showOpenDialog(null)
                         if (result == JFileChooser.APPROVE_OPTION) {
+                            // Save the directory for next time
+                            viewModel.userSettings.setLastDeckDirectory(
+                                fileChooser.selectedFile.parentFile.absolutePath
+                            )
                             viewModel.loadDeck(fileChooser.selectedFile.absolutePath)
                         }
                     },
@@ -396,11 +435,20 @@ fun HotseatDeckLoader(
 
                     OutlinedButton(
                         onClick = {
+                            // Open file chooser with default directory if set
+                            val defaultDir = viewModel.userSettings.getLastDeckDirectory()
                             val fileChooser = JFileChooser().apply {
                                 fileFilter = FileNameExtensionFilter("Text files", "txt")
+                                if (!defaultDir.isNullOrBlank()) {
+                                    currentDirectory = File(defaultDir)
+                                }
                             }
                             val result = fileChooser.showOpenDialog(null)
                             if (result == JFileChooser.APPROVE_OPTION) {
+                                // Save the directory for next time
+                                viewModel.userSettings.setLastDeckDirectory(
+                                    fileChooser.selectedFile.parentFile.absolutePath
+                                )
                                 viewModel.loadHotseatDeck(
                                     playerIndex,
                                     fileChooser.selectedFile.absolutePath

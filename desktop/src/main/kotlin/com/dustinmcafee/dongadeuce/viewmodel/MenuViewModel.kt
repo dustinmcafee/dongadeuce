@@ -57,8 +57,8 @@ sealed class Screen {
 }
 
 class MenuViewModel {
-    // User settings for persistence
-    private val userSettings = UserSettings()
+    // User settings for persistence (exposed for settings dialog)
+    val userSettings = UserSettings()
 
     private val _uiState = MutableStateFlow(MenuUiState())
     val uiState: StateFlow<MenuUiState> = _uiState.asStateFlow()
