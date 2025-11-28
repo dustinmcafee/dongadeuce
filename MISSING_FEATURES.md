@@ -3,22 +3,22 @@
 **Current Version:** v2.26.0
 **Last Updated:** 2025-11-27
 **Hotseat Mode Completion:** ~97%
-**Network Mode Completion:** ~5%
+**Network Mode Completion:** ~95%
 **MVVM Architecture Compliance:** 100%
 
 ---
 
 ## Executive Summary
 
-Dong-A-Deuce is a **highly functional hotseat multiplayer Commander game** with comprehensive game state management, professional UI, and nearly all core gameplay features implemented. The application is fully playable for 2-4 players on the same device.
+Dong-A-Deuce is a **highly functional multiplayer Commander game** with comprehensive game state management, professional UI, and nearly all core gameplay features implemented. The application is fully playable for 2-4 players in both hotseat mode (same device) and network mode (over local network).
 
 **Current State:**
 - Hotseat multiplayer is 98% complete and fully playable
+- Network multiplayer is 95% complete and fully playable
 - All core MTG mechanics implemented
 - Professional UI with card images and extensive dialogs
 - Game log/chat panel for event tracking and player communication
 - Excellent MVVM architecture (100% compliant)
-- Network multiplayer backend not yet implemented
 - Minor feature missing (commander tax)
 
 ---
@@ -81,54 +81,49 @@ Players must manually track commander tax (additional {2} for each previous cast
 
 ---
 
-### 4. Network Multiplayer Backend
+### 4. Network Multiplayer Backend - IMPLEMENTED
 
 **Priority:** CRITICAL (for network play)
 **Effort:** 3-4 weeks
-**Status:** UI exists, backend not implemented
+**Status:** COMPLETED (v2.26.0)
 
-**Impact:**
-Cannot play games with remote players. Only hotseat mode works.
-
-**What's Needed:**
+**Features Implemented:**
 
 #### GameServer.kt
-- Ktor WebSocket server on configurable port
-- Accept player connections
-- Maintain connected players list
+- Ktor WebSocket server on configurable port (default 8080)
+- Accept player connections with lobby system
+- Maintain connected players list with ready status
 - Broadcast game state updates to all clients
-- Handle player disconnects gracefully
+- Handle player disconnects gracefully (pause game)
 - Validate game actions for cheating prevention
+- Host can kick players from lobby
+- Unique name generation for duplicate player names
 
 #### GameClient.kt
 - Ktor WebSocket client
 - Connect to host server by IP:port
 - Send local player actions to server
 - Receive and apply remote game state updates
-- Reconnection logic for dropped connections
-- Heartbeat/ping system
+- Connection state tracking (Disconnected, Connecting, Connected, Error)
 
 #### GameMessage.kt
 - Serializable network protocol with kotlinx.serialization
-- Message types for all game actions:
-  - PlayerJoined, PlayerLeft, DeckLoaded
-  - GameStarted, DrawCard, PlayCard, MoveCard
-  - TapCard, UpdateLife, CommanderDamage
-  - NextPhase, PassTurn, ChatMessage
-  - CountersAdded, CardAttached, etc.
+- 15+ message types for lobby and game management
+- Full action support via NetworkAction sealed class
+
+#### NetworkAction.kt
+- 35+ serializable action types for all game operations
+- Card movement, tapping, counters, P/T modifications
+- Library operations, token creation, card cloning
+- Turn/phase management, chat messages, die rolls
 
 #### Integration
-- MenuViewModel.startHosting() - Start server
-- MenuViewModel.connectToGame() - Connect client
-- GameViewModel - Broadcast all actions over network
-- GameViewModel - Listen for and apply remote actions
-- State synchronization and conflict resolution
-
-**Why Not Implemented:**
-- Large engineering effort (3-4 weeks)
-- Hotseat mode fully functional as alternative
-- Requires careful design of network protocol
-- Must handle edge cases (disconnects, cheating, sync)
+- MenuViewModel.startHosting() - Start server with host deck
+- MenuViewModel.joinGame() - Connect client to server
+- GameViewModel - Routes all actions through network when in network mode
+- Host executes actions directly via executeHostAction()
+- Clients send actions via WebSocket
+- Real-time state synchronization
 
 ---
 
@@ -274,6 +269,17 @@ Player name not saved, no configuration options.
 - Custom token creation (name, type, P/T, color)
 - Multiple token creation at once
 
+### Network Multiplayer (95% Complete)
+- Ktor WebSocket server and client
+- Host/join lobby system with ready status
+- Real-time game state synchronization
+- Full action routing (35+ action types)
+- Player disconnect handling with game pause
+- Action validation for cheating prevention
+- Unique player name generation
+- Host can kick players from lobby
+- Chat messages over network
+
 ### Technical (100% Complete)
 - MVVM Architecture (100% compliant)
 - StateFlow Reactive Updates
@@ -346,14 +352,15 @@ These are features that would be nice but are not necessary for full Commander g
 |----------|----------|---------|------------|
 | **Core Gameplay** | 18/18 | 0/18 | 100% |
 | **Hotseat Multiplayer** | 6/6 | 0/6 | 100% |
+| **Network Multiplayer** | 9/10 | 1/10 | 90% |
 | **UI Components** | 16/16 | 0/16 | 100% |
 | **Technical Foundation** | 10/10 | 0/10 | 100% |
 | **Quality of Life** | 0/8 | 8/8 | 0% |
-| **Network Multiplayer** | 1/10 | 9/10 | 10% |
 | **Polish/Enhancement** | 0/20 | 20/20 | 0% |
-| **TOTAL** | 51/88 | 37/88 | **58%** |
+| **TOTAL** | 59/88 | 29/88 | **67%** |
 
 **For Hotseat Mode:** 50/53 = **94% Complete**
+**For Network Mode:** 59/63 = **94% Complete**
 
 ---
 
@@ -361,22 +368,23 @@ These are features that would be nice but are not necessary for full Commander g
 
 ### For Hotseat Play (2-4 players, same device):
 **Status:** FULLY PLAYABLE
-**Completeness:** 94%
-**Missing:** Game log, commander tax, player counters
+**Completeness:** 97%
+**Missing:** Commander tax
 **Verdict:** You can play complete Commander games right now!
 
 ### For Network Play (remote multiplayer):
-**Status:** NOT PLAYABLE
-**Completeness:** 10%
-**Missing:** Entire network backend
-**Verdict:** 3-4 weeks of development needed
+**Status:** FULLY PLAYABLE
+**Completeness:** 95%
+**Missing:** Commander tax, some edge case handling
+**Verdict:** You can play Commander games over local network with 2-4 players!
 
 ---
 
-## WHAT USERS CAN DO TODAY (v2.25.0)
+## WHAT USERS CAN DO TODAY (v2.26.0)
 
 ### Fully Functional
 - Start hotseat game with 2-4 players
+- Host or join network games over local network
 - Load individual decks for each player
 - Draw starting hands automatically
 - Track all game state (life, commander damage, zones)
@@ -399,10 +407,10 @@ These are features that would be nice but are not necessary for full Commander g
 - View game log/history of all actions
 - Send chat messages to other players
 - See die roll results in game log
+- Play network games with full feature parity to hotseat mode
 
 ### Cannot Do
 - Auto-calculate commander tax (must track manually)
-- Play over network with remote players
 - Use keyboard shortcuts
 - Save/load games
 - Access settings menu
@@ -432,22 +440,22 @@ These are features that would be nice but are not necessary for full Commander g
 
 ### For Users Who Want Hotseat Multiplayer:
 **Status:** Already works! Play it today.
-**Optional:** Add game log (2-3 days), commander tax (1 day), and player counters (2-3 days) for perfect experience.
+**Optional:** Add commander tax (1 day) for perfect experience.
 
 ### For Users Who Want Network Multiplayer:
-**Path:** Implement network backend (3-4 weeks)
-**Then:** Optional polish (chat, settings, etc.)
+**Status:** Already works! Host or join games over local network.
+**Optional:** Add commander tax (1 day), keyboard shortcuts, settings persistence.
 
 ---
 
 ## CONCLUSION
 
-Dong-A-Deuce v2.25.0 is a **highly functional hotseat Commander game** that can be played today. The application demonstrates excellent MVVM architecture and comprehensive Commander gameplay support. The only significant missing feature is network multiplayer, which requires 3-4 weeks of dedicated development.
+Dong-A-Deuce v2.26.0 is a **fully functional multiplayer Commander game** supporting both hotseat (same device) and network (local network) play. The application demonstrates excellent MVVM architecture and comprehensive Commander gameplay support with full feature parity between game modes.
 
 **For Hotseat Players:** This app is ready to use!
-**For Network Players:** Patience required, or contribute to the network backend.
+**For Network Players:** This app is ready to use! Host or join games over local network.
 
 ---
 
 **Last Updated:** 2025-11-27
-**Next Priority:** Game Log + Commander Tax + Player Counters
+**Next Priority:** Commander Tax + Keyboard Shortcuts + Settings

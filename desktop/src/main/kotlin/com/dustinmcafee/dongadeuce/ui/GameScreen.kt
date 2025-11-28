@@ -18,7 +18,14 @@ fun GameScreen(
     hotseatDecks: Map<Int, com.dustinmcafee.dongadeuce.models.Deck> = emptyMap(),
     playerCount: Int = 2, // Total players (including local player): 2, 3, or 4
     isHotseatMode: Boolean = false,
-    viewModel: GameViewModel = remember { GameViewModel() }
+    viewModel: GameViewModel = remember { GameViewModel() },
+    // Network mode parameters
+    networkGameState: com.dustinmcafee.dongadeuce.models.GameState? = null,
+    isPaused: Boolean = false,
+    pauseReason: String? = null,
+    isHost: Boolean = false,
+    onResumeGame: () -> Unit = {},
+    onReturnToMenu: () -> Unit = {}
 ) {
     val dragDropState = rememberDragDropState()
     val selectionState = rememberSelectionState()
@@ -81,30 +88,21 @@ fun GameScreen(
         }
     }
 
-    // Initialize game and load deck when entering the screen
+    // Initialize game for hotseat mode only
+    // Network mode: game state comes from the server via GameViewModel's network client
     LaunchedEffect(Unit) {
-        // Initialize game if not already done
-        if (uiState.localPlayer == null) {
-            // Generate player names based on mode
-            val playerNames = if (isHotseatMode) {
-                List(playerCount) { index -> "Player ${index + 1}" }
-            } else {
-                val opponentCount = (playerCount - 1).coerceIn(1, 3)
-                val opponentNames = List(opponentCount) { index ->
-                    "Opponent ${index + 1}"
-                }
-                listOf("You") + opponentNames
-            }
-
+        if (isHotseatMode && uiState.localPlayer == null) {
+            val playerNames = List(playerCount) { index -> "Player ${index + 1}" }
             viewModel.initializeGame(
                 localPlayerName = playerNames[0],
                 opponentNames = playerNames.drop(1),
-                isHotseatMode = isHotseatMode
+                isHotseatMode = true
             )
         }
     }
 
-    // Load decks for hotseat mode
+    // Load decks for hotseat mode only
+    // Network mode: decks are loaded on the server when the game starts
     LaunchedEffect(hotseatDecks, uiState.gameState, uiState.allPlayers) {
         if (isHotseatMode && hotseatDecks.isNotEmpty() && uiState.gameState != null) {
             val allPlayers = uiState.allPlayers
@@ -126,23 +124,6 @@ fun GameScreen(
         }
     }
 
-    // Load deck for network mode (single deck for local player)
-    LaunchedEffect(loadedDeck, uiState.gameState, uiState.localPlayer) {
-        if (!isHotseatMode) {
-            val localPlayer = uiState.localPlayer
-            if (loadedDeck != null && uiState.gameState != null && localPlayer != null) {
-                val currentHandCount = viewModel.getCardCount(localPlayer.id, Zone.HAND)
-                val libraryCount = viewModel.getCardCount(localPlayer.id, Zone.LIBRARY)
-
-                // Only load deck if we haven't already loaded it
-                if (currentHandCount == 0 && libraryCount == 0) {
-                    viewModel.loadDeck(loadedDeck)
-                    viewModel.drawStartingHand(localPlayer.id, 7)
-                }
-            }
-        }
-    }
-
     Box(modifier = Modifier.fillMaxSize()) {
         Row(
             modifier = Modifier
@@ -154,175 +135,206 @@ fun GameScreen(
             Column(
                 modifier = Modifier.weight(1f)
             ) {
-            if (isHotseatMode) {
-                // Hotseat mode: Compact layout with battlefields touching
-                // Active player always at bottom-left
                 val gameState = uiState.gameState
-                // IMPORTANT: Use gameState.players, NOT uiState.allPlayers
-                // because allPlayers is derived from localPlayer+opponents which is already rotated
                 val allPlayers = gameState?.players ?: emptyList()
-                val activePlayerIndex = gameState?.activePlayerIndex ?: 0
                 val activePlayerId = gameState?.activePlayer?.id
+                val localPlayerId = uiState.localPlayer?.id
 
-                // Rotate players so active player is first (will be at bottom)
-                val rotatedPlayers = allPlayers.drop(activePlayerIndex) + allPlayers.take(activePlayerIndex)
+                if (isHotseatMode) {
+                    // Hotseat mode: Rotate so active player is always at bottom
+                    val activePlayerIndex = gameState?.activePlayerIndex ?: 0
+                    val rotatedPlayers = allPlayers.drop(activePlayerIndex) + allPlayers.take(activePlayerIndex)
 
-                // Use key to force recomposition when active player changes
-                key(activePlayerId) {
+                    // Use key to force recomposition when active player changes
+                    key(activePlayerId) {
+                        Column(modifier = Modifier.fillMaxSize()) {
+                        when (rotatedPlayers.size) {
+                            2 -> {
+                                HotseatPlayerSection(
+                                    player = rotatedPlayers[1],
+                                    viewModel = viewModel,
+                                    isActivePlayer = false,
+                                    onCardAction = handleAction,
+                                    dragDropState = dragDropState,
+                                    selectionState = selectionState,
+                                    otherPlayers = rotatedPlayers.filter { it.id != rotatedPlayers[1].id },
+                                    modifier = Modifier.fillMaxWidth().weight(1f)
+                                )
+                                HotseatPlayerSection(
+                                    player = rotatedPlayers[0],
+                                    viewModel = viewModel,
+                                    isActivePlayer = true,
+                                    onCardAction = handleAction,
+                                    dragDropState = dragDropState,
+                                    selectionState = selectionState,
+                                    otherPlayers = rotatedPlayers.filter { it.id != rotatedPlayers[0].id },
+                                    modifier = Modifier.fillMaxWidth().weight(1f),
+                                    inverted = true
+                                )
+                            }
+                            3 -> {
+                                Row(modifier = Modifier.fillMaxWidth().weight(1f)) {
+                                    HotseatPlayerSection(
+                                        player = rotatedPlayers[1],
+                                        viewModel = viewModel,
+                                        isActivePlayer = false,
+                                        onCardAction = handleAction,
+                                        dragDropState = dragDropState,
+                                        selectionState = selectionState,
+                                        otherPlayers = rotatedPlayers.filter { it.id != rotatedPlayers[1].id },
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    HotseatPlayerSection(
+                                        player = rotatedPlayers[2],
+                                        viewModel = viewModel,
+                                        isActivePlayer = false,
+                                        onCardAction = handleAction,
+                                        dragDropState = dragDropState,
+                                        selectionState = selectionState,
+                                        otherPlayers = rotatedPlayers.filter { it.id != rotatedPlayers[2].id },
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                }
+                                Row(modifier = Modifier.fillMaxWidth().weight(1f)) {
+                                    HotseatPlayerSection(
+                                        player = rotatedPlayers[0],
+                                        viewModel = viewModel,
+                                        isActivePlayer = true,
+                                        onCardAction = handleAction,
+                                        dragDropState = dragDropState,
+                                        selectionState = selectionState,
+                                        otherPlayers = rotatedPlayers.filter { it.id != rotatedPlayers[0].id },
+                                        modifier = Modifier.weight(1f),
+                                        inverted = true
+                                    )
+                                    Spacer(modifier = Modifier.weight(1f))
+                                }
+                            }
+                            4 -> {
+                                Row(modifier = Modifier.fillMaxWidth().weight(1f)) {
+                                    HotseatPlayerSection(
+                                        player = rotatedPlayers[2],
+                                        viewModel = viewModel,
+                                        isActivePlayer = false,
+                                        onCardAction = handleAction,
+                                        dragDropState = dragDropState,
+                                        selectionState = selectionState,
+                                        otherPlayers = rotatedPlayers.filter { it.id != rotatedPlayers[2].id },
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    HotseatPlayerSection(
+                                        player = rotatedPlayers[3],
+                                        viewModel = viewModel,
+                                        isActivePlayer = false,
+                                        onCardAction = handleAction,
+                                        dragDropState = dragDropState,
+                                        selectionState = selectionState,
+                                        otherPlayers = rotatedPlayers.filter { it.id != rotatedPlayers[3].id },
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                }
+                                Row(modifier = Modifier.fillMaxWidth().weight(1f)) {
+                                    HotseatPlayerSection(
+                                        player = rotatedPlayers[0],
+                                        viewModel = viewModel,
+                                        isActivePlayer = true,
+                                        onCardAction = handleAction,
+                                        dragDropState = dragDropState,
+                                        selectionState = selectionState,
+                                        otherPlayers = rotatedPlayers.filter { it.id != rotatedPlayers[0].id },
+                                        modifier = Modifier.weight(1f),
+                                        inverted = true
+                                    )
+                                    HotseatPlayerSection(
+                                        player = rotatedPlayers[1],
+                                        viewModel = viewModel,
+                                        isActivePlayer = false,
+                                        onCardAction = handleAction,
+                                        dragDropState = dragDropState,
+                                        selectionState = selectionState,
+                                        otherPlayers = rotatedPlayers.filter { it.id != rotatedPlayers[1].id },
+                                        modifier = Modifier.weight(1f),
+                                        inverted = true
+                                    )
+                                }
+                            }
+                        }
+                        }
+                    }
+                } else {
+                    // Network mode: Fixed layout - local player always at bottom, opponents at top
+                    val localPlayer = uiState.localPlayer
+                    val opponents = uiState.opponents
+
                     Column(modifier = Modifier.fillMaxSize()) {
-                    when (rotatedPlayers.size) {
-                        2 -> {
-                            // 2 players: vertical split, opponent on top, active player on bottom
+                        // Opponents at top
+                        when (opponents.size) {
+                            1 -> {
+                                HotseatPlayerSection(
+                                    player = opponents[0],
+                                    viewModel = viewModel,
+                                    isActivePlayer = opponents[0].id == activePlayerId,
+                                    onCardAction = handleAction,
+                                    dragDropState = null, // Opponents can't drag
+                                    selectionState = null,
+                                    otherPlayers = allPlayers.filter { it.id != opponents[0].id },
+                                    modifier = Modifier.fillMaxWidth().weight(1f),
+                                    isLocalPlayer = false
+                                )
+                            }
+                            2 -> {
+                                Row(modifier = Modifier.fillMaxWidth().weight(1f)) {
+                                    opponents.forEach { opponent ->
+                                        HotseatPlayerSection(
+                                            player = opponent,
+                                            viewModel = viewModel,
+                                            isActivePlayer = opponent.id == activePlayerId,
+                                            onCardAction = handleAction,
+                                            dragDropState = null,
+                                            selectionState = null,
+                                            otherPlayers = allPlayers.filter { it.id != opponent.id },
+                                            modifier = Modifier.weight(1f),
+                                            isLocalPlayer = false
+                                        )
+                                    }
+                                }
+                            }
+                            3 -> {
+                                Row(modifier = Modifier.fillMaxWidth().weight(1f)) {
+                                    opponents.forEach { opponent ->
+                                        HotseatPlayerSection(
+                                            player = opponent,
+                                            viewModel = viewModel,
+                                            isActivePlayer = opponent.id == activePlayerId,
+                                            onCardAction = handleAction,
+                                            dragDropState = null,
+                                            selectionState = null,
+                                            otherPlayers = allPlayers.filter { it.id != opponent.id },
+                                            modifier = Modifier.weight(1f),
+                                            isLocalPlayer = false
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        // Local player at bottom
+                        if (localPlayer != null) {
                             HotseatPlayerSection(
-                                player = rotatedPlayers[1],
+                                player = localPlayer,
                                 viewModel = viewModel,
-                                isActivePlayer = false,
+                                isActivePlayer = localPlayer.id == activePlayerId,
                                 onCardAction = handleAction,
                                 dragDropState = dragDropState,
                                 selectionState = selectionState,
-                                otherPlayers = rotatedPlayers.filter { it.id != rotatedPlayers[1].id },
-                                modifier = Modifier.fillMaxWidth().weight(1f)
-                            )
-                            HotseatPlayerSection(
-                                player = rotatedPlayers[0],
-                                viewModel = viewModel,
-                                isActivePlayer = true,
-                                onCardAction = handleAction,
-                                dragDropState = dragDropState,
-                                selectionState = selectionState,
-                                otherPlayers = rotatedPlayers.filter { it.id != rotatedPlayers[0].id },
+                                otherPlayers = opponents,
                                 modifier = Modifier.fillMaxWidth().weight(1f),
-                                inverted = true
+                                inverted = true,
+                                isLocalPlayer = true
                             )
                         }
-                        3 -> {
-                            // 3 players: opponents on top, active player bottom-left
-                            Row(modifier = Modifier.fillMaxWidth().weight(1f)) {
-                                HotseatPlayerSection(
-                                    player = rotatedPlayers[1],
-                                    viewModel = viewModel,
-                                    isActivePlayer = false,
-                                    onCardAction = handleAction,
-                                    dragDropState = dragDropState,
-                                    selectionState = selectionState,
-                                    otherPlayers = rotatedPlayers.filter { it.id != rotatedPlayers[1].id },
-                                    modifier = Modifier.weight(1f)
-                                )
-                                HotseatPlayerSection(
-                                    player = rotatedPlayers[2],
-                                    viewModel = viewModel,
-                                    isActivePlayer = false,
-                                    onCardAction = handleAction,
-                                    dragDropState = dragDropState,
-                                    selectionState = selectionState,
-                                    otherPlayers = rotatedPlayers.filter { it.id != rotatedPlayers[2].id },
-                                    modifier = Modifier.weight(1f)
-                                )
-                            }
-                            Row(modifier = Modifier.fillMaxWidth().weight(1f)) {
-                                HotseatPlayerSection(
-                                    player = rotatedPlayers[0],
-                                    viewModel = viewModel,
-                                    isActivePlayer = true,
-                                    onCardAction = handleAction,
-                                    dragDropState = dragDropState,
-                                    selectionState = selectionState,
-                                    otherPlayers = rotatedPlayers.filter { it.id != rotatedPlayers[0].id },
-                                    modifier = Modifier.weight(1f),
-                                    inverted = true
-                                )
-                                // Empty space to keep active player on left
-                                Spacer(modifier = Modifier.weight(1f))
-                            }
-                        }
-                        4 -> {
-                            // 4 players: 2 opponents on top, active player bottom-left, 1 opponent bottom-right
-                            Row(modifier = Modifier.fillMaxWidth().weight(1f)) {
-                                HotseatPlayerSection(
-                                    player = rotatedPlayers[2],
-                                    viewModel = viewModel,
-                                    isActivePlayer = false,
-                                    onCardAction = handleAction,
-                                    dragDropState = dragDropState,
-                                    selectionState = selectionState,
-                                    otherPlayers = rotatedPlayers.filter { it.id != rotatedPlayers[2].id },
-                                    modifier = Modifier.weight(1f)
-                                )
-                                HotseatPlayerSection(
-                                    player = rotatedPlayers[3],
-                                    viewModel = viewModel,
-                                    isActivePlayer = false,
-                                    onCardAction = handleAction,
-                                    dragDropState = dragDropState,
-                                    selectionState = selectionState,
-                                    otherPlayers = rotatedPlayers.filter { it.id != rotatedPlayers[3].id },
-                                    modifier = Modifier.weight(1f)
-                                )
-                            }
-                            Row(modifier = Modifier.fillMaxWidth().weight(1f)) {
-                                HotseatPlayerSection(
-                                    player = rotatedPlayers[0],
-                                    viewModel = viewModel,
-                                    isActivePlayer = true,
-                                    onCardAction = handleAction,
-                                    dragDropState = dragDropState,
-                                    selectionState = selectionState,
-                                    otherPlayers = rotatedPlayers.filter { it.id != rotatedPlayers[0].id },
-                                    modifier = Modifier.weight(1f),
-                                    inverted = true
-                                )
-                                HotseatPlayerSection(
-                                    player = rotatedPlayers[1],
-                                    viewModel = viewModel,
-                                    isActivePlayer = false,
-                                    onCardAction = handleAction,
-                                    dragDropState = dragDropState,
-                                    selectionState = selectionState,
-                                    otherPlayers = rotatedPlayers.filter { it.id != rotatedPlayers[1].id },
-                                    modifier = Modifier.weight(1f),
-                                    inverted = true
-                                )
-                            }
-                        }
-                    }
                     }
                 }
-            } else {
-                // Network mode: Traditional local player vs opponents layout
-                val opponents = uiState.opponents
-                val localPlayer = uiState.localPlayer
-
-                // Opponents' area (top) - dynamic layout based on player count
-                if (opponents.isNotEmpty()) {
-                    OpponentsArea(
-                        opponents = opponents,
-                        viewModel = viewModel,
-                        onCardAction = handleAction,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(0.4f),
-                        selectionState = selectionState,
-                        allPlayers = opponents + listOfNotNull(localPlayer)
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // Your area (bottom)
-                if (localPlayer != null) {
-                    PlayerArea(
-                        player = localPlayer,
-                        viewModel = viewModel,
-                        allPlayers = uiState.allPlayers,
-                        onCardAction = handleAction,
-                        dragDropState = dragDropState,
-                        selectionState = selectionState,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(0.6f)
-                    )
-                }
-            }
         }
 
         // Right sidebar with Turn indicator and Game Log
@@ -524,6 +536,45 @@ fun GameScreen(
             confirmButton = {
                 TextButton(onClick = { /* Acknowledges game over, dialog stays visible */ }) {
                     Text("OK")
+                }
+            }
+        )
+    }
+
+    // Network game paused dialog
+    if (isPaused) {
+        AlertDialog(
+            onDismissRequest = { /* Cannot dismiss while paused */ },
+            title = { Text("Game Paused") },
+            text = {
+                Column {
+                    Text(
+                        pauseReason ?: "A player has disconnected.",
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        if (isHost) {
+                            "Waiting for player to reconnect. You can kick the player and resume, or return to menu."
+                        } else {
+                            "Waiting for the host to resolve the situation..."
+                        },
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+            },
+            confirmButton = {
+                if (isHost) {
+                    TextButton(onClick = onResumeGame) {
+                        Text("Resume Game")
+                    }
+                }
+            },
+            dismissButton = {
+                if (isHost) {
+                    TextButton(onClick = onReturnToMenu) {
+                        Text("Return to Menu")
+                    }
                 }
             }
         )

@@ -14,6 +14,10 @@ import com.dustinmcafee.dongadeuce.viewmodel.GameViewModel
 
 /**
  * A complete player section for hotseat mode including hand, battlefield, and zone controls
+ *
+ * @param isActivePlayer Whether this player is the active player (whose turn it is) - controls turn-based UI
+ * @param isLocalPlayer Whether this is the local player's section (for network mode) - controls hand visibility
+ *                      In hotseat mode, this should match isActivePlayer. In network mode, this is the local player.
  */
 @Composable
 fun HotseatPlayerSection(
@@ -25,9 +29,11 @@ fun HotseatPlayerSection(
     selectionState: SelectionState? = null,
     otherPlayers: List<Player> = emptyList(),
     modifier: Modifier = Modifier,
-    inverted: Boolean = false // If true, hand at bottom; if false, hand at top
+    inverted: Boolean = false, // If true, hand at bottom; if false, hand at top
+    isLocalPlayer: Boolean = isActivePlayer // Defaults to isActivePlayer for hotseat mode compatibility
 ) {
-    val handCards = if (isActivePlayer) viewModel.getCards(player.id, Zone.HAND) else emptyList()
+    // Show hand cards if this is the local player (in network mode) or active player (in hotseat mode)
+    val handCards = if (isLocalPlayer) viewModel.getCards(player.id, Zone.HAND) else emptyList()
     val handCount = viewModel.getCardCount(player.id, Zone.HAND)
     val battlefieldCards = viewModel.getCards(player.id, Zone.BATTLEFIELD)
     val commandZoneCards = viewModel.getCards(player.id, Zone.COMMAND_ZONE)
@@ -59,10 +65,10 @@ fun HotseatPlayerSection(
                 player = player,
                 handCards = handCards,
                 handCount = handCount,
-                showCards = isActivePlayer,
+                showCards = isLocalPlayer,
                 onCardAction = onCardAction,
                 dragDropState = dragDropState,
-                selectionState = if (isActivePlayer) selectionState else null,
+                selectionState = if (isLocalPlayer) selectionState else null,
                 otherPlayers = otherPlayers,
                 modifier = Modifier.fillMaxWidth().height(100.dp)
             )
@@ -80,6 +86,7 @@ fun HotseatPlayerSection(
                     player = player,
                     viewModel = viewModel,
                     isActivePlayer = isActivePlayer,
+                    isLocalPlayer = isLocalPlayer,
                     commandZoneCards = commandZoneCards,
                     libraryCount = libraryCount,
                     graveyardCount = graveyardCount,
@@ -100,7 +107,7 @@ fun HotseatPlayerSection(
                 Box(modifier = Modifier.weight(1f).fillMaxHeight().padding(4.dp)) {
                     DraggableBattlefieldGrid(
                         cards = battlefieldCards,
-                        isLocalPlayer = isActivePlayer,
+                        isLocalPlayer = isLocalPlayer,
                         onCardClick = { viewModel.toggleTap(it.instanceId) },
                         onContextAction = onCardAction,
                         onCardPositionChanged = { cardId, gridX, gridY ->
@@ -108,11 +115,11 @@ fun HotseatPlayerSection(
                         },
                         modifier = Modifier.fillMaxSize(),
                         selectionState = selectionState,
-                        currentPlayerId = if (isActivePlayer) player.id else null,
+                        currentPlayerId = if (isLocalPlayer) player.id else null,
                         otherPlayers = otherPlayers,
                         allPlayers = otherPlayers + listOf(player),
-                        dragDropState = if (isActivePlayer) dragDropState else null,
-                        onDropToZone = if (isActivePlayer) { cardIds, zone ->
+                        dragDropState = if (isLocalPlayer) dragDropState else null,
+                        onDropToZone = if (isLocalPlayer) { cardIds, zone ->
                             cardIds.forEach { cardId ->
                                 when (zone) {
                                     Zone.LIBRARY -> viewModel.moveCardToTopOfLibrary(cardId)
@@ -132,18 +139,18 @@ fun HotseatPlayerSection(
                 player = player,
                 handCards = handCards,
                 handCount = handCount,
-                showCards = isActivePlayer,
+                showCards = isLocalPlayer,
                 onCardAction = onCardAction,
                 dragDropState = dragDropState,
-                selectionState = if (isActivePlayer) selectionState else null,
+                selectionState = if (isLocalPlayer) selectionState else null,
                 otherPlayers = otherPlayers,
                 modifier = Modifier.fillMaxWidth().height(100.dp)
             )
         }
     }
 
-    // Zone dialogs for active player
-    if (isActivePlayer) {
+    // Zone dialogs for local player (the one who can interact with their zones)
+    if (isLocalPlayer) {
         HotseatPlayerDialogs(
             player = player,
             viewModel = viewModel,
@@ -188,6 +195,7 @@ private fun PlayerInfoSidebar(
     player: Player,
     viewModel: GameViewModel,
     isActivePlayer: Boolean,
+    isLocalPlayer: Boolean,
     commandZoneCards: List<CardInstance>,
     libraryCount: Int,
     graveyardCount: Int,
@@ -241,7 +249,7 @@ private fun PlayerInfoSidebar(
         // Player counters display (clickable to open dialog)
         PlayerCountersDisplay(
             player = player,
-            onClick = if (isActivePlayer) onShowPlayerCountersDialog else null
+            onClick = if (isLocalPlayer) onShowPlayerCountersDialog else null
         )
 
         Spacer(modifier = Modifier.height(4.dp))
@@ -249,11 +257,11 @@ private fun PlayerInfoSidebar(
         // Command Zone - shows actual commander card(s)
         CommandZoneDisplay(
             commanderCards = commandZoneCards,
-            isActivePlayer = isActivePlayer,
+            isActivePlayer = isLocalPlayer,
             onCardAction = onCardAction,
             otherPlayers = otherPlayers,
             dragDropState = dragDropState,
-            onDropCards = if (isActivePlayer) {
+            onDropCards = if (isLocalPlayer) {
                 { cardIds ->
                     dragDropState?.markHandledByZone()
                     cardIds.forEach { cardId ->
@@ -274,10 +282,10 @@ private fun PlayerInfoSidebar(
             libraryCount,
             Modifier.fillMaxWidth().height(50.dp),
             onClick = null, // No single-click action
-            onDoubleClick = if (isActivePlayer) ({ viewModel.drawCard(player.id) }) else null,
-            onRightClick = if (isActivePlayer) onShowLibraryOperationsDialog else null,
-            dragDropState = if (isActivePlayer) dragDropState else null,
-            onDropCards = if (isActivePlayer) {
+            onDoubleClick = if (isLocalPlayer) ({ viewModel.drawCard(player.id) }) else null,
+            onRightClick = if (isLocalPlayer) onShowLibraryOperationsDialog else null,
+            dragDropState = if (isLocalPlayer) dragDropState else null,
+            onDropCards = if (isLocalPlayer) {
                 { cardIds ->
                     dragDropState?.markHandledByZone()
                     cardIds.forEach { cardId ->
@@ -292,9 +300,9 @@ private fun PlayerInfoSidebar(
             Zone.GRAVEYARD,
             graveyardCount,
             Modifier.fillMaxWidth().height(50.dp),
-            onClick = if (isActivePlayer) onShowGraveyardDialog else null,
-            dragDropState = if (isActivePlayer) dragDropState else null,
-            onDropCards = if (isActivePlayer) {
+            onClick = if (isLocalPlayer) onShowGraveyardDialog else null,
+            dragDropState = if (isLocalPlayer) dragDropState else null,
+            onDropCards = if (isLocalPlayer) {
                 { cardIds ->
                     dragDropState?.markHandledByZone()
                     cardIds.forEach { cardId ->
@@ -309,9 +317,9 @@ private fun PlayerInfoSidebar(
             Zone.EXILE,
             exileCount,
             Modifier.fillMaxWidth().height(50.dp),
-            onClick = if (isActivePlayer) onShowExileDialog else null,
-            dragDropState = if (isActivePlayer) dragDropState else null,
-            onDropCards = if (isActivePlayer) {
+            onClick = if (isLocalPlayer) onShowExileDialog else null,
+            dragDropState = if (isLocalPlayer) dragDropState else null,
+            onDropCards = if (isLocalPlayer) {
                 { cardIds ->
                     dragDropState?.markHandledByZone()
                     cardIds.forEach { cardId ->
@@ -322,8 +330,8 @@ private fun PlayerInfoSidebar(
             } else null
         )
 
-        // Token creation button (only for active player)
-        if (isActivePlayer) {
+        // Token creation button (only for local player)
+        if (isLocalPlayer) {
             Spacer(modifier = Modifier.height(4.dp))
             OutlinedButton(
                 onClick = onShowTokenCreationDialog,

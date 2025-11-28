@@ -2,6 +2,7 @@ package com.dustinmcafee.dongadeuce.viewmodel
 
 import com.dustinmcafee.dongadeuce.api.ScryfallApi
 import com.dustinmcafee.dongadeuce.models.*
+import com.dustinmcafee.dongadeuce.network.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -20,6 +21,9 @@ data class GameUiState(
     val isLoading: Boolean = false,
     val error: String? = null,
     val isHotseatMode: Boolean = false,
+    val isNetworkMode: Boolean = false,
+    val isPaused: Boolean = false,
+    val pauseReason: String? = null,
     val gameEnded: Boolean = false,
     val tokenSearchResults: List<Card> = emptyList(),
     val isSearchingTokens: Boolean = false
@@ -28,7 +32,11 @@ data class GameUiState(
         get() = listOfNotNull(localPlayer) + opponents
 }
 
-class GameViewModel {
+class GameViewModel(
+    private val networkClient: GameClient? = null,
+    private val networkServer: GameServer? = null,
+    private val localPlayerId: String? = null
+) {
     private val _uiState = MutableStateFlow(GameUiState())
     val uiState: StateFlow<GameUiState> = _uiState.asStateFlow()
 
@@ -36,12 +44,104 @@ class GameViewModel {
     private val viewModelScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val scryfallApi = ScryfallApi()
 
+    // Track if we're in network mode (either as host or client)
+    val isNetworkGame: Boolean get() = networkClient != null || networkServer != null
+
+    init {
+        // If we have a network client (joining player), observe its state
+        networkClient?.let { client ->
+            viewModelScope.launch {
+                client.gameState.collect { gameState ->
+                    if (gameState != null) {
+                        handleNetworkStateUpdate(gameState)
+                    }
+                }
+            }
+
+            viewModelScope.launch {
+                client.isPaused.collect { paused ->
+                    _uiState.update { it.copy(isPaused = paused) }
+                }
+            }
+
+            viewModelScope.launch {
+                client.pauseReason.collect { reason ->
+                    _uiState.update { it.copy(pauseReason = reason) }
+                }
+            }
+        }
+
+        // If we have a network server (host), observe its state
+        networkServer?.let { server ->
+            viewModelScope.launch {
+                server.gameState.collect { gameState ->
+                    if (gameState != null) {
+                        handleNetworkStateUpdate(gameState)
+                    }
+                }
+            }
+
+            viewModelScope.launch {
+                server.isPaused.collect { paused ->
+                    _uiState.update { it.copy(isPaused = paused) }
+                }
+            }
+
+            viewModelScope.launch {
+                server.pauseReason.collect { reason ->
+                    _uiState.update { it.copy(pauseReason = reason) }
+                }
+            }
+        }
+    }
+
+    /**
+     * Handle state update from network
+     */
+    private fun handleNetworkStateUpdate(gameState: GameState) {
+        val playerId = localPlayerId ?: (networkClient?.playerId?.value)
+
+        _uiState.update { currentState ->
+            val localPlayer = playerId?.let { id ->
+                gameState.players.find { it.id == id }
+            }
+            val opponents = playerId?.let { id ->
+                gameState.players.filter { it.id != id }
+            } ?: gameState.players
+
+            currentState.copy(
+                gameState = gameState,
+                localPlayer = localPlayer,
+                opponents = opponents,
+                isNetworkMode = true
+            )
+        }
+    }
+
     /**
      * Clean up resources when ViewModel is no longer needed
      */
     fun cleanup() {
         viewModelScope.cancel()
         scryfallApi.close()
+    }
+
+    /**
+     * Helper to send network action
+     * For clients: sends action to server via WebSocket
+     * For host: executes action directly on the server
+     */
+    private fun sendNetworkAction(action: NetworkAction) {
+        viewModelScope.launch {
+            if (networkClient != null) {
+                // Client: send to server
+                networkClient.sendAction(action)
+            } else if (networkServer != null) {
+                // Host: execute directly on server
+                val hostId = networkServer.getHostId()
+                networkServer.executeHostAction(action, hostId)
+            }
+        }
     }
 
     /**
@@ -223,6 +323,12 @@ class GameViewModel {
      * Update life total for a player
      */
     fun updateLife(playerId: String, newLife: Int) {
+        // In network mode, send action to server
+        if (isNetworkGame) {
+            sendNetworkAction(NetworkAction.UpdateLife(playerId, newLife))
+            return
+        }
+
         _uiState.update { currentState ->
             val gameState = currentState.gameState ?: return@update currentState
             val player = gameState.players.find { it.id == playerId } ?: return@update currentState
@@ -268,6 +374,12 @@ class GameViewModel {
      * Add player counter (poison, energy, experience, etc.)
      */
     fun addPlayerCounter(playerId: String, counterType: String, amount: Int = 1) {
+        // In network mode, send action to server
+        if (isNetworkGame) {
+            sendNetworkAction(NetworkAction.AddPlayerCounter(playerId, counterType, amount))
+            return
+        }
+
         _uiState.update { currentState ->
             val gameState = currentState.gameState ?: return@update currentState
             val player = gameState.players.find { it.id == playerId } ?: return@update currentState
@@ -313,6 +425,12 @@ class GameViewModel {
      * Remove player counter (poison, energy, experience, etc.)
      */
     fun removePlayerCounter(playerId: String, counterType: String, amount: Int = 1) {
+        // In network mode, send action to server
+        if (isNetworkGame) {
+            sendNetworkAction(NetworkAction.RemovePlayerCounter(playerId, counterType, amount))
+            return
+        }
+
         addPlayerCounter(playerId, counterType, -amount)
     }
 
@@ -320,6 +438,12 @@ class GameViewModel {
      * Set player counter to specific value
      */
     fun setPlayerCounter(playerId: String, counterType: String, amount: Int) {
+        // In network mode, send action to server
+        if (isNetworkGame) {
+            sendNetworkAction(NetworkAction.SetPlayerCounter(playerId, counterType, amount))
+            return
+        }
+
         _uiState.update { currentState ->
             val gameState = currentState.gameState ?: return@update currentState
             val player = gameState.players.find { it.id == playerId } ?: return@update currentState
@@ -430,6 +554,12 @@ class GameViewModel {
      * If library is empty, player loses the game
      */
     fun drawCard(playerId: String) {
+        // In network mode, send action to server
+        if (isNetworkGame) {
+            sendNetworkAction(NetworkAction.DrawCard(playerId))
+            return
+        }
+
         _uiState.update { currentState ->
             val gameState = currentState.gameState ?: return@update currentState
             val player = gameState.players.find { it.id == playerId } ?: return@update currentState
@@ -490,6 +620,12 @@ class GameViewModel {
      * Move a card between zones
      */
     fun moveCard(cardInstanceId: String, targetZone: Zone) {
+        // In network mode, send action to server
+        if (isNetworkGame) {
+            sendNetworkAction(NetworkAction.MoveCard(cardInstanceId, targetZone))
+            return
+        }
+
         _uiState.update { currentState ->
             val gameState = currentState.gameState ?: return@update currentState
             val card = gameState.cardInstances.find { it.instanceId == cardInstanceId } ?: return@update currentState
@@ -552,6 +688,12 @@ class GameViewModel {
      * Moves the card to their battlefield
      */
     fun giveControlTo(cardInstanceId: String, newControllerId: String) {
+        // In network mode, send action to server
+        if (isNetworkGame) {
+            sendNetworkAction(NetworkAction.GiveControlTo(cardInstanceId, newControllerId))
+            return
+        }
+
         _uiState.update { currentState ->
             val gameState = currentState.gameState ?: return@update currentState
             val card = gameState.cardInstances.find { it.instanceId == cardInstanceId } ?: return@update currentState
@@ -579,6 +721,12 @@ class GameViewModel {
      * Tap/untap a card
      */
     fun toggleTap(cardInstanceId: String) {
+        // In network mode, send action to server
+        if (isNetworkGame) {
+            sendNetworkAction(NetworkAction.ToggleTap(cardInstanceId))
+            return
+        }
+
         _uiState.update { currentState ->
             val gameState = currentState.gameState ?: return@update currentState
             val card = gameState.cardInstances.find { it.instanceId == cardInstanceId } ?: return@update currentState
@@ -642,6 +790,12 @@ class GameViewModel {
      * Advance to next phase
      */
     fun nextPhase() {
+        // In network mode, send action to server
+        if (isNetworkGame) {
+            sendNetworkAction(NetworkAction.NextPhase)
+            return
+        }
+
         _uiState.update { currentState ->
             val gameState = currentState.gameState ?: return@update currentState
             val activePlayer = gameState.activePlayer
@@ -679,6 +833,12 @@ class GameViewModel {
      * Pass turn (advance through all phases to next player's untap)
      */
     fun passTurn() {
+        // In network mode, send action to server
+        if (isNetworkGame) {
+            sendNetworkAction(NetworkAction.PassTurn)
+            return
+        }
+
         _uiState.update { currentState ->
             val gameState = currentState.gameState ?: return@update currentState
             val fromPlayer = gameState.activePlayer
@@ -730,6 +890,12 @@ class GameViewModel {
      * Untap all permanents for a player
      */
     fun untapAll(playerId: String) {
+        // In network mode, send action to server
+        if (isNetworkGame) {
+            sendNetworkAction(NetworkAction.UntapAll(playerId))
+            return
+        }
+
         _uiState.update { currentState ->
             val gameState = currentState.gameState ?: return@update currentState
             val player = gameState.players.find { it.id == playerId } ?: return@update currentState
@@ -792,6 +958,12 @@ class GameViewModel {
      */
     fun updateCommanderDamage(playerId: String, commanderId: String, newDamage: Int) {
         require(newDamage >= 0) { "Commander damage cannot be negative, got $newDamage" }
+
+        // In network mode, send action to server
+        if (isNetworkGame) {
+            sendNetworkAction(NetworkAction.UpdateCommanderDamage(playerId, commanderId, newDamage))
+            return
+        }
 
         _uiState.update { currentState ->
             val gameState = currentState.gameState ?: return@update currentState
@@ -865,6 +1037,12 @@ class GameViewModel {
      * Shuffle a player's library
      */
     fun shuffleLibrary(playerId: String) {
+        // In network mode, send action to server
+        if (isNetworkGame) {
+            sendNetworkAction(NetworkAction.ShuffleLibrary(playerId))
+            return
+        }
+
         _uiState.update { currentState ->
             val gameState = currentState.gameState ?: return@update currentState
             val player = gameState.players.find { it.id == playerId } ?: return@update currentState
@@ -906,6 +1084,12 @@ class GameViewModel {
         require(type.isNotBlank()) { "Counter type cannot be blank" }
         require(amount > 0) { "Counter amount must be positive, got $amount" }
 
+        // In network mode, send action to server
+        if (isNetworkGame) {
+            sendNetworkAction(NetworkAction.AddCardCounter(cardId, type, amount))
+            return
+        }
+
         _uiState.update { currentState ->
             val gameState = currentState.gameState ?: return@update currentState
             val card = gameState.cardInstances.find { it.instanceId == cardId } ?: return@update currentState
@@ -937,6 +1121,12 @@ class GameViewModel {
     fun removeCounter(cardId: String, type: String, amount: Int = 1) {
         require(type.isNotBlank()) { "Counter type cannot be blank" }
         require(amount > 0) { "Counter amount must be positive, got $amount" }
+
+        // In network mode, send action to server
+        if (isNetworkGame) {
+            sendNetworkAction(NetworkAction.RemoveCardCounter(cardId, type, amount))
+            return
+        }
 
         _uiState.update { currentState ->
             val gameState = currentState.gameState ?: return@update currentState
@@ -977,6 +1167,12 @@ class GameViewModel {
         require(type.isNotBlank()) { "Counter type cannot be blank" }
         require(amount >= 0) { "Counter amount must be non-negative, got $amount" }
 
+        // In network mode, send action to server
+        if (isNetworkGame) {
+            sendNetworkAction(NetworkAction.SetCardCounter(cardId, type, amount))
+            return
+        }
+
         _uiState.update { currentState ->
             val gameState = currentState.gameState ?: return@update currentState
             val card = gameState.cardInstances.find { it.instanceId == cardId } ?: return@update currentState
@@ -1014,6 +1210,12 @@ class GameViewModel {
      * Modify a card's power
      */
     fun modifyPower(cardId: String, amount: Int) {
+        // In network mode, send action to server
+        if (isNetworkGame) {
+            sendNetworkAction(NetworkAction.ModifyPower(cardId, amount))
+            return
+        }
+
         _uiState.update { currentState ->
             val gameState = currentState.gameState ?: return@update currentState
 
@@ -1029,6 +1231,12 @@ class GameViewModel {
      * Modify a card's toughness
      */
     fun modifyToughness(cardId: String, amount: Int) {
+        // In network mode, send action to server
+        if (isNetworkGame) {
+            sendNetworkAction(NetworkAction.ModifyToughness(cardId, amount))
+            return
+        }
+
         _uiState.update { currentState ->
             val gameState = currentState.gameState ?: return@update currentState
 
@@ -1044,6 +1252,12 @@ class GameViewModel {
      * Modify both power and toughness by the same amount
      */
     fun modifyPowerToughness(cardId: String, amount: Int) {
+        // In network mode, send action to server
+        if (isNetworkGame) {
+            sendNetworkAction(NetworkAction.ModifyPowerToughness(cardId, amount))
+            return
+        }
+
         _uiState.update { currentState ->
             val gameState = currentState.gameState ?: return@update currentState
 
@@ -1062,6 +1276,12 @@ class GameViewModel {
      * Set power and toughness to specific values (calculates needed modifier)
      */
     fun setPowerToughness(cardId: String, newPower: Int, newToughness: Int) {
+        // In network mode, send action to server
+        if (isNetworkGame) {
+            sendNetworkAction(NetworkAction.SetPowerToughness(cardId, newPower, newToughness))
+            return
+        }
+
         _uiState.update { currentState ->
             val gameState = currentState.gameState ?: return@update currentState
 
@@ -1083,6 +1303,12 @@ class GameViewModel {
      * Reset P/T modifiers to 0
      */
     fun resetPowerToughness(cardId: String) {
+        // In network mode, send action to server
+        if (isNetworkGame) {
+            sendNetworkAction(NetworkAction.ResetPowerToughness(cardId))
+            return
+        }
+
         _uiState.update { currentState ->
             val gameState = currentState.gameState ?: return@update currentState
 
@@ -1098,6 +1324,12 @@ class GameViewModel {
      * Flow P: increase power, decrease toughness
      */
     fun flowPower(cardId: String) {
+        // In network mode, send action to server
+        if (isNetworkGame) {
+            sendNetworkAction(NetworkAction.FlowPower(cardId))
+            return
+        }
+
         _uiState.update { currentState ->
             val gameState = currentState.gameState ?: return@update currentState
 
@@ -1116,6 +1348,12 @@ class GameViewModel {
      * Flow T: decrease power, increase toughness
      */
     fun flowToughness(cardId: String) {
+        // In network mode, send action to server
+        if (isNetworkGame) {
+            sendNetworkAction(NetworkAction.FlowToughness(cardId))
+            return
+        }
+
         _uiState.update { currentState ->
             val gameState = currentState.gameState ?: return@update currentState
 
@@ -1134,6 +1372,12 @@ class GameViewModel {
      * Toggle doesn't untap flag
      */
     fun toggleDoesntUntap(cardId: String) {
+        // In network mode, send action to server
+        if (isNetworkGame) {
+            sendNetworkAction(NetworkAction.ToggleDoesntUntap(cardId))
+            return
+        }
+
         _uiState.update { currentState ->
             val gameState = currentState.gameState ?: return@update currentState
 
@@ -1149,6 +1393,12 @@ class GameViewModel {
      * Set annotation on a card
      */
     fun setAnnotation(cardId: String, annotation: String?) {
+        // In network mode, send action to server
+        if (isNetworkGame) {
+            sendNetworkAction(NetworkAction.SetAnnotation(cardId, annotation))
+            return
+        }
+
         _uiState.update { currentState ->
             val gameState = currentState.gameState ?: return@update currentState
 
@@ -1164,6 +1414,12 @@ class GameViewModel {
      * Play a card face down
      */
     fun playFaceDown(cardId: String) {
+        // In network mode, send action to server
+        if (isNetworkGame) {
+            sendNetworkAction(NetworkAction.PlayFaceDown(cardId))
+            return
+        }
+
         _uiState.update { currentState ->
             val gameState = currentState.gameState ?: return@update currentState
 
@@ -1183,6 +1439,12 @@ class GameViewModel {
      * Toggle face down status
      */
     fun toggleFaceDown(cardId: String) {
+        // In network mode, send action to server
+        if (isNetworkGame) {
+            sendNetworkAction(NetworkAction.ToggleFaceDown(cardId))
+            return
+        }
+
         _uiState.update { currentState ->
             val gameState = currentState.gameState ?: return@update currentState
 
@@ -1198,6 +1460,12 @@ class GameViewModel {
      * Attach a card (aura/equipment) to another card
      */
     fun attachCard(sourceId: String, targetId: String) {
+        // In network mode, send action to server
+        if (isNetworkGame) {
+            sendNetworkAction(NetworkAction.AttachCard(sourceId, targetId))
+            return
+        }
+
         _uiState.update { currentState ->
             val gameState = currentState.gameState ?: return@update currentState
 
@@ -1213,6 +1481,12 @@ class GameViewModel {
      * Detach a card (remove attachment)
      */
     fun detachCard(cardId: String) {
+        // In network mode, send action to server
+        if (isNetworkGame) {
+            sendNetworkAction(NetworkAction.DetachCard(cardId))
+            return
+        }
+
         _uiState.update { currentState ->
             val gameState = currentState.gameState ?: return@update currentState
 
@@ -1228,6 +1502,12 @@ class GameViewModel {
      * Flip a card (for flip cards, morph, etc.)
      */
     fun flipCard(cardId: String) {
+        // In network mode, send action to server
+        if (isNetworkGame) {
+            sendNetworkAction(NetworkAction.FlipCard(cardId))
+            return
+        }
+
         _uiState.update { currentState ->
             val gameState = currentState.gameState ?: return@update currentState
 
@@ -1243,6 +1523,12 @@ class GameViewModel {
      * Mill cards from top of library to graveyard
      */
     fun millCards(playerId: String, count: Int) {
+        // In network mode, send action to server
+        if (isNetworkGame) {
+            sendNetworkAction(NetworkAction.MillCards(playerId, count))
+            return
+        }
+
         _uiState.update { currentState ->
             val gameState = currentState.gameState ?: return@update currentState
             val player = gameState.players.find { it.id == playerId } ?: return@update currentState
@@ -1307,6 +1593,12 @@ class GameViewModel {
      * Mulligan - return hand to library, shuffle, and draw new hand
      */
     fun mulligan(playerId: String) {
+        // In network mode, send action to server
+        if (isNetworkGame) {
+            sendNetworkAction(NetworkAction.Mulligan(playerId))
+            return
+        }
+
         // Get hand cards atomically
         val currentState = _uiState.value
         val gameState = currentState.gameState ?: return
@@ -1350,6 +1642,12 @@ class GameViewModel {
      * Convention: Last card in library list = top of library (stack-based)
      */
     fun moveCardToTopOfLibrary(cardId: String) {
+        // In network mode, send action to server
+        if (isNetworkGame) {
+            sendNetworkAction(NetworkAction.MoveCardToTopOfLibrary(cardId))
+            return
+        }
+
         _uiState.update { currentState ->
             val gameState = currentState.gameState ?: return@update currentState
 
@@ -1383,6 +1681,12 @@ class GameViewModel {
      * Convention: First card in library list = bottom of library (stack-based)
      */
     fun moveCardToBottomOfLibrary(cardId: String) {
+        // In network mode, send action to server
+        if (isNetworkGame) {
+            sendNetworkAction(NetworkAction.MoveCardToBottomOfLibrary(cardId))
+            return
+        }
+
         _uiState.update { currentState ->
             val gameState = currentState.gameState ?: return@update currentState
 
@@ -1416,6 +1720,12 @@ class GameViewModel {
      * Convention: position 1 = top (last in list), position 2 = second from top, etc.
      */
     fun moveCardToLibraryPosition(cardId: String, positionFromTop: Int) {
+        // In network mode, send action to server
+        if (isNetworkGame) {
+            sendNetworkAction(NetworkAction.MoveCardToLibraryPosition(cardId, positionFromTop))
+            return
+        }
+
         _uiState.update { currentState ->
             val gameState = currentState.gameState ?: return@update currentState
 
@@ -1455,6 +1765,12 @@ class GameViewModel {
      * Convention: position 1 = bottom (first in list), position 2 = second from bottom, etc.
      */
     fun moveCardToLibraryPositionFromBottom(cardId: String, positionFromBottom: Int) {
+        // In network mode, send action to server
+        if (isNetworkGame) {
+            sendNetworkAction(NetworkAction.MoveCardToLibraryPositionFromBottom(cardId, positionFromBottom))
+            return
+        }
+
         _uiState.update { currentState ->
             val gameState = currentState.gameState ?: return@update currentState
 
@@ -1515,6 +1831,12 @@ class GameViewModel {
      * Shuffle the top N cards of a player's library
      */
     fun shuffleTopCards(playerId: String, count: Int) {
+        // In network mode, send action to server
+        if (isNetworkGame) {
+            sendNetworkAction(NetworkAction.ShuffleTopCards(playerId, count))
+            return
+        }
+
         _uiState.update { currentState ->
             val gameState = currentState.gameState ?: return@update currentState
 
@@ -1549,6 +1871,12 @@ class GameViewModel {
      * Shuffle the bottom N cards of a player's library
      */
     fun shuffleBottomCards(playerId: String, count: Int) {
+        // In network mode, send action to server
+        if (isNetworkGame) {
+            sendNetworkAction(NetworkAction.ShuffleBottomCards(playerId, count))
+            return
+        }
+
         _uiState.update { currentState ->
             val gameState = currentState.gameState ?: return@update currentState
 
@@ -1583,6 +1911,12 @@ class GameViewModel {
      * Move top N cards from library to a specific zone
      */
     fun moveTopCardsToZone(playerId: String, count: Int, targetZone: Zone) {
+        // In network mode, send action to server
+        if (isNetworkGame) {
+            sendNetworkAction(NetworkAction.MoveTopCardsToZone(playerId, count, targetZone))
+            return
+        }
+
         _uiState.update { currentState ->
             val gameState = currentState.gameState ?: return@update currentState
 
@@ -1605,6 +1939,12 @@ class GameViewModel {
      * Move bottom N cards from library to a specific zone
      */
     fun moveBottomCardsToZone(playerId: String, count: Int, targetZone: Zone) {
+        // In network mode, send action to server
+        if (isNetworkGame) {
+            sendNetworkAction(NetworkAction.MoveBottomCardsToZone(playerId, count, targetZone))
+            return
+        }
+
         _uiState.update { currentState ->
             val gameState = currentState.gameState ?: return@update currentState
 
@@ -1636,6 +1976,12 @@ class GameViewModel {
         imageUri: String? = null,
         quantity: Int = 1
     ) {
+        // In network mode, send action to server
+        if (isNetworkGame) {
+            sendNetworkAction(NetworkAction.CreateToken(playerId, tokenName, tokenType, power, toughness, color, imageUri, quantity))
+            return
+        }
+
         _uiState.update { currentState ->
             val gameState = currentState.gameState ?: return@update currentState
             val player = gameState.players.find { it.id == playerId } ?: return@update currentState
@@ -1695,6 +2041,12 @@ class GameViewModel {
         targetZone: Zone = Zone.BATTLEFIELD,
         quantity: Int = 1
     ): String? {
+        // In network mode, send action to server
+        if (isNetworkGame) {
+            sendNetworkAction(NetworkAction.CloneCard(cardId, newOwnerId, targetZone, quantity))
+            return null // Clone ID not available in network mode
+        }
+
         var createdCloneId: String? = null
 
         _uiState.update { currentState ->
@@ -1736,6 +2088,12 @@ class GameViewModel {
      * Log a die roll event
      */
     fun logDieRoll(playerId: String, dieType: String, result: Int, numberOfDice: Int = 1) {
+        // In network mode, send action to server
+        if (isNetworkGame) {
+            sendNetworkAction(NetworkAction.LogDieRoll(playerId, dieType, result, numberOfDice))
+            return
+        }
+
         _uiState.update { currentState ->
             val gameState = currentState.gameState ?: return@update currentState
             val player = gameState.players.find { it.id == playerId } ?: return@update currentState
@@ -1759,6 +2117,12 @@ class GameViewModel {
     fun sendChatMessage(playerId: String, message: String) {
         if (message.isBlank()) return
 
+        // In network mode, send action to server
+        if (isNetworkGame) {
+            sendNetworkAction(NetworkAction.SendChatMessage(playerId, message))
+            return
+        }
+
         _uiState.update { currentState ->
             val gameState = currentState.gameState ?: return@update currentState
             val player = gameState.players.find { it.id == playerId } ?: return@update currentState
@@ -1778,6 +2142,12 @@ class GameViewModel {
      * Update a card's grid position on the battlefield
      */
     fun updateCardGridPosition(cardId: String, gridX: Int, gridY: Int) {
+        // In network mode, send action to server
+        if (isNetworkGame) {
+            sendNetworkAction(NetworkAction.UpdateCardGridPosition(cardId, gridX, gridY))
+            return
+        }
+
         _uiState.update { currentState ->
             val gameState = currentState.gameState ?: return@update currentState
 

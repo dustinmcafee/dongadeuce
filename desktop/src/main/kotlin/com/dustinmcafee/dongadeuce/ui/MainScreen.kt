@@ -26,12 +26,33 @@ fun MainScreen(
         )
         Screen.HostLobby -> HostLobbyScreen(viewModel = menuViewModel)
         Screen.JoinLobby -> JoinLobbyScreen(viewModel = menuViewModel)
-        Screen.Game -> GameScreen(
-            loadedDeck = uiState.loadedDeck,
-            hotseatDecks = if (uiState.hotseatMode) uiState.hotseatDecks else emptyMap(),
-            playerCount = uiState.playerCount,
-            isHotseatMode = uiState.hotseatMode
-        )
+        Screen.Game -> {
+            // Create GameViewModel with network client/server if in network mode
+            val networkClient = menuViewModel.getGameClient()
+            val networkServer = menuViewModel.getGameServer()
+            val localPlayerId = menuViewModel.getLocalPlayerId()
+            val gameViewModel = remember(networkClient, networkServer, localPlayerId) {
+                com.dustinmcafee.dongadeuce.viewmodel.GameViewModel(
+                    networkClient = networkClient,
+                    networkServer = networkServer,
+                    localPlayerId = localPlayerId
+                )
+            }
+
+            GameScreen(
+                loadedDeck = uiState.loadedDeck,
+                hotseatDecks = if (uiState.hotseatMode) uiState.hotseatDecks else emptyMap(),
+                playerCount = uiState.playerCount,
+                isHotseatMode = uiState.hotseatMode,
+                viewModel = gameViewModel,
+                networkGameState = uiState.networkGameState,
+                isPaused = uiState.isPaused,
+                pauseReason = uiState.pauseReason,
+                isHost = menuViewModel.isHost(),
+                onResumeGame = { menuViewModel.resumeGame() },
+                onReturnToMenu = { menuViewModel.returnToMenu() }
+            )
+        }
     }
 
     // Show error snackbar if there's an error
@@ -272,11 +293,27 @@ fun MenuScreen(
                     uiState = uiState
                 )
             } else {
+                // Network mode: Player name input
+                var playerName by remember { mutableStateOf(uiState.playerName) }
+                OutlinedTextField(
+                    value = playerName,
+                    onValueChange = {
+                        playerName = it
+                        viewModel.setPlayerName(it)
+                    },
+                    label = { Text("Your Name") },
+                    placeholder = { Text("Enter your name") },
+                    singleLine = true,
+                    modifier = Modifier.width(200.dp)
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
                 // Network mode: Single deck + Host/Join buttons
                 Button(
                     onClick = { viewModel.startHosting() },
                     modifier = Modifier.width(200.dp),
-                    enabled = uiState.loadedDeck != null && !uiState.isLoading
+                    enabled = uiState.loadedDeck != null && !uiState.isLoading && playerName.isNotBlank()
                 ) {
                     Text("Host Game")
                 }
@@ -284,7 +321,7 @@ fun MenuScreen(
                 Button(
                     onClick = { viewModel.navigateToJoin() },
                     modifier = Modifier.width(200.dp),
-                    enabled = uiState.loadedDeck != null && !uiState.isLoading
+                    enabled = uiState.loadedDeck != null && !uiState.isLoading && playerName.isNotBlank()
                 ) {
                     Text("Join Game")
                 }
@@ -396,6 +433,7 @@ fun HotseatDeckLoader(
 @Composable
 fun HostLobbyScreen(viewModel: MenuViewModel) {
     val uiState by viewModel.uiState.collectAsState()
+    val lobbyState = uiState.lobbyState
 
     Box(
         modifier = Modifier.fillMaxSize().padding(32.dp),
@@ -413,16 +451,45 @@ fun HostLobbyScreen(viewModel: MenuViewModel) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text("Waiting for players...", style = MaterialTheme.typography.titleMedium)
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text("Server: localhost:${uiState.serverPort}", style = MaterialTheme.typography.bodyMedium)
+
+                    // Show server URL
+                    val serverUrl = uiState.serverUrl ?: "localhost:${uiState.serverPort}"
+                    Text("Server: $serverUrl", style = MaterialTheme.typography.bodyMedium)
+                    Text("Share this address with other players", style = MaterialTheme.typography.bodySmall)
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    Text("Connected Players:", style = MaterialTheme.typography.labelLarge)
-                    if (uiState.connectedPlayers.isEmpty()) {
+                    Text("Connected Players (${lobbyState?.players?.size ?: 0}/${lobbyState?.maxPlayers ?: 4}):", style = MaterialTheme.typography.labelLarge)
+
+                    if (lobbyState?.players.isNullOrEmpty()) {
                         Text("No players yet...", style = MaterialTheme.typography.bodySmall)
                     } else {
-                        uiState.connectedPlayers.forEach { playerName ->
-                            Text("• $playerName", style = MaterialTheme.typography.bodyMedium)
+                        lobbyState?.players?.forEach { player ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        if (player.isHost) "👑 ${player.name}" else "• ${player.name}",
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
+                                    if (player.isReady && !player.isHost) {
+                                        Text(" ✓ Ready", style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.primary)
+                                    }
+                                }
+
+                                // Kick button (not for host)
+                                if (!player.isHost) {
+                                    TextButton(
+                                        onClick = { viewModel.kickPlayer(player.id) }
+                                    ) {
+                                        Text("Kick", color = MaterialTheme.colorScheme.error)
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -430,10 +497,18 @@ fun HostLobbyScreen(viewModel: MenuViewModel) {
 
             Spacer(modifier = Modifier.height(16.dp))
 
+            // Check if all non-host players are ready
+            val allReady = lobbyState?.players?.filter { !it.isHost }?.all { it.isReady } ?: false
+            val enoughPlayers = (lobbyState?.players?.size ?: 0) >= 2
+
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 Button(
-                    onClick = { viewModel.startGame() },
-                    enabled = uiState.connectedPlayers.isNotEmpty()
+                    onClick = {
+                        if (!viewModel.startNetworkGame()) {
+                            // Show error if start failed
+                        }
+                    },
+                    enabled = enoughPlayers && allReady
                 ) {
                     Text("Start Game")
                 }
@@ -441,6 +516,21 @@ fun HostLobbyScreen(viewModel: MenuViewModel) {
                 OutlinedButton(onClick = { viewModel.returnToMenu() }) {
                     Text("Cancel")
                 }
+            }
+
+            // Show hint if waiting for players
+            if (!enoughPlayers) {
+                Text(
+                    "Need at least 2 players to start",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            } else if (!allReady) {
+                Text(
+                    "Waiting for all players to be ready...",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
     }
@@ -450,6 +540,14 @@ fun HostLobbyScreen(viewModel: MenuViewModel) {
 fun JoinLobbyScreen(viewModel: MenuViewModel) {
     val uiState by viewModel.uiState.collectAsState()
     var serverAddress by remember { mutableStateOf("localhost") }
+    var serverPort by remember { mutableStateOf("8080") }
+    val lobbyState = uiState.lobbyState
+    val isConnected = uiState.connectionState is com.dustinmcafee.dongadeuce.network.ConnectionState.Connected
+
+    // Find current player's ready status
+    val currentPlayerId = (uiState.connectionState as? com.dustinmcafee.dongadeuce.network.ConnectionState.Connected)?.playerId
+    val currentPlayer = lobbyState?.players?.find { it.id == currentPlayerId }
+    val isReady = currentPlayer?.isReady ?: false
 
     Box(
         modifier = Modifier.fillMaxSize().padding(32.dp),
@@ -463,37 +561,102 @@ fun JoinLobbyScreen(viewModel: MenuViewModel) {
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            OutlinedTextField(
-                value = serverAddress,
-                onValueChange = {
-                    serverAddress = it
-                    viewModel.setServerAddress(it)
-                },
-                label = { Text("Server Address") },
-                placeholder = { Text("localhost or IP address") },
-                modifier = Modifier.width(300.dp)
-            )
+            if (!isConnected) {
+                // Connection form
+                OutlinedTextField(
+                    value = serverAddress,
+                    onValueChange = {
+                        serverAddress = it
+                        viewModel.setServerAddress(it)
+                    },
+                    label = { Text("Server Address") },
+                    placeholder = { Text("localhost or IP address") },
+                    modifier = Modifier.width(300.dp)
+                )
 
-            Spacer(modifier = Modifier.height(16.dp))
+                OutlinedTextField(
+                    value = serverPort,
+                    onValueChange = {
+                        serverPort = it.filter { c -> c.isDigit() }
+                        serverPort.toIntOrNull()?.let { port ->
+                            viewModel.setServerPort(port)
+                        }
+                    },
+                    label = { Text("Port") },
+                    placeholder = { Text("8080") },
+                    modifier = Modifier.width(300.dp)
+                )
 
-            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                Button(
-                    onClick = { viewModel.connectToGame() },
-                    enabled = !uiState.isLoading
-                ) {
-                    if (uiState.isLoading) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(20.dp),
-                            strokeWidth = 2.dp
-                        )
-                    } else {
-                        Text("Connect")
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    Button(
+                        onClick = { viewModel.connectToGame() },
+                        enabled = !uiState.isLoading
+                    ) {
+                        if (uiState.isLoading) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(20.dp),
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Text("Connect")
+                        }
+                    }
+
+                    OutlinedButton(onClick = { viewModel.returnToMenu() }) {
+                        Text("Cancel")
+                    }
+                }
+            } else {
+                // Connected - show lobby
+                Card(modifier = Modifier.width(400.dp)) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text("Connected to lobby", style = MaterialTheme.typography.titleMedium)
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Text("Players (${lobbyState?.players?.size ?: 0}/${lobbyState?.maxPlayers ?: 4}):", style = MaterialTheme.typography.labelLarge)
+
+                        lobbyState?.players?.forEach { player ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    if (player.isHost) "👑 ${player.name}" else "• ${player.name}",
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                                if (player.id == currentPlayerId) {
+                                    Text(" (You)", style = MaterialTheme.typography.bodySmall)
+                                }
+                                if (player.isReady && !player.isHost) {
+                                    Text(" ✓ Ready", style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.primary)
+                                }
+                            }
+                        }
                     }
                 }
 
-                OutlinedButton(onClick = { viewModel.returnToMenu() }) {
-                    Text("Cancel")
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    Button(
+                        onClick = { viewModel.setReady(!isReady) }
+                    ) {
+                        Text(if (isReady) "Not Ready" else "Ready!")
+                    }
+
+                    OutlinedButton(onClick = { viewModel.returnToMenu() }) {
+                        Text("Leave")
+                    }
                 }
+
+                Text(
+                    if (isReady) "Waiting for host to start the game..." else "Click 'Ready!' when you're ready to play",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
     }

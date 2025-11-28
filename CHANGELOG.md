@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.26.0] - 2025-11-27
+
+### Added
+- **Network Multiplayer** - Full network multiplayer support with host/join functionality
+  - Host games on local network and share address with other players
+  - Join games by entering server address and port
+  - Player name input field for network games
+  - Automatic unique name generation for duplicate player names (appends (1), (2), etc.)
+  - Lobby system with player list, ready status, and kick functionality
+  - Real-time game state synchronization across all clients
+
+- **Network Action Routing** - All 35+ game actions work over network
+  - Card movement, tapping, counters, power/toughness modifications
+  - Library operations (shuffle, peek, mill, search)
+  - Token creation and card cloning
+  - Player counters (poison, energy, experience)
+  - Commander damage tracking
+  - Die rolling and chat messages
+  - Turn passing and phase advancement
+
+### Changed
+- Network mode uses fixed layout (local player at bottom, opponents at top) instead of rotating based on active turn
+- Players can interact with their own cards/zones regardless of whose turn it is (for instant-speed plays)
+- Separated `isActivePlayer` (whose turn) from `isLocalPlayer` (who can interact) in UI components
+
+### Fixed
+- Fixed GameClient WebSocket connection issues with nested coroutines
+- Fixed host not being able to execute game actions (added executeHostAction for direct server execution)
+- Fixed player names showing "Player 1" for all players in network games
+
 ## [2.25.0] - 2025-11-05
 
 ### Added
