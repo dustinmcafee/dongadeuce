@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.4.0] - 2025-11-28
+
+### Added
+- **Comprehensive Unit Test Suite** - Expanded from 44 to 270 tests
+  - GameViewModelTest: 81 tests covering all card operations, counters, P/T, attachments, phases, tokens, reveals
+  - NetworkActionTest: 50 tests for JSON serialization of all network action types
+  - DeckParserTest: 30 tests for deck parsing, validation, and file operations
+  - PlayerTest: 28 tests for player state, counters, and loss conditions
+  - CardInstanceTest: 26 tests for card state, counters, and P/T modifications
+  - GameStateTest: 21 tests for state management, event logging, and battlefield filtering
+  - GameMessageTest: 20 tests for network message serialization
+  - DeckTest: 14 tests for deck validation and singleton rules
+
+### Technical Details
+- All tests use `kotlin.test` framework with backtick naming convention
+- Network tests verify JSON roundtrip serialization with `kotlinx.serialization`
+- Added reflection-based test helper `addCardsToGame()` for injecting test cards
+- Tests cover all 35+ network actions and all game message types
+- 100% test coverage on critical game logic paths
+
 ## [3.3.1] - 2025-11-28
 
 ### Fixed

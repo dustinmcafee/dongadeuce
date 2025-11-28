@@ -168,4 +168,138 @@ class PlayerTest {
         assertTrue(doubleDefeated.hasLost, "Should stay defeated")
         assertEquals(-4, doubleDefeated.life)
     }
+
+    // Counter Tests
+
+    @Test
+    fun `addCounter adds poison counters`() {
+        val player = Player(id = "1", name = "Test Player")
+
+        val poisoned = player.addCounter("poison", 3)
+
+        assertEquals(3, poisoned.getCounter("poison"), "Should have 3 poison counters")
+    }
+
+    @Test
+    fun `addCounter at 10 poison causes loss`() {
+        val player = Player(id = "1", name = "Test Player")
+
+        val poisoned = player.addCounter("poison", 10)
+
+        assertEquals(10, poisoned.getCounter("poison"))
+        assertTrue(poisoned.hasLost, "Player should lose at 10 poison counters")
+    }
+
+    @Test
+    fun `addCounter above 10 poison causes loss`() {
+        val player = Player(id = "1", name = "Test Player")
+            .addCounter("poison", 5)
+
+        val morePoisoned = player.addCounter("poison", 7)
+
+        assertEquals(12, morePoisoned.getCounter("poison"))
+        assertTrue(morePoisoned.hasLost, "Player should lose above 10 poison counters")
+    }
+
+    @Test
+    fun `addCounter 9 poison does not cause loss`() {
+        val player = Player(id = "1", name = "Test Player")
+
+        val poisoned = player.addCounter("poison", 9)
+
+        assertEquals(9, poisoned.getCounter("poison"))
+        assertFalse(poisoned.hasLost, "Player should not lose at 9 poison counters")
+    }
+
+    @Test
+    fun `removeCounter removes poison`() {
+        val player = Player(id = "1", name = "Test Player")
+            .addCounter("poison", 5)
+
+        val lessPoison = player.removeCounter("poison", 2)
+
+        assertEquals(3, lessPoison.getCounter("poison"), "Should have 3 poison counters")
+    }
+
+    @Test
+    fun `removeCounter cannot go below zero`() {
+        val player = Player(id = "1", name = "Test Player")
+            .addCounter("poison", 3)
+
+        val removed = player.removeCounter("poison", 10)
+
+        assertEquals(0, removed.getCounter("poison"), "Poison should not go below 0")
+    }
+
+    @Test
+    fun `setCounter sets exact value`() {
+        val player = Player(id = "1", name = "Test Player")
+            .addCounter("poison", 3)
+
+        val set = player.setCounter("poison", 7)
+
+        assertEquals(7, set.getCounter("poison"), "Should have exactly 7 poison counters")
+    }
+
+    @Test
+    fun `setCounter at 10 poison causes loss`() {
+        val player = Player(id = "1", name = "Test Player")
+
+        val poisoned = player.setCounter("poison", 10)
+
+        assertEquals(10, poisoned.getCounter("poison"))
+        assertTrue(poisoned.hasLost, "Player should lose when poison set to 10")
+    }
+
+    @Test
+    fun `getCounter returns 0 for missing type`() {
+        val player = Player(id = "1", name = "Test Player")
+
+        val count = player.getCounter("nonexistent")
+
+        assertEquals(0, count, "Missing counter type should return 0")
+    }
+
+    @Test
+    fun `energy counters have no threshold`() {
+        val player = Player(id = "1", name = "Test Player")
+
+        val energized = player.addCounter("energy", 100)
+
+        assertEquals(100, energized.getCounter("energy"))
+        assertFalse(energized.hasLost, "Energy counters should not cause loss")
+    }
+
+    @Test
+    fun `experience counters have no threshold`() {
+        val player = Player(id = "1", name = "Test Player")
+
+        val experienced = player.addCounter("experience", 50)
+
+        assertEquals(50, experienced.getCounter("experience"))
+        assertFalse(experienced.hasLost, "Experience counters should not cause loss")
+    }
+
+    @Test
+    fun `multiple counter types tracked independently`() {
+        val player = Player(id = "1", name = "Test Player")
+            .addCounter("poison", 5)
+            .addCounter("energy", 10)
+            .addCounter("experience", 3)
+
+        assertEquals(5, player.getCounter("poison"))
+        assertEquals(10, player.getCounter("energy"))
+        assertEquals(3, player.getCounter("experience"))
+    }
+
+    @Test
+    fun `removing all counters removes counter type from map`() {
+        val player = Player(id = "1", name = "Test Player")
+            .addCounter("poison", 3)
+
+        val removed = player.removeCounter("poison", 3)
+
+        assertEquals(0, removed.getCounter("poison"))
+        assertFalse(removed.counters.containsKey("poison"), "Counter type should be removed from map")
+    }
 }

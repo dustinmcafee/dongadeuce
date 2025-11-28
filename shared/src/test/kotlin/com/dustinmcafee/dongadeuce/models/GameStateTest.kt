@@ -273,4 +273,215 @@ class GameStateTest {
         assertEquals(GamePhase.COMBAT_BEGIN, gameState.phase, "Should be at COMBAT_BEGIN after 4 advances")
         assertEquals(1, gameState.turnNumber, "Turn should still be 1")
     }
+
+    // Battlefield Control Tests
+
+    @Test
+    fun `getPlayerBattlefield filters by controllerId not ownerId`() {
+        val player1Id = "player1"
+        val player2Id = "player2"
+
+        // Card owned by player1 but controlled by player2
+        val stolenCard = CardInstance(
+            card = Card(name = "Stolen Card"),
+            ownerId = player1Id,
+            controllerId = player2Id,
+            zone = Zone.BATTLEFIELD
+        )
+        // Card owned and controlled by player1
+        val ownedCard = CardInstance(
+            card = Card(name = "Owned Card"),
+            ownerId = player1Id,
+            zone = Zone.BATTLEFIELD
+        )
+        // Card in a different zone
+        val handCard = CardInstance(
+            card = Card(name = "Hand Card"),
+            ownerId = player1Id,
+            zone = Zone.HAND
+        )
+
+        val gameState = GameState(
+            gameId = "game1",
+            players = emptyList(),
+            cardInstances = listOf(stolenCard, ownedCard, handCard)
+        )
+
+        // Player2's battlefield should include the stolen card
+        val player2Battlefield = gameState.getPlayerBattlefield(player2Id)
+        assertEquals(1, player2Battlefield.size, "Player 2 should control 1 card")
+        assertEquals("Stolen Card", player2Battlefield[0].card.name)
+
+        // Player1's battlefield should only include the owned card (not the stolen one)
+        val player1Battlefield = gameState.getPlayerBattlefield(player1Id)
+        assertEquals(1, player1Battlefield.size, "Player 1 should control 1 card")
+        assertEquals("Owned Card", player1Battlefield[0].card.name)
+
+        // getPlayerCards by ownerId should return owned cards regardless of control
+        val player1OwnedCards = gameState.getPlayerCards(player1Id)
+        assertEquals(3, player1OwnedCards.size, "Player 1 should own 3 cards total")
+    }
+
+    @Test
+    fun `getPlayerBattlefield returns empty for player with no controlled cards`() {
+        val player1Id = "player1"
+        val player2Id = "player2"
+
+        val card = CardInstance(
+            card = Card(name = "Card"),
+            ownerId = player1Id,
+            zone = Zone.BATTLEFIELD
+        )
+
+        val gameState = GameState(
+            gameId = "game1",
+            players = emptyList(),
+            cardInstances = listOf(card)
+        )
+
+        val player2Battlefield = gameState.getPlayerBattlefield(player2Id)
+        assertTrue(player2Battlefield.isEmpty(), "Player 2 should have no cards on battlefield")
+    }
+
+    // Event Log Tests
+
+    @Test
+    fun `addEvent appends to event log`() {
+        val gameState = GameState(
+            gameId = "game1",
+            players = emptyList(),
+            cardInstances = emptyList(),
+            gameLog = emptyList()
+        )
+
+        val event = GameEvent.CardDrawn(
+            playerId = "player1",
+            playerName = "Player 1",
+            cardName = "Sol Ring"
+        )
+
+        val updatedState = gameState.addEvent(event)
+
+        assertEquals(1, updatedState.gameLog.size, "Game log should have 1 event")
+        assertEquals(event, updatedState.gameLog[0], "Event should match")
+    }
+
+    @Test
+    fun `addEvent preserves existing events`() {
+        val event1 = GameEvent.CardDrawn(
+            playerId = "player1",
+            playerName = "Player 1",
+            cardName = "Sol Ring"
+        )
+        val gameState = GameState(
+            gameId = "game1",
+            players = emptyList(),
+            cardInstances = emptyList(),
+            gameLog = listOf(event1)
+        )
+
+        val event2 = GameEvent.CardPlayed(
+            playerId = "player1",
+            playerName = "Player 1",
+            cardName = "Sol Ring",
+            fromZone = Zone.HAND
+        )
+
+        val updatedState = gameState.addEvent(event2)
+
+        assertEquals(2, updatedState.gameLog.size, "Game log should have 2 events")
+        assertEquals(event1, updatedState.gameLog[0], "First event should be preserved")
+        assertEquals(event2, updatedState.gameLog[1], "Second event should be added")
+    }
+
+    @Test
+    fun `addEvents appends multiple events`() {
+        val gameState = GameState(
+            gameId = "game1",
+            players = emptyList(),
+            cardInstances = emptyList(),
+            gameLog = emptyList()
+        )
+
+        val events = listOf(
+            GameEvent.CardDrawn(
+                playerId = "player1",
+                playerName = "Player 1",
+                cardName = "Sol Ring"
+            ),
+            GameEvent.CardDrawn(
+                playerId = "player1",
+                playerName = "Player 1",
+                cardName = "Mana Crypt"
+            ),
+            GameEvent.CardPlayed(
+                playerId = "player1",
+                playerName = "Player 1",
+                cardName = "Sol Ring",
+                fromZone = Zone.HAND
+            )
+        )
+
+        val updatedState = gameState.addEvents(events)
+
+        assertEquals(3, updatedState.gameLog.size, "Game log should have 3 events")
+        assertEquals("Sol Ring", (updatedState.gameLog[0] as GameEvent.CardDrawn).cardName)
+        assertEquals("Mana Crypt", (updatedState.gameLog[1] as GameEvent.CardDrawn).cardName)
+        assertEquals("Sol Ring", (updatedState.gameLog[2] as GameEvent.CardPlayed).cardName)
+    }
+
+    @Test
+    fun `addEvents with empty list returns unchanged state`() {
+        val event = GameEvent.CardDrawn(
+            playerId = "player1",
+            playerName = "Player 1",
+            cardName = "Sol Ring"
+        )
+        val gameState = GameState(
+            gameId = "game1",
+            players = emptyList(),
+            cardInstances = emptyList(),
+            gameLog = listOf(event)
+        )
+
+        val updatedState = gameState.addEvents(emptyList())
+
+        assertEquals(1, updatedState.gameLog.size, "Game log should still have 1 event")
+        assertEquals(event, updatedState.gameLog[0], "Event should be preserved")
+    }
+
+    @Test
+    fun `addEvents preserves existing events`() {
+        val existingEvent = GameEvent.CardDrawn(
+            playerId = "player1",
+            playerName = "Player 1",
+            cardName = "Command Tower"
+        )
+        val gameState = GameState(
+            gameId = "game1",
+            players = emptyList(),
+            cardInstances = emptyList(),
+            gameLog = listOf(existingEvent)
+        )
+
+        val newEvents = listOf(
+            GameEvent.CardDrawn(
+                playerId = "player1",
+                playerName = "Player 1",
+                cardName = "Sol Ring"
+            ),
+            GameEvent.CardDrawn(
+                playerId = "player1",
+                playerName = "Player 1",
+                cardName = "Mana Crypt"
+            )
+        )
+
+        val updatedState = gameState.addEvents(newEvents)
+
+        assertEquals(3, updatedState.gameLog.size, "Game log should have 3 events")
+        assertEquals("Command Tower", (updatedState.gameLog[0] as GameEvent.CardDrawn).cardName, "First event should be preserved")
+        assertEquals("Sol Ring", (updatedState.gameLog[1] as GameEvent.CardDrawn).cardName)
+        assertEquals("Mana Crypt", (updatedState.gameLog[2] as GameEvent.CardDrawn).cardName)
+    }
 }
