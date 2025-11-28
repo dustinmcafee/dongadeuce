@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.1.4] - 2025-11-28
+
+### Changed
+- Card cache now prefers paper printings over digital-only
+- Card cache now uses most recent release date when multiple printings exist
+- Digital-only cards (Arena/MTGO exclusives) only used if no paper version exists
+
 ## [3.1.3] - 2025-11-28
 
 ### Added

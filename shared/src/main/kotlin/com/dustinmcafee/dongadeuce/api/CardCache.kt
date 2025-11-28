@@ -177,6 +177,7 @@ class CardCache(
     /**
      * Load cache into memory if not already loaded
      * Parses Scryfall bulk JSON format
+     * Prefers: paper printings over digital, most recent release date
      */
     suspend fun loadCache(): Boolean {
         if (cardMap != null) return true
@@ -190,9 +191,25 @@ class CardCache(
                 val jsonString = cacheFile.readText()
                 // Parse Scryfall format directly
                 val scryfallCards = json.decodeFromString<List<ScryfallCard>>(jsonString)
-                cardMap = scryfallCards.associate {
-                    it.name.lowercase() to it.toCard()
+
+                // Group cards by name and select the best printing for each
+                val cardsByName = mutableMapOf<String, ScryfallCard>()
+
+                for (card in scryfallCards) {
+                    val nameKey = card.name.lowercase()
+                    val existing = cardsByName[nameKey]
+
+                    if (existing == null) {
+                        // First time seeing this card
+                        cardsByName[nameKey] = card
+                    } else {
+                        // Compare and keep the better printing
+                        val newCard = selectBetterPrinting(existing, card)
+                        cardsByName[nameKey] = newCard
+                    }
                 }
+
+                cardMap = cardsByName.mapValues { it.value.toCard() }
             }
             true
         } catch (e: Exception) {
@@ -200,6 +217,32 @@ class CardCache(
             e.printStackTrace()
             false
         }
+    }
+
+    /**
+     * Select the better printing between two cards with the same name.
+     * Priority:
+     * 1. Paper over digital-only
+     * 2. More recent release date
+     */
+    private fun selectBetterPrinting(existing: ScryfallCard, candidate: ScryfallCard): ScryfallCard {
+        val existingIsPaper = existing.isPaper()
+        val candidateIsPaper = candidate.isPaper()
+
+        // If one is paper and the other isn't, prefer paper
+        if (existingIsPaper && !candidateIsPaper) {
+            return existing
+        }
+        if (candidateIsPaper && !existingIsPaper) {
+            return candidate
+        }
+
+        // Both are same type (both paper or both digital), compare release dates
+        // Prefer more recent (later date string comparison works for YYYY-MM-DD format)
+        val existingDate = existing.releasedAt ?: "0000-00-00"
+        val candidateDate = candidate.releasedAt ?: "0000-00-00"
+
+        return if (candidateDate > existingDate) candidate else existing
     }
 
     /**

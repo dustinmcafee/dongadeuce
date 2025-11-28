@@ -117,8 +117,20 @@ data class ScryfallCard(
     val toughness: String? = null,
     val colors: List<String> = emptyList(),
     @SerialName("image_uris") val imageUris: ScryfallImageUris? = null,
-    @SerialName("card_faces") val cardFaces: List<ScryfallCardFace>? = null
+    @SerialName("card_faces") val cardFaces: List<ScryfallCardFace>? = null,
+    // Fields for determining best printing
+    @SerialName("released_at") val releasedAt: String? = null,  // YYYY-MM-DD format
+    val digital: Boolean = false,  // True if digital-only printing
+    val games: List<String> = emptyList()  // ["paper", "arena", "mtgo"]
 ) {
+    /**
+     * Check if this is a paper printing (not digital-only)
+     */
+    fun isPaper(): Boolean = !digital && games.contains("paper")
+
+    /**
+     * Convert to our Card model
+     */
     fun toCard(): Card {
         // Handle double-faced cards
         val mainImageUri = imageUris?.normal
