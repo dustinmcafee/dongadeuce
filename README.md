@@ -17,6 +17,41 @@ A lightweight, cross-platform MTG Commander game client built with Kotlin and Co
 - **Settings Persistence**: Player name and network settings saved between sessions
 - **Keyboard Shortcuts**: 120+ shortcuts for fast gameplay
 
+## Download & Install
+
+Download the latest release from [GitHub Releases](https://github.com/dustinmcafee/dongadeuce/releases/latest).
+
+### Windows
+1. Download `Commander.MTG-X.X.X.msi`
+2. Run the installer
+3. Launch "Commander MTG" from the Start Menu
+
+*Or download `dongadeuce-windows-X.X.X.jar` and run with `java -jar dongadeuce-windows-X.X.X.jar`*
+
+### macOS
+1. Download `Commander.MTG-X.X.X.dmg`
+2. Open the DMG and drag to Applications
+3. Launch from Applications folder
+
+*First launch: Right-click → Open to bypass Gatekeeper*
+
+### Linux
+**Debian/Ubuntu:**
+```bash
+sudo dpkg -i commander-mtg_X.X.X-1_amd64.deb
+commander-mtg
+```
+
+**Other distributions:**
+```bash
+java -jar dongadeuce-windows-X.X.X.jar
+```
+
+### First Run
+1. Click "Download Cache" to get card data (~500MB, one-time)
+2. Load a deck file (examples included in repo)
+3. Start a hotseat or network game
+
 ## Project Structure
 
 ```
