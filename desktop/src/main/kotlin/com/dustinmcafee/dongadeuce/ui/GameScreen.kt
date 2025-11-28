@@ -52,6 +52,11 @@ fun GameScreen(
     var showPeekTopDialog by remember { mutableStateOf(false) }
     var showPeekBottomDialog by remember { mutableStateOf(false) }
     var peekCount by remember { mutableStateOf(5) } // Default peek count
+    // Number input dialog state
+    var showNumberInputDialog by remember { mutableStateOf(false) }
+    var numberInputTitle by remember { mutableStateOf("") }
+    var numberInputDefault by remember { mutableStateOf(1) }
+    var numberInputCallback by remember { mutableStateOf<((Int) -> Unit)?>(null) }
 
     // Keyboard shortcut handler
     val keyboardState = rememberKeyboardShortcutState(viewModel, selectionState)
@@ -81,7 +86,8 @@ fun GameScreen(
             showExileDialog ||
             showCommandZoneDialog ||
             showPeekTopDialog ||
-            showPeekBottomDialog
+            showPeekBottomDialog ||
+            showNumberInputDialog
 
     // Update keyboard state with dialog status
     LaunchedEffect(isAnyDialogOpen) {
@@ -109,6 +115,12 @@ fun GameScreen(
         keyboardState.onShowCommandZoneDialog = { showCommandZoneDialog = true }
         keyboardState.onShowPeekTopDialog = { showPeekTopDialog = true }
         keyboardState.onShowPeekBottomDialog = { showPeekBottomDialog = true }
+        keyboardState.onShowNumberInputDialog = { title, default, callback ->
+            numberInputTitle = title
+            numberInputDefault = default
+            numberInputCallback = callback
+            showNumberInputDialog = true
+        }
         keyboardState.onCloseDialog = {
             cardDetailsToShow = null
             showLibraryPositionDialog = false
@@ -125,6 +137,7 @@ fun GameScreen(
             showCommandZoneDialog = false
             showPeekTopDialog = false
             showPeekBottomDialog = false
+            showNumberInputDialog = false
         }
         keyboardState.onFocusChat = {
             // Focus the chat input - would need a reference to the chat input field
@@ -757,6 +770,55 @@ fun GameScreen(
                 bottomCards.forEach { card -> viewModel.moveCard(card.instanceId, zone) }
             },
             onShuffleCards = { viewModel.shuffleBottomCards(activePlayerId, peekCount) }
+        )
+    }
+
+    // Number input dialog (for draw/mill/shuffle multiple)
+    if (showNumberInputDialog) {
+        var inputValue by remember(numberInputDefault) { mutableStateOf(numberInputDefault.toString()) }
+        AlertDialog(
+            onDismissRequest = {
+                showNumberInputDialog = false
+                numberInputCallback = null
+            },
+            title = { Text(numberInputTitle) },
+            text = {
+                OutlinedTextField(
+                    value = inputValue,
+                    onValueChange = { newValue ->
+                        if (newValue.isEmpty() || newValue.all { it.isDigit() }) {
+                            inputValue = newValue
+                        }
+                    },
+                    label = { Text("Count") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val count = inputValue.toIntOrNull() ?: numberInputDefault
+                        if (count > 0) {
+                            numberInputCallback?.invoke(count)
+                        }
+                        showNumberInputDialog = false
+                        numberInputCallback = null
+                    }
+                ) {
+                    Text("OK")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showNumberInputDialog = false
+                        numberInputCallback = null
+                    }
+                ) {
+                    Text("Cancel")
+                }
+            }
         )
     }
 

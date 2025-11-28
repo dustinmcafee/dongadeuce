@@ -40,6 +40,9 @@ class KeyboardShortcutState(
     var onCreateAnotherToken: () -> Unit = {}
     var onCreateRelatedTokens: () -> Unit = {}
 
+    // Callbacks for number input operations (title, default, action)
+    var onShowNumberInputDialog: (String, Int, (Int) -> Unit) -> Unit = { _, _, _ -> }
+
     // Track if a dialog is open (shortcuts disabled except Esc)
     var isDialogOpen: Boolean = false
 
@@ -304,7 +307,12 @@ class KeyboardShortcutState(
 
             // Drawing & Library
             ShortcutAction.DrawCard -> viewModel.drawCard(activePlayer.id)
-            ShortcutAction.DrawMultiple -> viewModel.drawCards(activePlayer.id, 7) // Default to 7
+            ShortcutAction.DrawMultiple -> {
+                val playerId = activePlayer.id
+                onShowNumberInputDialog("Draw Cards", 7) { count ->
+                    viewModel.drawCards(playerId, count)
+                }
+            }
             ShortcutAction.UndoDraw -> {
                 // Put the last drawn card back on top of library
                 val handCards = gameState.cardInstances.filter {
@@ -316,8 +324,18 @@ class KeyboardShortcutState(
             }
             ShortcutAction.Mulligan -> viewModel.mulligan(activePlayer.id)
             ShortcutAction.ShuffleLibrary -> viewModel.shuffleLibrary(activePlayer.id)
-            ShortcutAction.ShuffleTopCards -> viewModel.shuffleTopCards(activePlayer.id, 5) // Default to 5
-            ShortcutAction.ShuffleBottomCards -> viewModel.shuffleBottomCards(activePlayer.id, 5) // Default to 5
+            ShortcutAction.ShuffleTopCards -> {
+                val playerId = activePlayer.id
+                onShowNumberInputDialog("Shuffle Top Cards", 5) { count ->
+                    viewModel.shuffleTopCards(playerId, count)
+                }
+            }
+            ShortcutAction.ShuffleBottomCards -> {
+                val playerId = activePlayer.id
+                onShowNumberInputDialog("Shuffle Bottom Cards", 5) { count ->
+                    viewModel.shuffleBottomCards(playerId, count)
+                }
+            }
             ShortcutAction.PlayTopCard -> {
                 val topCard = gameState.cardInstances.find {
                     it.ownerId == activePlayer.id && it.zone == Zone.LIBRARY
@@ -325,17 +343,37 @@ class KeyboardShortcutState(
                 topCard?.let { viewModel.moveCard(it.instanceId, Zone.BATTLEFIELD) } ?: return false
             }
             ShortcutAction.MillTopCard -> viewModel.millCards(activePlayer.id, 1)
-            ShortcutAction.MillMultiple -> viewModel.millCards(activePlayer.id, 5) // Default to 5
+            ShortcutAction.MillMultiple -> {
+                val playerId = activePlayer.id
+                onShowNumberInputDialog("Mill Cards", 5) { count ->
+                    viewModel.millCards(playerId, count)
+                }
+            }
             ShortcutAction.AlwaysRevealTopCard -> viewModel.toggleRevealTopCard(activePlayer.id)
             ShortcutAction.AlwaysLookAtTopCard -> viewModel.toggleLookAtTopCard(activePlayer.id)
 
             // Bottom Card Operations
             ShortcutAction.DrawBottomCard -> viewModel.drawFromBottom(activePlayer.id, 1)
-            ShortcutAction.DrawBottomMultiple -> viewModel.drawFromBottom(activePlayer.id, 7) // Default to 7
+            ShortcutAction.DrawBottomMultiple -> {
+                val playerId = activePlayer.id
+                onShowNumberInputDialog("Draw from Bottom", 7) { count ->
+                    viewModel.drawFromBottom(playerId, count)
+                }
+            }
             ShortcutAction.MillBottomCard -> viewModel.millFromBottom(activePlayer.id, 1)
-            ShortcutAction.MillBottomMultiple -> viewModel.millFromBottom(activePlayer.id, 5) // Default to 5
+            ShortcutAction.MillBottomMultiple -> {
+                val playerId = activePlayer.id
+                onShowNumberInputDialog("Mill from Bottom", 5) { count ->
+                    viewModel.millFromBottom(playerId, count)
+                }
+            }
             ShortcutAction.ExileBottomCard -> viewModel.exileFromBottom(activePlayer.id, 1)
-            ShortcutAction.ExileBottomMultiple -> viewModel.exileFromBottom(activePlayer.id, 5) // Default to 5
+            ShortcutAction.ExileBottomMultiple -> {
+                val playerId = activePlayer.id
+                onShowNumberInputDialog("Exile from Bottom", 5) { count ->
+                    viewModel.exileFromBottom(playerId, count)
+                }
+            }
             ShortcutAction.BottomToTop -> viewModel.moveBottomCardToTop(activePlayer.id)
 
             // View Zones
