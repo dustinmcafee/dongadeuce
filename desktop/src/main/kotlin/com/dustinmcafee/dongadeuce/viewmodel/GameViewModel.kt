@@ -1774,7 +1774,7 @@ class GameViewModel(
         // Validate player exists
         val currentState = _uiState.value
         val gameState = currentState.gameState ?: return
-        gameState.players.find { it.id == playerId } ?: return
+        val player = gameState.players.find { it.id == playerId } ?: return
 
         // Move all hand cards to library (without individual logging)
         _uiState.update { state ->
@@ -2131,6 +2131,60 @@ class GameViewModel(
             }
 
             currentState.copy(gameState = updatedGameState)
+        }
+    }
+
+    /**
+     * Draw cards from the bottom of the library
+     */
+    fun drawFromBottom(playerId: String, count: Int) {
+        moveBottomCardsToZone(playerId, count, Zone.HAND)
+    }
+
+    /**
+     * Mill cards from the bottom of the library
+     */
+    fun millFromBottom(playerId: String, count: Int) {
+        moveBottomCardsToZone(playerId, count, Zone.GRAVEYARD)
+    }
+
+    /**
+     * Exile cards from the bottom of the library
+     */
+    fun exileFromBottom(playerId: String, count: Int) {
+        moveBottomCardsToZone(playerId, count, Zone.EXILE)
+    }
+
+    /**
+     * Move the bottom card of the library to the top
+     */
+    fun moveBottomCardToTop(playerId: String) {
+        // In network mode, send action to server
+        if (isNetworkGame) {
+            sendNetworkAction(NetworkAction.MoveBottomCardToTop(playerId))
+            return
+        }
+
+        _uiState.update { currentState ->
+            val gameState = currentState.gameState ?: return@update currentState
+
+            val libraryCards = gameState.cardInstances
+                .filter { it.ownerId == playerId && it.zone == Zone.LIBRARY }
+
+            if (libraryCards.isEmpty()) return@update currentState
+
+            // Get the bottom card (first in list) and move it to the end (top)
+            val bottomCard = libraryCards.first()
+            val remainingCards = libraryCards.drop(1)
+
+            // Rebuild: other cards + remaining library + bottom card at top
+            val otherCards = gameState.cardInstances
+                .filter { !(it.ownerId == playerId && it.zone == Zone.LIBRARY) }
+            val reorderedCards = otherCards + remainingCards + bottomCard
+
+            currentState.copy(
+                gameState = gameState.copy(cardInstances = reorderedCards)
+            )
         }
     }
 

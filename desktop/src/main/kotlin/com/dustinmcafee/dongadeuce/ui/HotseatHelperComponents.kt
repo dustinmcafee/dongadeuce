@@ -288,7 +288,6 @@ fun CompactHandStrip(
     handCount: Int,
     showCards: Boolean,
     onCardAction: (CardAction) -> Unit,
-    dragDropState: DragDropState? = null,
     selectionState: SelectionState? = null,
     otherPlayers: List<Player> = emptyList(),
     modifier: Modifier = Modifier

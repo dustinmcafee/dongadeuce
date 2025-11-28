@@ -1225,6 +1225,22 @@ class GameServer(
                 )
             }
 
+            is NetworkAction.MoveBottomCardToTop -> {
+                val libraryCards = state.cardInstances.filter {
+                    it.ownerId == action.playerId && it.zone == Zone.LIBRARY
+                }
+                if (libraryCards.isEmpty()) {
+                    state
+                } else {
+                    val bottomCard = libraryCards.first()
+                    val remainingCards = libraryCards.drop(1)
+                    val otherCards = state.cardInstances.filter {
+                        !(it.ownerId == action.playerId && it.zone == Zone.LIBRARY)
+                    }
+                    state.copy(cardInstances = otherCards + remainingCards + bottomCard)
+                }
+            }
+
             is NetworkAction.CreateToken -> {
                 val targetPlayer = state.players.find { it.id == action.playerId } ?: return state
                 val tokenCard = Card(

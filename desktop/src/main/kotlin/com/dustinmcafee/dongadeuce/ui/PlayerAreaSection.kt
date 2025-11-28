@@ -134,7 +134,6 @@ fun PlayerArea(
             viewModel = viewModel,
             allPlayers = allPlayers,
             onCardAction = onCardAction,
-            dragDropState = dragDropState,
             selectionState = selectionState,
             onShowHandDialog = { showHandDialog = true },
             modifier = Modifier.fillMaxWidth().weight(0.3f)
@@ -491,7 +490,6 @@ private fun PlayerHandDisplay(
     viewModel: GameViewModel,
     allPlayers: List<Player>,
     onCardAction: (CardAction) -> Unit,
-    dragDropState: DragDropState?,
     selectionState: SelectionState?,
     onShowHandDialog: () -> Unit,
     modifier: Modifier = Modifier

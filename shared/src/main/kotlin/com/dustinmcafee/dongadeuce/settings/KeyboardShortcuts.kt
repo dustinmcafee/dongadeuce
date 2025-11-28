@@ -8,9 +8,14 @@ import kotlinx.serialization.Serializable
 sealed class ShortcutAction(val id: String, val displayName: String, val category: String) {
     // Game Phases
     object UntapPhase : ShortcutAction("untapPhase", "Untap Phase", "Game Phases")
+    object UpkeepPhase : ShortcutAction("upkeepPhase", "Upkeep Phase", "Game Phases")
     object DrawPhase : ShortcutAction("drawPhase", "Draw Phase", "Game Phases")
     object FirstMainPhase : ShortcutAction("firstMainPhase", "First Main Phase", "Game Phases")
-    object CombatPhase : ShortcutAction("combatPhase", "Combat Phase", "Game Phases")
+    object CombatPhase : ShortcutAction("combatPhase", "Begin Combat", "Game Phases")
+    object AttackPhase : ShortcutAction("attackPhase", "Declare Attackers", "Game Phases")
+    object BlockPhase : ShortcutAction("blockPhase", "Declare Blockers", "Game Phases")
+    object DamagePhase : ShortcutAction("damagePhase", "Combat Damage", "Game Phases")
+    object EndCombatPhase : ShortcutAction("endCombatPhase", "End Combat", "Game Phases")
     object SecondMainPhase : ShortcutAction("secondMainPhase", "Second Main Phase", "Game Phases")
     object EndPhase : ShortcutAction("endPhase", "End Phase", "Game Phases")
     object NextPhase : ShortcutAction("nextPhase", "Next Phase", "Game Phases")
@@ -73,11 +78,22 @@ sealed class ShortcutAction(val id: String, val displayName: String, val categor
     object UndoDraw : ShortcutAction("undoDraw", "Undo Draw", "Drawing & Library")
     object Mulligan : ShortcutAction("mulligan", "Mulligan", "Drawing & Library")
     object ShuffleLibrary : ShortcutAction("shuffleLibrary", "Shuffle Library", "Drawing & Library")
+    object ShuffleTopCards : ShortcutAction("shuffleTopCards", "Shuffle Top Cards of Library", "Drawing & Library")
+    object ShuffleBottomCards : ShortcutAction("shuffleBottomCards", "Shuffle Bottom Cards of Library", "Drawing & Library")
     object PlayTopCard : ShortcutAction("playTopCard", "Play Top Card", "Drawing & Library")
     object MillTopCard : ShortcutAction("millTopCard", "Mill Top Card", "Drawing & Library")
     object MillMultiple : ShortcutAction("millMultiple", "Mill Multiple Cards", "Drawing & Library")
     object AlwaysRevealTopCard : ShortcutAction("alwaysRevealTopCard", "Always Reveal Top Card", "Drawing & Library")
     object AlwaysLookAtTopCard : ShortcutAction("alwaysLookAtTopCard", "Always Look At Top Card", "Drawing & Library")
+
+    // Bottom Card Operations
+    object DrawBottomCard : ShortcutAction("drawBottomCard", "Draw Bottom Card", "Bottom Card Operations")
+    object DrawBottomMultiple : ShortcutAction("drawBottomMultiple", "Draw Multiple from Bottom", "Bottom Card Operations")
+    object MillBottomCard : ShortcutAction("millBottomCard", "Mill Bottom Card", "Bottom Card Operations")
+    object MillBottomMultiple : ShortcutAction("millBottomMultiple", "Mill Multiple from Bottom", "Bottom Card Operations")
+    object ExileBottomCard : ShortcutAction("exileBottomCard", "Exile Bottom Card", "Bottom Card Operations")
+    object ExileBottomMultiple : ShortcutAction("exileBottomMultiple", "Exile Multiple from Bottom", "Bottom Card Operations")
+    object BottomToTop : ShortcutAction("bottomToTop", "Move Bottom Card to Top", "Bottom Card Operations")
 
     // View Zones
     object ViewLibrary : ShortcutAction("viewLibrary", "View Library", "View Zones")
@@ -112,7 +128,8 @@ sealed class ShortcutAction(val id: String, val displayName: String, val categor
         val all: List<ShortcutAction> by lazy {
             listOf(
                 // Game Phases
-                UntapPhase, DrawPhase, FirstMainPhase, CombatPhase, SecondMainPhase, EndPhase, NextPhase, PassTurn,
+                UntapPhase, UpkeepPhase, DrawPhase, FirstMainPhase, CombatPhase, AttackPhase, BlockPhase,
+                DamagePhase, EndCombatPhase, SecondMainPhase, EndPhase, NextPhase, PassTurn,
                 // Card Actions
                 TapUntapCard, UntapAll, ToggleDoesntUntap, FlipCard, PlayFaceDown, CloneCard, CreateToken, SetAnnotation,
                 AttachCard, DetachCard, MoveToGraveyard, MoveToBottomLibrary, MoveToExile, MoveToHand, MoveTopToBottom,
@@ -126,8 +143,11 @@ sealed class ShortcutAction(val id: String, val displayName: String, val categor
                 AddCounterD, RemoveCounterD, AddCounterE, RemoveCounterE, AddCounterF, RemoveCounterF,
                 IncrementAllCounters,
                 // Drawing & Library
-                DrawCard, DrawMultiple, UndoDraw, Mulligan, ShuffleLibrary, PlayTopCard, MillTopCard, MillMultiple,
-                AlwaysRevealTopCard, AlwaysLookAtTopCard,
+                DrawCard, DrawMultiple, UndoDraw, Mulligan, ShuffleLibrary, ShuffleTopCards, ShuffleBottomCards,
+                PlayTopCard, MillTopCard, MillMultiple, AlwaysRevealTopCard, AlwaysLookAtTopCard,
+                // Bottom Card Operations
+                DrawBottomCard, DrawBottomMultiple, MillBottomCard, MillBottomMultiple,
+                ExileBottomCard, ExileBottomMultiple, BottomToTop,
                 // View Zones
                 ViewLibrary, ViewGraveyard, ViewExile, ViewCommandZone, ViewSideboard, PeekTopCards, PeekBottomCards, CloseDialog,
                 // Selection

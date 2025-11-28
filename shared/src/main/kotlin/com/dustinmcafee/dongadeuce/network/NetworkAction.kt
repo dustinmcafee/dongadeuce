@@ -79,6 +79,14 @@ sealed class NetworkAction {
     ) : NetworkAction()
 
     /**
+     * Move bottom card to top of library
+     */
+    @Serializable
+    data class MoveBottomCardToTop(
+        val playerId: String
+    ) : NetworkAction()
+
+    /**
      * Mill cards from library to graveyard
      */
     @Serializable

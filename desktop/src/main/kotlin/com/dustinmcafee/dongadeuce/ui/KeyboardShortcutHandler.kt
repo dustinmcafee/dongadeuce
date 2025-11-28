@@ -119,10 +119,15 @@ class KeyboardShortcutState(
             ShortcutAction.DrawPhase -> viewModel.setPhase(GamePhase.DRAW)
             ShortcutAction.FirstMainPhase -> viewModel.setPhase(GamePhase.MAIN_1)
             ShortcutAction.CombatPhase -> viewModel.setPhase(GamePhase.COMBAT_BEGIN)
+            ShortcutAction.AttackPhase -> viewModel.setPhase(GamePhase.COMBAT_DECLARE_ATTACKERS)
+            ShortcutAction.BlockPhase -> viewModel.setPhase(GamePhase.COMBAT_DECLARE_BLOCKERS)
+            ShortcutAction.DamagePhase -> viewModel.setPhase(GamePhase.COMBAT_DAMAGE)
+            ShortcutAction.EndCombatPhase -> viewModel.setPhase(GamePhase.COMBAT_END)
             ShortcutAction.SecondMainPhase -> viewModel.setPhase(GamePhase.MAIN_2)
             ShortcutAction.EndPhase -> viewModel.setPhase(GamePhase.END)
             ShortcutAction.NextPhase -> viewModel.advancePhase()
             ShortcutAction.PassTurn -> viewModel.passTurn()
+            ShortcutAction.UpkeepPhase -> viewModel.setPhase(GamePhase.UPKEEP)
 
             // Card Actions (apply to all selected cards)
             ShortcutAction.TapUntapCard -> {
@@ -311,6 +316,8 @@ class KeyboardShortcutState(
             }
             ShortcutAction.Mulligan -> viewModel.mulligan(activePlayer.id)
             ShortcutAction.ShuffleLibrary -> viewModel.shuffleLibrary(activePlayer.id)
+            ShortcutAction.ShuffleTopCards -> viewModel.shuffleTopCards(activePlayer.id, 5) // Default to 5
+            ShortcutAction.ShuffleBottomCards -> viewModel.shuffleBottomCards(activePlayer.id, 5) // Default to 5
             ShortcutAction.PlayTopCard -> {
                 val topCard = gameState.cardInstances.find {
                     it.ownerId == activePlayer.id && it.zone == Zone.LIBRARY
@@ -321,6 +328,15 @@ class KeyboardShortcutState(
             ShortcutAction.MillMultiple -> viewModel.millCards(activePlayer.id, 5) // Default to 5
             ShortcutAction.AlwaysRevealTopCard -> viewModel.toggleRevealTopCard(activePlayer.id)
             ShortcutAction.AlwaysLookAtTopCard -> viewModel.toggleLookAtTopCard(activePlayer.id)
+
+            // Bottom Card Operations
+            ShortcutAction.DrawBottomCard -> viewModel.drawFromBottom(activePlayer.id, 1)
+            ShortcutAction.DrawBottomMultiple -> viewModel.drawFromBottom(activePlayer.id, 7) // Default to 7
+            ShortcutAction.MillBottomCard -> viewModel.millFromBottom(activePlayer.id, 1)
+            ShortcutAction.MillBottomMultiple -> viewModel.millFromBottom(activePlayer.id, 5) // Default to 5
+            ShortcutAction.ExileBottomCard -> viewModel.exileFromBottom(activePlayer.id, 1)
+            ShortcutAction.ExileBottomMultiple -> viewModel.exileFromBottom(activePlayer.id, 5) // Default to 5
+            ShortcutAction.BottomToTop -> viewModel.moveBottomCardToTop(activePlayer.id)
 
             // View Zones
             ShortcutAction.ViewLibrary -> onShowLibraryDialog()

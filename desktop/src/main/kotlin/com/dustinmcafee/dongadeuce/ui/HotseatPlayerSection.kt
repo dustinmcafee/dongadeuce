@@ -68,7 +68,6 @@ fun HotseatPlayerSection(
                 handCount = handCount,
                 showCards = isLocalPlayer,
                 onCardAction = onCardAction,
-                dragDropState = dragDropState,
                 selectionState = if (isLocalPlayer) selectionState else null,
                 otherPlayers = otherPlayers,
                 modifier = Modifier.fillMaxWidth().height(100.dp)
@@ -142,7 +141,6 @@ fun HotseatPlayerSection(
                 handCount = handCount,
                 showCards = isLocalPlayer,
                 onCardAction = onCardAction,
-                dragDropState = dragDropState,
                 selectionState = if (isLocalPlayer) selectionState else null,
                 otherPlayers = otherPlayers,
                 modifier = Modifier.fillMaxWidth().height(100.dp)
