@@ -49,7 +49,7 @@ class GameMessageTest {
 
         assertEquals(original, deserialized)
         assertTrue(deserialized is GameMessage.PlayerJoin)
-        assertEquals("Test Player", (deserialized as GameMessage.PlayerJoin).playerName)
+        assertEquals("Test Player", deserialized.playerName)
     }
 
     @Test
@@ -111,7 +111,7 @@ class GameMessageTest {
 
         assertEquals(original, deserialized)
         assertTrue(deserialized is GameMessage.LobbyState)
-        assertEquals(2, (deserialized as GameMessage.LobbyState).players.size)
+        assertEquals(2, deserialized.players.size)
     }
 
     @Test
@@ -154,7 +154,7 @@ class GameMessageTest {
 
         assertEquals(original, deserialized)
         assertTrue(deserialized is GameMessage.GameAction)
-        assertTrue((deserialized as GameMessage.GameAction).action is NetworkAction.DrawCard)
+        assertTrue(deserialized.action is NetworkAction.DrawCard)
     }
 
     @Test

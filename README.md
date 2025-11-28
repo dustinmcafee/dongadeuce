@@ -145,7 +145,7 @@ cd dongadeuce
 ./gradlew desktop:packageDeb
 ```
 
-## Current Status (v3.4.0)
+## Current Status (v3.5.0)
 
 **Hotseat Mode:** 98% Complete - Fully Playable! ✅
 **Network Mode:** 96% Complete - Fully Playable! ✅
@@ -209,7 +209,7 @@ cd dongadeuce
 - Scryfall API integration
 - Bulk card cache with progress UI
 - Text-based deck parser
-- 270 passing unit tests
+- 402 passing unit tests
 - Comprehensive input validation
 - Cross-platform packaging (Windows, macOS, Linux)
 

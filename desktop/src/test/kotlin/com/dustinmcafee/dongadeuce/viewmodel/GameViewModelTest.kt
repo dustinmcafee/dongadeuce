@@ -1218,7 +1218,7 @@ class GameViewModelTest {
 
         val revealedState = viewModel.revealedCardsState.value
         assertNotNull(revealedState)
-        assertEquals(1, revealedState?.cards?.size)
+        assertEquals(1, revealedState.cards.size)
     }
 
     @Test

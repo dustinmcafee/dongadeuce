@@ -27,6 +27,8 @@ dependencies {
     // Testing
     testImplementation(kotlin("test"))
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
+    testImplementation(compose.desktop.uiTestJUnit4)
+    testImplementation("io.mockk:mockk:1.13.8")
 }
 
 tasks.test {

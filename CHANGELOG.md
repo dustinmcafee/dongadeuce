@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.5.0] - 2025-11-28
+
+### Added
+- **UI State Testing Suite** - Added 132 new tests for UI state management
+  - SelectionStateTest: 26 tests for multi-card selection logic
+  - DragDropStateTest: 33 tests for drag-and-drop operations
+  - KeyboardShortcutStateTest: 73 tests for keyboard binding configuration
+
+### Technical Details
+- Added Compose Desktop UI test dependency (`compose.desktop.uiTestJUnit4`)
+- Added MockK library for mocking in tests
+- Tests cover keyboard bindings, selection state, and drag-drop mechanics
+- Total test count now at 402 (up from 270)
+
+### Changed
+- **CI/CD Pipeline** - Tests now run as prerequisite before building release artifacts
+  - All platform builds (Windows, macOS, Linux) now depend on tests passing
+  - Test results uploaded as artifacts for debugging failures
+
 ## [3.4.0] - 2025-11-28
 
 ### Added
