@@ -5,6 +5,7 @@ package com.dustinmcafee.dongadeuce.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -523,6 +524,281 @@ fun HandDialog(
             }
         }
     )
+}
+
+/**
+ * Card type categories for column-based display
+ */
+enum class CardTypeCategory(val displayName: String) {
+    CREATURE("Creatures"),
+    PLANESWALKER("Planeswalkers"),
+    INSTANT("Instants"),
+    SORCERY("Sorceries"),
+    ENCHANTMENT("Enchantments"),
+    ARTIFACT("Artifacts"),
+    LAND("Lands"),
+    OTHER("Other")
+}
+
+/**
+ * Get the category for a card based on its type line
+ */
+private fun getCardCategory(typeLine: String?): CardTypeCategory {
+    val type = typeLine?.lowercase() ?: ""
+    return when {
+        type.contains("creature") -> CardTypeCategory.CREATURE
+        type.contains("planeswalker") -> CardTypeCategory.PLANESWALKER
+        type.contains("instant") -> CardTypeCategory.INSTANT
+        type.contains("sorcery") -> CardTypeCategory.SORCERY
+        type.contains("enchantment") -> CardTypeCategory.ENCHANTMENT
+        type.contains("artifact") -> CardTypeCategory.ARTIFACT
+        type.contains("land") -> CardTypeCategory.LAND
+        else -> CardTypeCategory.OTHER
+    }
+}
+
+/**
+ * Comprehensive hand/zone viewer dialog with column-based layout by card type (Cockatrice-style)
+ * Cards are grouped by type into columns and sorted alphabetically within each column
+ */
+@Composable
+fun ViewHandDialog(
+    cards: List<CardInstance>,
+    playerName: String,
+    onDismiss: () -> Unit,
+    onPlayCard: (CardInstance) -> Unit,
+    onDiscard: (CardInstance) -> Unit = {},
+    onExile: (CardInstance) -> Unit = {},
+    onToLibrary: (CardInstance) -> Unit = {},
+    onContextAction: (CardAction) -> Unit = {}
+) {
+    // Group cards by type category and sort alphabetically within each group
+    val cardsByCategory = remember(cards) {
+        cards
+            .groupBy { getCardCategory(it.card.type) }
+            .mapValues { (_, cardList) -> cardList.sortedBy { it.card.name.lowercase() } }
+    }
+
+    // Get non-empty categories in display order
+    val activeCategories = remember(cardsByCategory) {
+        CardTypeCategory.entries.filter { cardsByCategory[it]?.isNotEmpty() == true }
+    }
+
+    // Use Dialog for better control over sizing
+    androidx.compose.ui.window.Dialog(
+        onDismissRequest = onDismiss
+    ) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth(0.95f)
+                .fillMaxHeight(0.85f),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surface
+            )
+        ) {
+            Column(
+                modifier = Modifier.fillMaxSize().padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                // Title
+                Text(
+                    "${playerName}'s Hand (${cards.size} cards)",
+                    style = MaterialTheme.typography.headlineSmall
+                )
+
+                Divider()
+
+                if (cards.isEmpty()) {
+                    Box(
+                        modifier = Modifier.weight(1f).fillMaxWidth(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("No cards in hand", style = MaterialTheme.typography.bodyMedium)
+                    }
+                } else {
+                    // Horizontal scrollable row of columns (one per card type)
+                    val scrollState = rememberScrollState()
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth()
+                            .horizontalScroll(scrollState)
+                    ) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            activeCategories.forEach { category ->
+                                val categoryCards = cardsByCategory[category] ?: emptyList()
+
+                                // Column for this card type
+                                Card(
+                                    modifier = Modifier
+                                        .width(180.dp)
+                                        .fillMaxHeight(),
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                                    )
+                                ) {
+                                    Column(
+                                        modifier = Modifier.fillMaxSize().padding(8.dp),
+                                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                                    ) {
+                                        // Column header
+                                        Text(
+                                            "${category.displayName} (${categoryCards.size})",
+                                            style = MaterialTheme.typography.titleSmall,
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+
+                                        Divider(modifier = Modifier.padding(vertical = 4.dp))
+
+                                        // Vertically scrollable list of cards
+                                        Column(
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .verticalScroll(rememberScrollState()),
+                                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                                        ) {
+                                            categoryCards.forEach { cardInstance ->
+                                                ViewHandCardItem(
+                                                    cardInstance = cardInstance,
+                                                    onPlayCard = onPlayCard,
+                                                    onDiscard = onDiscard,
+                                                    onExile = onExile,
+                                                    onToLibrary = onToLibrary,
+                                                    onContextAction = onContextAction
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Close button
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    TextButton(onClick = onDismiss) {
+                        Text("Close")
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Individual card item in the View Hand dialog with right-click context menu
+ */
+@Composable
+private fun ViewHandCardItem(
+    cardInstance: CardInstance,
+    onPlayCard: (CardInstance) -> Unit,
+    onDiscard: (CardInstance) -> Unit,
+    onExile: (CardInstance) -> Unit,
+    onToLibrary: (CardInstance) -> Unit,
+    onContextAction: (CardAction) -> Unit
+) {
+    var showContextMenu by remember { mutableStateOf(false) }
+    var contextMenuOffset by remember { mutableStateOf(Offset.Zero) }
+
+    Box {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .pointerInput(cardInstance.instanceId) {
+                    awaitPointerEventScope {
+                        while (true) {
+                            val event = awaitPointerEvent()
+                            if (event.buttons.isSecondaryPressed && event.type == PointerEventType.Press) {
+                                contextMenuOffset = event.changes.first().position
+                                showContextMenu = true
+                            }
+                        }
+                    }
+                }
+                .clickable { onPlayCard(cardInstance) },
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.secondaryContainer
+            )
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(6.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Card image thumbnail (smaller)
+                CardImage(
+                    imageUrl = cardInstance.card.imageUri,
+                    contentDescription = cardInstance.card.name,
+                    modifier = Modifier.width(40.dp).height(56.dp)
+                )
+
+                // Card info
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = cardInstance.card.name,
+                        style = MaterialTheme.typography.labelMedium,
+                        maxLines = 2
+                    )
+                    val manaCost = cardInstance.card.manaCost
+                    if (manaCost != null) {
+                        Text(
+                            text = manaCost,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
+                        )
+                    }
+                }
+            }
+        }
+
+        // Right-click context menu
+        DropdownMenu(
+            expanded = showContextMenu,
+            onDismissRequest = { showContextMenu = false }
+        ) {
+            DropdownMenuItem(
+                text = { Text("To Battlefield") },
+                onClick = {
+                    showContextMenu = false
+                    onPlayCard(cardInstance)
+                }
+            )
+            DropdownMenuItem(
+                text = { Text("To Graveyard") },
+                onClick = {
+                    showContextMenu = false
+                    onDiscard(cardInstance)
+                }
+            )
+            DropdownMenuItem(
+                text = { Text("To Exile") },
+                onClick = {
+                    showContextMenu = false
+                    onExile(cardInstance)
+                }
+            )
+            DropdownMenuItem(
+                text = { Text("To Library") },
+                onClick = {
+                    showContextMenu = false
+                    onToLibrary(cardInstance)
+                }
+            )
+            DropdownMenuItem(
+                text = { Text("To Hand") },
+                onClick = {
+                    showContextMenu = false
+                    onContextAction(CardAction.ToHand(cardInstance))
+                }
+            )
+        }
+    }
 }
 
 /**

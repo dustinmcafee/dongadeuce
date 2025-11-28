@@ -17,8 +17,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.*
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInWindow
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import com.dustinmcafee.dongadeuce.models.*
+import com.dustinmcafee.dongadeuce.viewmodel.GameViewModel
 
 /**
  * Compact player counters display (shows poison/energy/experience if any)
@@ -288,69 +291,151 @@ fun CompactHandStrip(
     handCount: Int,
     showCards: Boolean,
     onCardAction: (CardAction) -> Unit,
+    viewModel: GameViewModel? = null,
     selectionState: SelectionState? = null,
     otherPlayers: List<Player> = emptyList(),
     modifier: Modifier = Modifier
 ) {
+    // State for right-click context menu and View Hand dialog
+    var showContextMenu by remember { mutableStateOf(false) }
+    var contextMenuOffset by remember { mutableStateOf(Offset.Zero) }
+    var showViewHandDialog by remember { mutableStateOf(false) }
+
+    // View Hand dialog
+    if (showViewHandDialog && showCards) {
+        ViewHandDialog(
+            cards = handCards,
+            playerName = player.name,
+            onDismiss = { showViewHandDialog = false },
+            onPlayCard = { cardInstance ->
+                viewModel?.moveCard(cardInstance.instanceId, Zone.BATTLEFIELD)
+                    ?: onCardAction(CardAction.ToBattlefield(cardInstance))
+            },
+            onDiscard = { cardInstance ->
+                viewModel?.moveCard(cardInstance.instanceId, Zone.GRAVEYARD)
+                    ?: onCardAction(CardAction.ToGraveyard(cardInstance))
+            },
+            onExile = { cardInstance ->
+                viewModel?.moveCard(cardInstance.instanceId, Zone.EXILE)
+                    ?: onCardAction(CardAction.ToExile(cardInstance))
+            },
+            onToLibrary = { cardInstance ->
+                viewModel?.moveCard(cardInstance.instanceId, Zone.LIBRARY)
+                    ?: onCardAction(CardAction.ToLibrary(cardInstance))
+            },
+            onContextAction = onCardAction
+        )
+    }
+
     Card(
         modifier = modifier,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            Row(
-                modifier = Modifier.fillMaxWidth().weight(1f).padding(4.dp),
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    "${player.name}'s Hand ($handCount)",
-                    style = MaterialTheme.typography.labelSmall,
-                    modifier = Modifier.width(120.dp)
-                )
-
-                // Shared drag state for hand cards
-                var draggedHandCardIds by remember { mutableStateOf<Set<String>>(emptySet()) }
-                var handDragOffset by remember { mutableStateOf(Offset.Zero) }
-
-                if (!showCards) {
-                    // For non-active players, just show card count, not actual cards
+        Box {
+            Column(modifier = Modifier.fillMaxSize()) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().weight(1f).padding(4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Text(
-                        "Hidden",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                        "${player.name}'s Hand ($handCount)",
+                        style = MaterialTheme.typography.labelSmall,
+                        modifier = Modifier.width(120.dp)
                     )
-                } else if (handCards.isEmpty()) {
-                    Text(
-                        "No cards",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                    )
-                } else {
-                    FlowRow(
-                        modifier = Modifier.weight(1f).horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        handCards.forEach { cardInstance ->
-                            HandCardDisplay(
-                                cardInstance = cardInstance,
-                                onCardClick = { /* Single click - could open dialog */ },
-                                onDoubleClick = {
-                                    // Double-click plays card to battlefield
-                                    onCardAction(CardAction.ToBattlefield(cardInstance))
-                                },
-                                onContextAction = onCardAction,
-                                selectionState = selectionState,
-                                sharedDraggedCardIds = draggedHandCardIds,
-                                sharedDragOffset = handDragOffset,
-                                onDragStateChange = { draggedIds, offset ->
-                                    draggedHandCardIds = draggedIds
-                                    handDragOffset = offset
-                                },
-                                otherPlayers = otherPlayers
+
+                    // Shared drag state for hand cards
+                    var draggedHandCardIds by remember { mutableStateOf<Set<String>>(emptySet()) }
+                    var handDragOffset by remember { mutableStateOf(Offset.Zero) }
+
+                    // Hand area with right-click support
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
+                            .then(
+                                if (showCards) {
+                                    Modifier.pointerInput(Unit) {
+                                        awaitPointerEventScope {
+                                            while (true) {
+                                                val event = awaitPointerEvent()
+                                                if (event.buttons.isSecondaryPressed && event.type == PointerEventType.Press) {
+                                                    contextMenuOffset = event.changes.first().position
+                                                    showContextMenu = true
+                                                }
+                                            }
+                                        }
+                                    }
+                                } else Modifier
                             )
+                    ) {
+                        if (!showCards) {
+                            // For non-active players, just show card count, not actual cards
+                            Text(
+                                "Hidden",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                            )
+                        } else if (handCards.isEmpty()) {
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.CenterStart
+                            ) {
+                                Text(
+                                    "No cards (Right-click for options)",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                                )
+                            }
+                        } else {
+                            FlowRow(
+                                modifier = Modifier.fillMaxSize().horizontalScroll(rememberScrollState()),
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                handCards.forEach { cardInstance ->
+                                    HandCardDisplay(
+                                        cardInstance = cardInstance,
+                                        onCardClick = { /* Single click - could open dialog */ },
+                                        onDoubleClick = {
+                                            // Double-click plays card to battlefield
+                                            onCardAction(CardAction.ToBattlefield(cardInstance))
+                                        },
+                                        onContextAction = onCardAction,
+                                        selectionState = selectionState,
+                                        sharedDraggedCardIds = draggedHandCardIds,
+                                        sharedDragOffset = handDragOffset,
+                                        onDragStateChange = { draggedIds, offset ->
+                                            draggedHandCardIds = draggedIds
+                                            handDragOffset = offset
+                                        },
+                                        otherPlayers = otherPlayers
+                                    )
+                                }
+                            }
                         }
                     }
+                }
+            }
+
+            // Context menu dropdown
+            if (showCards) {
+                val density = LocalDensity.current.density
+                DropdownMenu(
+                    expanded = showContextMenu,
+                    onDismissRequest = { showContextMenu = false },
+                    offset = DpOffset(
+                        x = (contextMenuOffset.x / density).dp,
+                        y = (contextMenuOffset.y / density).dp
+                    )
+                ) {
+                    DropdownMenuItem(
+                        text = { Text("View Hand") },
+                        onClick = {
+                            showContextMenu = false
+                            showViewHandDialog = true
+                        }
+                    )
                 }
             }
         }

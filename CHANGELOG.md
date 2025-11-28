@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.2.0] - 2025-11-28
+
+### Added
+- **View Hand Dialog** - Right-click anywhere in hand area to open
+  - Cockatrice-style column layout grouped by card type
+  - Cards sorted alphabetically within each type column
+  - Right-click context menu on cards with zone actions (To Battlefield, To Graveyard, To Exile, To Library, To Hand)
+  - Horizontal scrolling for many card types
+  - Works in both hotseat and network modes
+
+### Changed
+- **Library Search Dialog** - Now uses the same Cockatrice-style column layout
+  - Cards grouped by type into columns
+  - Cards sorted alphabetically within each column
+  - Right-click context menu on cards (To Hand, To Battlefield, To Top/Bottom of Library)
+  - Search field still filters across all columns
+  - Horizontal scrolling for large libraries
+
 ## [3.1.4] - 2025-11-28
 
 ### Changed

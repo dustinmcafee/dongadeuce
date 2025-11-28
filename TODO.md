@@ -1,6 +1,6 @@
 # Dong-A-Deuce - Development TODO
 
-**Current Version:** v3.1.4
+**Current Version:** v3.2.0
 **Hotseat Mode:** 99% complete (fully playable!)
 **Network Mode:** 97% complete (fully playable!)
 **Last Updated:** 2025-11-28
@@ -179,6 +179,7 @@ These are nice-to-have features that would improve the experience but aren't req
 
 | Version | Highlights |
 |---------|------------|
+| v3.2.0 | View Hand dialog with Cockatrice-style column layout |
 | v3.1.0 | Settings Dialog UI |
 | v3.0.0 | 120+ shortcuts, Stack Until Found, build fixes |
 | v2.27.0 | Keyboard shortcuts system (65+) |

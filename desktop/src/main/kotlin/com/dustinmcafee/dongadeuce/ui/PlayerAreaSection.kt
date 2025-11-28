@@ -11,6 +11,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.*
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import com.dustinmcafee.dongadeuce.models.*
 import com.dustinmcafee.dongadeuce.viewmodel.GameViewModel
@@ -494,80 +497,146 @@ private fun PlayerHandDisplay(
     onShowHandDialog: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    // State for right-click context menu and View Hand dialog
+    var showContextMenu by remember { mutableStateOf(false) }
+    var contextMenuOffset by remember { mutableStateOf(Offset.Zero) }
+    var showViewHandDialog by remember { mutableStateOf(false) }
+
+    // View Hand dialog
+    if (showViewHandDialog) {
+        ViewHandDialog(
+            cards = handCards,
+            playerName = player.name,
+            onDismiss = { showViewHandDialog = false },
+            onPlayCard = { cardInstance ->
+                viewModel.moveCard(cardInstance.instanceId, Zone.BATTLEFIELD)
+            },
+            onDiscard = { cardInstance ->
+                viewModel.moveCard(cardInstance.instanceId, Zone.GRAVEYARD)
+            },
+            onExile = { cardInstance ->
+                viewModel.moveCard(cardInstance.instanceId, Zone.EXILE)
+            },
+            onToLibrary = { cardInstance ->
+                viewModel.moveCard(cardInstance.instanceId, Zone.LIBRARY)
+            },
+            onContextAction = onCardAction
+        )
+    }
+
     Card(
         modifier = modifier,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f)
-                    .padding(8.dp)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+        Box {
+            Column(modifier = Modifier.fillMaxSize()) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                        .padding(8.dp)
                 ) {
-                    Text("Hand ($handCount)", style = MaterialTheme.typography.titleSmall)
-                    OutlinedButton(onClick = onShowHandDialog) {
-                        Text("Expand")
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(4.dp))
-
-                // Shared drag state for hand cards
-                var draggedHandCardIds by remember { mutableStateOf<Set<String>>(emptySet()) }
-                var handDragOffset by remember { mutableStateOf(Offset.Zero) }
-
-                if (handCards.isEmpty()) {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            "No cards in hand",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                        )
+                        Text("Hand ($handCount)", style = MaterialTheme.typography.titleSmall)
+                        OutlinedButton(onClick = onShowHandDialog) {
+                            Text("Expand")
+                        }
                     }
-                } else {
-                    FlowRow(
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    // Shared drag state for hand cards
+                    var draggedHandCardIds by remember { mutableStateOf<Set<String>>(emptySet()) }
+                    var handDragOffset by remember { mutableStateOf(Offset.Zero) }
+
+                    // Hand area with right-click support
+                    Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .verticalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                            .pointerInput(Unit) {
+                                awaitPointerEventScope {
+                                    while (true) {
+                                        val event = awaitPointerEvent()
+                                        if (event.buttons.isSecondaryPressed && event.type == PointerEventType.Press) {
+                                            contextMenuOffset = event.changes.first().position
+                                            showContextMenu = true
+                                        }
+                                    }
+                                }
+                            }
                     ) {
-                        handCards.forEach { cardInstance ->
-                            HandCardDisplay(
-                                cardInstance = cardInstance,
-                                onCardClick = { onShowHandDialog() },
-                                onDoubleClick = {
-                                    viewModel.moveCard(cardInstance.instanceId, Zone.BATTLEFIELD)
-                                },
-                                onContextAction = onCardAction,
-                                selectionState = selectionState,
-                                sharedDraggedCardIds = draggedHandCardIds,
-                                sharedDragOffset = handDragOffset,
-                                onDragStateChange = { draggedIds, offset ->
-                                    draggedHandCardIds = draggedIds
-                                    handDragOffset = offset
-                                },
-                                otherPlayers = allPlayers.filter { it.id != player.id }
-                            )
+                        if (handCards.isEmpty()) {
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    "No cards in hand\n(Right-click for options)",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                )
+                            }
+                        } else {
+                            FlowRow(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .verticalScroll(rememberScrollState()),
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                handCards.forEach { cardInstance ->
+                                    HandCardDisplay(
+                                        cardInstance = cardInstance,
+                                        onCardClick = { onShowHandDialog() },
+                                        onDoubleClick = {
+                                            viewModel.moveCard(cardInstance.instanceId, Zone.BATTLEFIELD)
+                                        },
+                                        onContextAction = onCardAction,
+                                        selectionState = selectionState,
+                                        sharedDraggedCardIds = draggedHandCardIds,
+                                        sharedDragOffset = handDragOffset,
+                                        onDragStateChange = { draggedIds, offset ->
+                                            draggedHandCardIds = draggedIds
+                                            handDragOffset = offset
+                                        },
+                                        otherPlayers = allPlayers.filter { it.id != player.id }
+                                    )
+                                }
+                            }
                         }
                     }
                 }
+
+                // Batch actions row
+                if (selectionState?.hasSelection == true) {
+                    HandBatchActionsRow(
+                        selectionState = selectionState,
+                        viewModel = viewModel
+                    )
+                }
             }
 
-            // Batch actions row
-            if (selectionState?.hasSelection == true) {
-                HandBatchActionsRow(
-                    selectionState = selectionState,
-                    viewModel = viewModel
+            // Context menu dropdown
+            val density = LocalDensity.current.density
+            DropdownMenu(
+                expanded = showContextMenu,
+                onDismissRequest = { showContextMenu = false },
+                offset = DpOffset(
+                    x = (contextMenuOffset.x / density).dp,
+                    y = (contextMenuOffset.y / density).dp
+                )
+            ) {
+                DropdownMenuItem(
+                    text = { Text("View Hand") },
+                    onClick = {
+                        showContextMenu = false
+                        showViewHandDialog = true
+                    }
                 )
             }
         }
