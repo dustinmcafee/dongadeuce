@@ -328,6 +328,7 @@ val Zone.displayName: String
         Zone.EXILE -> "Exile"
         Zone.COMMAND_ZONE -> "Command Zone"
         Zone.STACK -> "Stack"
+        Zone.SIDEBOARD -> "Sideboard"
     }
 
 /**

@@ -145,9 +145,10 @@ cd dongadeuce
 ./gradlew desktop:packageDeb
 ```
 
-## Current Status (v3.5.0)
+## Current Status (v4.1.0-alpha)
 
-**Hotseat Mode:** 98% Complete - Fully Playable! ✅
+**Desktop:** 99% Complete - Fully Playable! ✅
+**Android:** 95% Complete - Fully Playable! ✅
 **Network Mode:** 96% Complete - Fully Playable! ✅
 
 ### ✅ Fully Implemented
@@ -209,6 +210,7 @@ cd dongadeuce
 - Scryfall API integration
 - Bulk card cache with progress UI
 - Text-based deck parser
+- Sideboard support with deck loading
 - 402 passing unit tests
 - Comprehensive input validation
 - Cross-platform packaging (Windows, macOS, Linux)
@@ -231,7 +233,8 @@ cd dongadeuce
 - **Game Save/Load** - Games meant to be played in one session
 
 ### Completion Status
-- **Hotseat Mode:** ~98% complete (fully playable)
+- **Desktop:** ~99% complete (fully playable)
+- **Android:** ~95% complete (fully playable)
 - **Network Mode:** ~96% complete (fully playable)
 
 ## Tech Stack

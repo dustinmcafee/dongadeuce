@@ -7,6 +7,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.1.0-alpha] - 2025-11-29
+
+### Added
+- **Sideboard Zone** - Full sideboard support for deck management
+  - New `Zone.SIDEBOARD` in game model
+  - Deck parser supports `// Sideboard` section in deck files
+  - Sideboard cards loaded separately from main deck
+  - SideboardDialog for viewing and moving sideboard cards
+  - Context menu actions for sideboard cards (To Hand, To Battlefield, To Graveyard)
+  - Keyboard shortcut (Ctrl+F3) to view sideboard
+
+- **Settings Dialog (Android)** - Full settings persistence
+  - Player name configuration saved to UserSettings
+  - Server address and port persistence
+  - Proper integration with shared UserSettings class
+
+- **RevealedCardsDialog (Android)** - Shows cards revealed by other players
+  - Displays cards revealed to you during gameplay
+  - Card details view integration
+  - Proper state management with `revealedCardsState`
+
+- **StackUntilFoundDialog (Android)** - Search library until match found
+  - Two-stage dialog (search → results)
+  - Search by card name or type
+  - Options to send revealed cards to graveyard or bottom of library
+
+- **PlayerCountersDialog Enhancement** - Set counters to specific values
+  - Tap on counter value to edit directly
+  - New `onSetCounter` callback with `setPlayerCounter` integration
+
+### Fixed
+- **Scry/Peek Dialog Card Refresh Bug** - Cards no longer refresh when moving items
+  - ScryDialog now captures initial cards with `remember { }` instead of `remember(cards)`
+  - LibraryPeekDialog maintains internal `displayedCards` state
+  - Moving cards to other zones properly removes them from dialog without fetching new cards
+  - Prevents confusing behavior where new library cards would appear in scry view
+
+### Changed
+- **Deck Model** - Added `sideboard: List<Card>` field with default empty list
+- **DeckParser** - Parses `// Sideboard` category and populates deck sideboard
+- **GameViewModel** - `loadDeck()` and `loadDeckForPlayer()` now load sideboard to `Zone.SIDEBOARD`
+- **CardContextMenu** - Both Android and Desktop now handle `Zone.SIDEBOARD` actions
+
 ## [4.0.0-alpha] - 2025-11-29
 
 ### Added

@@ -3,6 +3,7 @@
 package com.dustinmcafee.dongadeuce.ui
 
 import androidx.compose.foundation.*
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
@@ -17,13 +18,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
+import kotlin.math.roundToInt
 import com.dustinmcafee.dongadeuce.models.*
 import com.dustinmcafee.dongadeuce.ui.UIConstants
 import com.dustinmcafee.dongadeuce.viewmodel.AndroidMenuViewModel
@@ -40,6 +47,7 @@ fun AndroidGameScreen(
     gameViewModel: GameViewModel = remember { GameViewModel() }
 ) {
     val gameUiState by gameViewModel.uiState.collectAsState()
+    val revealedCardsState by gameViewModel.revealedCardsState.collectAsState()
     val selectionState = rememberSelectionState()
     val keyboardState = rememberKeyboardShortcutState(gameViewModel, selectionState)
 
@@ -61,10 +69,28 @@ fun AndroidGameScreen(
     var showTokenDialog by remember { mutableStateOf(false) }
     var showPlayerCountersDialog by remember { mutableStateOf(false) }
     var showLibraryDialog by remember { mutableStateOf(false) }
+    var showLibraryActionsDialog by remember { mutableStateOf(false) }
     var showGraveyardDialog by remember { mutableStateOf(false) }
     var showExileDialog by remember { mutableStateOf(false) }
+    var showHandDialog by remember { mutableStateOf(false) }
     var showGameLogDialog by remember { mutableStateOf(false) }
     var showActionsMenu by remember { mutableStateOf(false) }
+    var viewingOpponentZone by remember { mutableStateOf<Pair<Player, Zone>?>(null) }
+    var showScryDialog by remember { mutableStateOf(false) }
+    var scryCount by remember { mutableStateOf(1) }
+    var showCommanderDamageDialog by remember { mutableStateOf(false) }
+    var showCommandZoneDialog by remember { mutableStateOf(false) }
+    var showLibraryPeekTopDialog by remember { mutableStateOf(false) }
+    var showLibraryPeekBottomDialog by remember { mutableStateOf(false) }
+    var peekCount by remember { mutableStateOf(1) }
+    var handOwnerIdToShow by remember { mutableStateOf<String?>(null) }
+    var showNumberInputDialog by remember { mutableStateOf(false) }
+    var numberInputTitle by remember { mutableStateOf("") }
+    var numberInputDefault by remember { mutableStateOf(0) }
+    var numberInputCallback by remember { mutableStateOf<((Int) -> Unit)?>(null) }
+    var showSettingsDialog by remember { mutableStateOf(false) }
+    var showStackUntilFoundDialog by remember { mutableStateOf(false) }
+    var showSideboardDialog by remember { mutableStateOf(false) }
 
     // Setup keyboard shortcut callbacks and initialize game
     LaunchedEffect(Unit) {
@@ -84,6 +110,27 @@ fun AndroidGameScreen(
             cardForAnnotationDialog = card
             showAnnotationDialog = true
         }
+        keyboardState.onShowCommandZoneDialog = { showCommandZoneDialog = true }
+        keyboardState.onShowPeekTopDialog = {
+            peekCount = 1
+            showLibraryPeekTopDialog = true
+        }
+        keyboardState.onShowPeekBottomDialog = {
+            peekCount = 1
+            showLibraryPeekBottomDialog = true
+        }
+        keyboardState.onShowNumberInputDialog = { title, defaultValue, callback ->
+            numberInputTitle = title
+            numberInputDefault = defaultValue
+            numberInputCallback = callback
+            showNumberInputDialog = true
+        }
+        keyboardState.onShowStackUntilFoundDialog = {
+            showStackUntilFoundDialog = true
+        }
+        keyboardState.onShowSideboardDialog = {
+            showSideboardDialog = true
+        }
         keyboardState.onCloseDialog = {
             cardDetailsToShow = null
             showLibraryPositionDialog = false
@@ -98,6 +145,16 @@ fun AndroidGameScreen(
             showGraveyardDialog = false
             showExileDialog = false
             showGameLogDialog = false
+            showCommandZoneDialog = false
+            showCommanderDamageDialog = false
+            showLibraryPeekTopDialog = false
+            showLibraryPeekBottomDialog = false
+            showScryDialog = false
+            showHandDialog = false
+            showNumberInputDialog = false
+            showStackUntilFoundDialog = false
+            showSideboardDialog = false
+            showSettingsDialog = false
         }
         keyboardState.onLeaveGame = { menuViewModel.returnToMenu() }
 
@@ -154,6 +211,10 @@ fun AndroidGameScreen(
             is CardAction.CreateCopy -> {
                 gameViewModel.cloneCard(action.cardInstance.instanceId, action.ownerId)
             }
+            is CardAction.ViewHand -> {
+                handOwnerIdToShow = action.playerId
+                showHandDialog = true
+            }
             else -> {
                 gameViewModel.handleBatchCardAction(
                     action = action,
@@ -203,6 +264,12 @@ fun AndroidGameScreen(
                             gameViewModel = gameViewModel,
                             activePlayerId = activePlayer?.id,
                             onCardAction = handleAction,
+                            onShowOpponentGraveyard = { opponent ->
+                                viewingOpponentZone = Pair(opponent, Zone.GRAVEYARD)
+                            },
+                            onShowOpponentExile = { opponent ->
+                                viewingOpponentZone = Pair(opponent, Zone.EXILE)
+                            },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .weight(0.35f)
@@ -217,11 +284,14 @@ fun AndroidGameScreen(
                             isActivePlayer = player.id == activePlayer?.id,
                             onCardAction = handleAction,
                             selectionState = selectionState,
-                            otherPlayers = opponents,
                             onShowContextMenu = { card ->
                                 contextMenuCard = card
                                 showContextMenu = true
                             },
+                            onShowLibrary = { showLibraryDialog = true },
+                            onShowGraveyard = { showGraveyardDialog = true },
+                            onShowExile = { showExileDialog = true },
+                            onShowHand = { showHandDialog = true },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .weight(0.65f)
@@ -244,12 +314,9 @@ fun AndroidGameScreen(
                 localPlayer = localPlayer,
                 gameViewModel = gameViewModel,
                 onShowDieRoller = { showDieRollerDialog = true },
-                onShowSetLife = { showSetLifeDialog = true },
                 onShowTokenCreation = { showTokenDialog = true },
-                onShowPlayerCounters = { showPlayerCountersDialog = true },
-                onShowLibrary = { showLibraryDialog = true },
-                onShowGraveyard = { showGraveyardDialog = true },
-                onShowExile = { showExileDialog = true }
+                onShowLibraryActions = { showLibraryActionsDialog = true },
+                onShowTopCardDetails = { card -> cardDetailsToShow = card }
             )
         }
 
@@ -293,8 +360,7 @@ fun AndroidGameScreen(
                 onDismiss = { showLibraryPositionDialog = false; cardForLibraryPosition = null },
                 onToTop = { gameViewModel.moveCardToTopOfLibrary(card.instanceId) },
                 onToBottom = { gameViewModel.moveCardToBottomOfLibrary(card.instanceId) },
-                onToPositionFromTop = { pos -> gameViewModel.moveCardToLibraryPosition(card.instanceId, pos) },
-                onToPositionFromBottom = { pos -> gameViewModel.moveCardToLibraryPositionFromBottom(card.instanceId, pos) }
+                onToPositionFromTop = { pos -> gameViewModel.moveCardToLibraryPosition(card.instanceId, pos) }
             )
         }
     }
@@ -366,7 +432,6 @@ fun AndroidGameScreen(
 
     if (showTokenDialog && activePlayer != null) {
         TokenCreationDialog(
-            viewModel = gameViewModel,
             onDismiss = { showTokenDialog = false },
             onCreateToken = { name, type, power, toughness, color, imageUri, quantity ->
                 gameViewModel.createToken(activePlayer.id, name, type, power, toughness, color, imageUri, quantity)
@@ -399,6 +464,80 @@ fun AndroidGameScreen(
         )
     }
 
+    if (showLibraryActionsDialog && localPlayer != null) {
+        val libraryCards = gameViewModel.getCards(localPlayer.id, Zone.LIBRARY)
+        val topCard = libraryCards.lastOrNull()
+        val canSeeTopCard = localPlayer.revealTopCard || localPlayer.lookAtTopCard
+        LibraryActionsDialog(
+            librarySize = libraryCards.size,
+            topCard = topCard,
+            canSeeTopCard = canSeeTopCard,
+            onDismiss = { showLibraryActionsDialog = false },
+            onDraw = { gameViewModel.drawCard(localPlayer.id) },
+            onDrawMultiple = { count -> gameViewModel.drawCards(localPlayer.id, count) },
+            onSearch = {
+                showLibraryActionsDialog = false
+                showLibraryDialog = true
+            },
+            onShuffle = { gameViewModel.shuffleLibrary(localPlayer.id) },
+            onMill = { count -> gameViewModel.millCards(localPlayer.id, count) },
+            onScry = { count ->
+                scryCount = count
+                showLibraryActionsDialog = false
+                showScryDialog = true
+            },
+            onPlayTopCard = {
+                topCard?.let { gameViewModel.moveCard(it.instanceId, Zone.BATTLEFIELD) }
+            },
+            onRevealTop = { gameViewModel.toggleRevealTopCard(localPlayer.id) },
+            onLookAtTop = { gameViewModel.toggleLookAtTopCard(localPlayer.id) },
+            onViewTopCard = { card ->
+                cardDetailsToShow = card
+            },
+            onSendTopTo = { count, zone ->
+                // Get the top X cards from library and move them to the target zone
+                val cards = gameViewModel.getCards(localPlayer.id, Zone.LIBRARY)
+                cards.takeLast(count.coerceAtMost(cards.size)).forEach { card ->
+                    gameViewModel.moveCard(card.instanceId, zone)
+                }
+            },
+            onSendBottomTo = { count, zone ->
+                // Get the bottom X cards from library and move them to the target zone
+                val cards = gameViewModel.getCards(localPlayer.id, Zone.LIBRARY)
+                cards.take(count.coerceAtMost(cards.size)).forEach { card ->
+                    gameViewModel.moveCard(card.instanceId, zone)
+                }
+            }
+        )
+    }
+
+    // Scry dialog
+    if (showScryDialog && localPlayer != null) {
+        val libraryCards = gameViewModel.getCards(localPlayer.id, Zone.LIBRARY)
+        // Get top X cards (library is stored with bottom at index 0, top at end)
+        val scryCards = libraryCards.takeLast(scryCount.coerceAtMost(libraryCards.size))
+        ScryDialog(
+            cards = scryCards,
+            onDismiss = { showScryDialog = false },
+            onReorder = { orderedIds ->
+                // Reorder the top of the library based on the new order
+                gameViewModel.reorderLibraryTop(localPlayer.id, orderedIds)
+            },
+            onToHand = { card ->
+                gameViewModel.moveCard(card.instanceId, Zone.HAND)
+            },
+            onToBattlefield = { card ->
+                gameViewModel.moveCard(card.instanceId, Zone.BATTLEFIELD)
+            },
+            onToBottom = { card ->
+                gameViewModel.moveCardToBottomOfLibrary(card.instanceId)
+            },
+            onToGraveyard = { card ->
+                gameViewModel.moveCard(card.instanceId, Zone.GRAVEYARD)
+            }
+        )
+    }
+
     if (showGraveyardDialog && localPlayer != null) {
         val graveyardCards = gameViewModel.getCards(localPlayer.id, Zone.GRAVEYARD)
         GraveyardDialog(
@@ -421,10 +560,51 @@ fun AndroidGameScreen(
         )
     }
 
+    if (showHandDialog) {
+        // Use handOwnerIdToShow if set, otherwise fall back to localPlayer
+        val handOwnerId = handOwnerIdToShow ?: localPlayer?.id
+        val handOwner = allPlayers.find { it.id == handOwnerId } ?: localPlayer
+        if (handOwner != null) {
+            val handCards = gameViewModel.getCards(handOwner.id, Zone.HAND)
+            HandViewDialog(
+                cards = handCards,
+                playerName = handOwner.name,
+                onDismiss = {
+                    showHandDialog = false
+                    handOwnerIdToShow = null
+                },
+                onPlayCard = { card ->
+                    gameViewModel.moveCard(card.instanceId, Zone.BATTLEFIELD)
+                },
+                onDiscardCard = { card ->
+                    gameViewModel.moveCard(card.instanceId, Zone.GRAVEYARD)
+                },
+                onCardDetails = { card ->
+                    cardDetailsToShow = card
+                }
+            )
+        }
+    }
+
+    // Opponent zone viewing dialog (read-only)
+    viewingOpponentZone?.let { (opponent, zone) ->
+        val cards = gameViewModel.getCards(opponent.id, zone)
+        val zoneName = when (zone) {
+            Zone.GRAVEYARD -> "Graveyard"
+            Zone.EXILE -> "Exile"
+            else -> zone.name
+        }
+        OpponentZoneDialog(
+            cards = cards,
+            playerName = opponent.name,
+            zoneName = zoneName,
+            onDismiss = { viewingOpponentZone = null }
+        )
+    }
+
     if (showGameLogDialog && gameState != null) {
         GameLogDialog(
             gameLog = gameState.gameLog,
-            players = allPlayers,
             onDismiss = { showGameLogDialog = false },
             onSendMessage = { message ->
                 activePlayer?.let { gameViewModel.sendChatMessage(it.id, message) }
@@ -438,6 +618,153 @@ fun AndroidGameScreen(
             player = localPlayer,
             gameViewModel = gameViewModel,
             onDismiss = { showActionsMenu = false }
+        )
+    }
+
+    // Commander damage tracking dialog
+    if (showCommanderDamageDialog && gameState != null) {
+        // Get all commanders (creatures/planeswalkers in battlefield or command zone)
+        val commanders = gameState.cardInstances.filter { card ->
+            card.card.canBeCommander &&
+            (card.zone == Zone.BATTLEFIELD || card.zone == Zone.COMMAND_ZONE)
+        }
+        CommanderDamageDialog(
+            players = gameState.players,
+            commanders = commanders,
+            onDismiss = { showCommanderDamageDialog = false },
+            onDamageChange = { playerId, commanderId, newDamage ->
+                gameViewModel.updateCommanderDamage(playerId, commanderId, newDamage)
+            }
+        )
+    }
+
+    // Command zone dialog
+    if (showCommandZoneDialog && localPlayer != null) {
+        val commandZoneCards = gameViewModel.getCards(localPlayer.id, Zone.COMMAND_ZONE)
+        CommandZoneDialog(
+            cards = commandZoneCards,
+            playerName = localPlayer.name,
+            onDismiss = { showCommandZoneDialog = false },
+            onCast = { card ->
+                gameViewModel.moveCard(card.instanceId, Zone.BATTLEFIELD)
+            },
+            onToHand = { card ->
+                gameViewModel.moveCard(card.instanceId, Zone.HAND)
+            }
+        )
+    }
+
+    // Library peek top dialog
+    if (showLibraryPeekTopDialog && localPlayer != null) {
+        val libraryCards = gameViewModel.getCards(localPlayer.id, Zone.LIBRARY)
+        val topCards = libraryCards.takeLast(peekCount.coerceAtMost(libraryCards.size))
+        LibraryPeekDialog(
+            cards = topCards.reversed(), // Show top card first
+            title = "Top ${topCards.size} Cards",
+            onDismiss = { showLibraryPeekTopDialog = false },
+            onToHand = { card -> gameViewModel.moveCard(card.instanceId, Zone.HAND) },
+            onToBattlefield = { card -> gameViewModel.moveCard(card.instanceId, Zone.BATTLEFIELD) },
+            onToGraveyard = { card -> gameViewModel.moveCard(card.instanceId, Zone.GRAVEYARD) },
+            onToExile = { card -> gameViewModel.moveCard(card.instanceId, Zone.EXILE) },
+            onToTop = { card -> gameViewModel.moveCardToTopOfLibrary(card.instanceId) },
+            onToBottom = { card -> gameViewModel.moveCardToBottomOfLibrary(card.instanceId) }
+        )
+    }
+
+    // Library peek bottom dialog
+    if (showLibraryPeekBottomDialog && localPlayer != null) {
+        val libraryCards = gameViewModel.getCards(localPlayer.id, Zone.LIBRARY)
+        val bottomCards = libraryCards.take(peekCount.coerceAtMost(libraryCards.size))
+        LibraryPeekDialog(
+            cards = bottomCards, // Bottom card first
+            title = "Bottom ${bottomCards.size} Cards",
+            onDismiss = { showLibraryPeekBottomDialog = false },
+            onToHand = { card -> gameViewModel.moveCard(card.instanceId, Zone.HAND) },
+            onToBattlefield = { card -> gameViewModel.moveCard(card.instanceId, Zone.BATTLEFIELD) },
+            onToGraveyard = { card -> gameViewModel.moveCard(card.instanceId, Zone.GRAVEYARD) },
+            onToExile = { card -> gameViewModel.moveCard(card.instanceId, Zone.EXILE) },
+            onToTop = { card -> gameViewModel.moveCardToTopOfLibrary(card.instanceId) },
+            onToBottom = { card -> gameViewModel.moveCardToBottomOfLibrary(card.instanceId) }
+        )
+    }
+
+    // Number input dialog
+    if (showNumberInputDialog) {
+        NumberInputDialog(
+            title = numberInputTitle,
+            defaultValue = numberInputDefault,
+            onDismiss = {
+                showNumberInputDialog = false
+                numberInputCallback = null
+            },
+            onConfirm = { value ->
+                numberInputCallback?.invoke(value)
+                showNumberInputDialog = false
+                numberInputCallback = null
+            }
+        )
+    }
+
+    // Revealed cards dialog - shows when another player reveals cards to us
+    revealedCardsState?.let { state ->
+        // Only show if we're one of the target players (or it's revealed to all)
+        val isTargeted = state.targetPlayerIds.isEmpty() ||
+            localPlayer?.id in state.targetPlayerIds
+        if (isTargeted) {
+            RevealedCardsDialog(
+                cards = state.cards,
+                revealingPlayerName = state.revealingPlayerName,
+                title = state.title,
+                onDismiss = { gameViewModel.dismissRevealedCards() },
+                onViewDetails = { card -> cardDetailsToShow = card }
+            )
+        }
+    }
+
+    // Settings dialog
+    if (showSettingsDialog) {
+        val userSettings = menuViewModel.userSettings
+        SettingsDialog(
+            currentPlayerName = userSettings.getPlayerName(),
+            currentServerAddress = userSettings.getServerAddress(),
+            currentServerPort = userSettings.getServerPort(),
+            onPlayerNameChange = { userSettings.setPlayerName(it) },
+            onServerAddressChange = { userSettings.setServerAddress(it) },
+            onServerPortChange = { userSettings.setServerPort(it) },
+            onDismiss = { showSettingsDialog = false }
+        )
+    }
+
+    // Stack Until Found dialog
+    if (showStackUntilFoundDialog && localPlayer != null) {
+        val libraryCards = gameViewModel.getCards(localPlayer.id, Zone.LIBRARY)
+        StackUntilFoundDialog(
+            libraryCards = libraryCards,
+            onDismiss = { showStackUntilFoundDialog = false },
+            onMoveToGraveyard = { card ->
+                gameViewModel.moveCard(card.instanceId, Zone.GRAVEYARD)
+            },
+            onMoveToBottom = { card ->
+                gameViewModel.moveCardToBottomOfLibrary(card.instanceId)
+            }
+        )
+    }
+
+    // Sideboard dialog
+    if (showSideboardDialog && localPlayer != null) {
+        val sideboardCards = gameViewModel.getCards(localPlayer.id, Zone.SIDEBOARD)
+        SideboardDialog(
+            sideboardCards = sideboardCards,
+            onDismiss = { showSideboardDialog = false },
+            onToHand = { card ->
+                gameViewModel.moveCard(card.instanceId, Zone.HAND)
+            },
+            onToBattlefield = { card ->
+                gameViewModel.moveCard(card.instanceId, Zone.BATTLEFIELD)
+            },
+            onToGraveyard = { card ->
+                gameViewModel.moveCard(card.instanceId, Zone.GRAVEYARD)
+            }
         )
     }
 }
@@ -465,10 +792,19 @@ private fun TopGameBar(
         ) {
             // Turn info
             Column {
-                Text(
-                    "Turn $turnNumber",
-                    style = MaterialTheme.typography.labelMedium
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        "Turn $turnNumber",
+                        style = MaterialTheme.typography.labelMedium
+                    )
+                    if (isHotseatMode) {
+                        Text(
+                            " (Hotseat)",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                        )
+                    }
+                }
                 Text(
                     activePlayer?.name ?: "",
                     style = MaterialTheme.typography.titleSmall,
@@ -507,6 +843,8 @@ private fun OpponentSection(
     gameViewModel: GameViewModel,
     activePlayerId: String?,
     onCardAction: (CardAction) -> Unit,
+    onShowOpponentGraveyard: (Player) -> Unit,
+    onShowOpponentExile: (Player) -> Unit,
     modifier: Modifier = Modifier
 ) {
     LazyRow(
@@ -520,6 +858,8 @@ private fun OpponentSection(
                 gameViewModel = gameViewModel,
                 isActive = opponent.id == activePlayerId,
                 onCardAction = onCardAction,
+                onShowGraveyard = { onShowOpponentGraveyard(opponent) },
+                onShowExile = { onShowOpponentExile(opponent) },
                 modifier = Modifier.fillParentMaxWidth(
                     if (opponents.size == 1) 1f else 0.5f
                 )
@@ -534,12 +874,15 @@ private fun OpponentCard(
     gameViewModel: GameViewModel,
     isActive: Boolean,
     onCardAction: (CardAction) -> Unit,
+    onShowGraveyard: () -> Unit,
+    onShowExile: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val battlefieldCards = gameViewModel.getCards(player.id, Zone.BATTLEFIELD)
     val handCount = gameViewModel.getCardCount(player.id, Zone.HAND)
     val libraryCount = gameViewModel.getCardCount(player.id, Zone.LIBRARY)
     val graveyardCount = gameViewModel.getCardCount(player.id, Zone.GRAVEYARD)
+    val exileCount = gameViewModel.getCardCount(player.id, Zone.EXILE)
 
     Card(
         modifier = modifier,
@@ -569,14 +912,15 @@ private fun OpponentCard(
                 )
             }
 
-            // Zone counts
+            // Zone counts - Graveyard and Exile are clickable
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
                 ZoneCount("Hand", handCount)
                 ZoneCount("Library", libraryCount)
-                ZoneCount("Graveyard", graveyardCount)
+                ClickableZoneCount("Graveyard", graveyardCount, onClick = onShowGraveyard)
+                ClickableZoneCount("Exile", exileCount, onClick = onShowExile)
             }
 
             Spacer(modifier = Modifier.height(4.dp))
@@ -602,6 +946,23 @@ private fun ZoneCount(label: String, count: Int) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(count.toString(), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
         Text(label, style = MaterialTheme.typography.labelSmall)
+    }
+}
+
+@Composable
+private fun ClickableZoneCount(label: String, count: Int, onClick: () -> Unit) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .clickable(onClick = onClick)
+            .background(
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                shape = RoundedCornerShape(4.dp)
+            )
+            .padding(horizontal = 8.dp, vertical = 4.dp)
+    ) {
+        Text(count.toString(), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+        Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
     }
 }
 
@@ -637,8 +998,11 @@ private fun LocalPlayerSection(
     isActivePlayer: Boolean,
     onCardAction: (CardAction) -> Unit,
     selectionState: SelectionState,
-    otherPlayers: List<Player>,
     onShowContextMenu: (CardInstance) -> Unit,
+    onShowLibrary: () -> Unit,
+    onShowGraveyard: () -> Unit,
+    onShowExile: () -> Unit,
+    onShowHand: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val battlefieldCards = gameViewModel.getCards(player.id, Zone.BATTLEFIELD)
@@ -669,7 +1033,10 @@ private fun LocalPlayerSection(
                     onCardLongPress = { card ->
                         onShowContextMenu(card)
                     },
-                    onCardAction = onCardAction
+                    onCardAction = onCardAction,
+                    onCardPositionChanged = { cardId, col, row ->
+                        gameViewModel.updateCardGridPosition(cardId, col, row)
+                    }
                 )
             }
         }
@@ -680,20 +1047,23 @@ private fun LocalPlayerSection(
             gameViewModel = gameViewModel,
             commandZoneCards = commandZoneCards,
             isActivePlayer = isActivePlayer,
-            onCardAction = onCardAction
+            onCardAction = onCardAction,
+            onShowLibrary = onShowLibrary,
+            onShowGraveyard = onShowGraveyard,
+            onShowExile = onShowExile
         )
 
         // Hand
         HandStrip(
             handCards = handCards,
             onCardClick = { card ->
-                // Play to battlefield on tap
+                // Play to battlefield on double-tap
                 gameViewModel.moveCard(card.instanceId, Zone.BATTLEFIELD)
             },
             onCardLongPress = { card ->
                 onShowContextMenu(card)
             },
-            onCardAction = onCardAction,
+            onViewHand = onShowHand,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(100.dp)
@@ -707,33 +1077,95 @@ private fun BattlefieldGrid(
     selectionState: SelectionState,
     onCardClick: (CardInstance) -> Unit,
     onCardLongPress: (CardInstance) -> Unit,
-    onCardAction: (CardAction) -> Unit
+    onCardAction: (CardAction) -> Unit,
+    onCardPositionChanged: ((String, Int, Int) -> Unit)? = null
 ) {
-    // Simple grid layout for battlefield
-    val columns = 6
-    val rows = (cards.size + columns - 1) / columns
+    val columns = 5
+    val cardSize = 70.dp
+    val spacing = 4.dp
+    val density = LocalDensity.current
 
-    Column(
-        modifier = Modifier.verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(4.dp)
-    ) {
-        for (row in 0 until rows) {
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                for (col in 0 until columns) {
-                    val index = row * columns + col
-                    if (index < cards.size) {
-                        val card = cards[index]
-                        BattlefieldCard(
-                            cardInstance = card,
-                            isSelected = selectionState.isSelected(card.instanceId),
-                            onClick = { onCardClick(card) },
-                            onLongClick = { onCardLongPress(card) },
-                            onDoubleClick = { onCardAction(CardAction.ViewDetails(card)) }
-                        )
-                    } else {
-                        Spacer(modifier = Modifier.size(width = 50.dp, height = 70.dp))
+    // Track which card is being dragged and its offset
+    var draggingCard by remember { mutableStateOf<CardInstance?>(null) }
+    var dragOffset by remember { mutableStateOf(Offset.Zero) }
+    var dragStartIndex by remember { mutableStateOf(-1) }
+
+    // Calculate card positions for drop target detection
+    val cardSizePx = with(density) { cardSize.toPx() }
+    val spacingPx = with(density) { spacing.toPx() }
+    val cellSize = cardSizePx + spacingPx
+
+    Box(modifier = Modifier.verticalScroll(rememberScrollState())) {
+        // Grid of cards
+        Column(verticalArrangement = Arrangement.spacedBy(spacing)) {
+            val rows = ((cards.size + columns - 1) / columns).coerceAtLeast(1)
+            for (row in 0 until rows) {
+                Row(horizontalArrangement = Arrangement.spacedBy(spacing)) {
+                    for (col in 0 until columns) {
+                        val index = row * columns + col
+                        if (index < cards.size) {
+                            val card = cards[index]
+                            val isDragging = draggingCard?.instanceId == card.instanceId
+
+                            // Key by card.instanceId to ensure proper composable identity
+                            key(card.instanceId) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(cardSize)
+                                        .zIndex(if (isDragging) 10f else 0f)
+                                        .then(
+                                            if (isDragging) {
+                                                Modifier.offset {
+                                                    IntOffset(
+                                                        dragOffset.x.roundToInt(),
+                                                        dragOffset.y.roundToInt()
+                                                    )
+                                                }
+                                            } else Modifier
+                                        )
+                                ) {
+                                    DraggableBattlefieldCard(
+                                        cardInstance = card,
+                                        isSelected = selectionState.isSelected(card.instanceId),
+                                        isDragging = isDragging,
+                                        onClick = { onCardClick(card) },
+                                        onLongClick = { onCardLongPress(card) },
+                                        onDoubleClick = { onCardAction(CardAction.ViewDetails(card)) },
+                                        onDragStart = {
+                                            draggingCard = card
+                                            dragStartIndex = index
+                                            dragOffset = Offset.Zero
+                                        },
+                                        onDrag = { offset ->
+                                            dragOffset += offset
+                                        },
+                                        onDragEnd = {
+                                            // Calculate target position
+                                            val startRow = dragStartIndex / columns
+                                            val startCol = dragStartIndex % columns
+                                            val targetCol = (startCol + (dragOffset.x / cellSize).roundToInt()).coerceIn(0, columns - 1)
+                                            val targetRow = (startRow + (dragOffset.y / cellSize).roundToInt()).coerceAtLeast(0)
+
+                                            // Notify position change
+                                            draggingCard?.let { dragCard ->
+                                                onCardPositionChanged?.invoke(dragCard.instanceId, targetCol, targetRow)
+                                            }
+
+                                            draggingCard = null
+                                            dragOffset = Offset.Zero
+                                            dragStartIndex = -1
+                                        },
+                                        onDragCancel = {
+                                            draggingCard = null
+                                            dragOffset = Offset.Zero
+                                            dragStartIndex = -1
+                                        }
+                                    )
+                                }
+                            }
+                        } else {
+                            Spacer(modifier = Modifier.size(cardSize))
+                        }
                     }
                 }
             }
@@ -751,21 +1183,13 @@ private fun BattlefieldCard(
 ) {
     var lastClickTime by remember { mutableStateOf(0L) }
 
+    // Use a consistent fixed-size container for ALL cards - critical for proper touch targets
+    // All cards get the same size container regardless of tap state
+    // Key pointerInput by cardInstance.instanceId to ensure correct card is targeted
     Box(
         modifier = Modifier
-            .size(width = 50.dp, height = 70.dp)
-            .clip(RoundedCornerShape(4.dp))
-            .border(
-                width = if (isSelected) 2.dp else 1.dp,
-                color = when {
-                    isSelected -> MaterialTheme.colorScheme.primary
-                    cardInstance.isTapped -> Color.Gray
-                    else -> Color.Transparent
-                },
-                shape = RoundedCornerShape(4.dp)
-            )
-            .rotate(if (cardInstance.isTapped) 90f else 0f)
-            .pointerInput(Unit) {
+            .size(70.dp) // Square container for all cards - allows rotated cards to fit
+            .pointerInput(cardInstance.instanceId) {
                 detectTapGestures(
                     onTap = {
                         val now = System.currentTimeMillis()
@@ -779,40 +1203,185 @@ private fun BattlefieldCard(
                     },
                     onLongPress = { onLongClick() }
                 )
-            }
+            },
+        contentAlignment = Alignment.Center
     ) {
-        CardImage(
-            imageUrl = if (cardInstance.isFaceDown) null else cardInstance.card.imageUri,
-            contentDescription = cardInstance.card.name,
-            modifier = Modifier.fillMaxSize()
-        )
-
-        // Counter indicators
-        if (cardInstance.counters.isNotEmpty()) {
-            Box(
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .background(Color.Black.copy(alpha = 0.7f), CircleShape)
-                    .padding(2.dp)
-            ) {
-                Text(
-                    text = cardInstance.counters.values.sum().toString(),
-                    color = Color.White,
-                    fontSize = 10.sp
+        // Inner card that rotates
+        Box(
+            modifier = Modifier
+                .size(width = 50.dp, height = 70.dp)
+                .clip(RoundedCornerShape(4.dp))
+                .border(
+                    width = if (isSelected) 2.dp else 1.dp,
+                    color = when {
+                        isSelected -> MaterialTheme.colorScheme.primary
+                        cardInstance.isTapped -> Color.Gray
+                        else -> Color.Transparent
+                    },
+                    shape = RoundedCornerShape(4.dp)
                 )
+                .rotate(if (cardInstance.isTapped) 90f else 0f)
+        ) {
+            CardImage(
+                imageUrl = if (cardInstance.isFaceDown) null else cardInstance.card.imageUri,
+                contentDescription = cardInstance.card.name,
+                modifier = Modifier.fillMaxSize()
+            )
+
+            // Counter indicators
+            if (cardInstance.counters.isNotEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .background(Color.Black.copy(alpha = 0.7f), CircleShape)
+                        .padding(2.dp)
+                ) {
+                    Text(
+                        text = cardInstance.counters.values.sum().toString(),
+                        color = Color.White,
+                        fontSize = 10.sp
+                    )
+                }
+            }
+
+            // P/T modification indicator
+            if (cardInstance.powerModifier != 0 || cardInstance.toughnessModifier != 0) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .background(Color.Blue.copy(alpha = 0.7f), RoundedCornerShape(2.dp))
+                        .padding(horizontal = 2.dp)
+                ) {
+                    val mod = "${if (cardInstance.powerModifier >= 0) "+" else ""}${cardInstance.powerModifier}/${if (cardInstance.toughnessModifier >= 0) "+" else ""}${cardInstance.toughnessModifier}"
+                    Text(text = mod, color = Color.White, fontSize = 8.sp)
+                }
             }
         }
+    }
+}
 
-        // P/T modification indicator
-        if (cardInstance.powerModifier != 0 || cardInstance.toughnessModifier != 0) {
-            Box(
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .background(Color.Blue.copy(alpha = 0.7f), RoundedCornerShape(2.dp))
-                    .padding(horizontal = 2.dp)
-            ) {
-                val mod = "${if (cardInstance.powerModifier >= 0) "+" else ""}${cardInstance.powerModifier}/${if (cardInstance.toughnessModifier >= 0) "+" else ""}${cardInstance.toughnessModifier}"
-                Text(text = mod, color = Color.White, fontSize = 8.sp)
+/**
+ * Battlefield card that supports drag gesture for repositioning.
+ * Uses combined gesture detection for tap, long-press, and drag.
+ */
+@Composable
+private fun DraggableBattlefieldCard(
+    cardInstance: CardInstance,
+    isSelected: Boolean,
+    isDragging: Boolean,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit,
+    onDoubleClick: () -> Unit,
+    onDragStart: () -> Unit,
+    onDrag: (Offset) -> Unit,
+    onDragEnd: () -> Unit,
+    onDragCancel: () -> Unit
+) {
+    var lastClickTime by remember { mutableStateOf(0L) }
+    var isDragInProgress by remember { mutableStateOf(false) }
+
+    // Use square container for consistent touch target
+    // Use cardInstance.instanceId as key so closures update when cards change
+    Box(
+        modifier = Modifier
+            .size(70.dp)
+            .pointerInput(cardInstance.instanceId) {
+                detectDragGestures(
+                    onDragStart = {
+                        isDragInProgress = true
+                        onDragStart()
+                    },
+                    onDrag = { change, dragAmount ->
+                        change.consume()
+                        onDrag(dragAmount)
+                    },
+                    onDragEnd = {
+                        isDragInProgress = false
+                        onDragEnd()
+                    },
+                    onDragCancel = {
+                        isDragInProgress = false
+                        onDragCancel()
+                    }
+                )
+            }
+            .pointerInput(cardInstance.instanceId) {
+                detectTapGestures(
+                    onTap = {
+                        if (!isDragInProgress) {
+                            val now = System.currentTimeMillis()
+                            if (now - lastClickTime < UIConstants.DOUBLE_CLICK_DELAY_MS) {
+                                onDoubleClick()
+                                lastClickTime = 0L
+                            } else {
+                                onClick()
+                                lastClickTime = now
+                            }
+                        }
+                    },
+                    onLongPress = {
+                        if (!isDragInProgress) {
+                            onLongClick()
+                        }
+                    }
+                )
+            },
+        contentAlignment = Alignment.Center
+    ) {
+        // Inner card that rotates
+        Box(
+            modifier = Modifier
+                .size(width = 50.dp, height = 70.dp)
+                .clip(RoundedCornerShape(4.dp))
+                .border(
+                    width = when {
+                        isDragging -> 3.dp
+                        isSelected -> 2.dp
+                        else -> 1.dp
+                    },
+                    color = when {
+                        isDragging -> Color.Yellow
+                        isSelected -> MaterialTheme.colorScheme.primary
+                        cardInstance.isTapped -> Color.Gray
+                        else -> Color.Transparent
+                    },
+                    shape = RoundedCornerShape(4.dp)
+                )
+                .rotate(if (cardInstance.isTapped) 90f else 0f)
+        ) {
+            CardImage(
+                imageUrl = if (cardInstance.isFaceDown) null else cardInstance.card.imageUri,
+                contentDescription = cardInstance.card.name,
+                modifier = Modifier.fillMaxSize()
+            )
+
+            // Counter indicators
+            if (cardInstance.counters.isNotEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .background(Color.Black.copy(alpha = 0.7f), CircleShape)
+                        .padding(2.dp)
+                ) {
+                    Text(
+                        text = cardInstance.counters.values.sum().toString(),
+                        color = Color.White,
+                        fontSize = 10.sp
+                    )
+                }
+            }
+
+            // P/T modification indicator
+            if (cardInstance.powerModifier != 0 || cardInstance.toughnessModifier != 0) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .background(Color.Blue.copy(alpha = 0.7f), RoundedCornerShape(2.dp))
+                        .padding(horizontal = 2.dp)
+                ) {
+                    val mod = "${if (cardInstance.powerModifier >= 0) "+" else ""}${cardInstance.powerModifier}/${if (cardInstance.toughnessModifier >= 0) "+" else ""}${cardInstance.toughnessModifier}"
+                    Text(text = mod, color = Color.White, fontSize = 8.sp)
+                }
             }
         }
     }
@@ -824,15 +1393,27 @@ private fun PlayerInfoBar(
     gameViewModel: GameViewModel,
     commandZoneCards: List<CardInstance>,
     isActivePlayer: Boolean,
-    onCardAction: (CardAction) -> Unit
+    onCardAction: (CardAction) -> Unit,
+    onShowLibrary: () -> Unit,
+    onShowGraveyard: () -> Unit,
+    onShowExile: () -> Unit
 ) {
     val libraryCount = gameViewModel.getCardCount(player.id, Zone.LIBRARY)
     val graveyardCount = gameViewModel.getCardCount(player.id, Zone.GRAVEYARD)
     val exileCount = gameViewModel.getCardCount(player.id, Zone.EXILE)
 
+    // Active player gets a highlighted bar color
+    val barColor = if (isActivePlayer) Color(0xFF4CAF50) else Color(0xFF2E7D32)
+
     Surface(
-        color = Color(0xFF2E7D32),
-        modifier = Modifier.fillMaxWidth()
+        color = barColor,
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(
+                if (isActivePlayer) {
+                    Modifier.border(2.dp, Color.Yellow)
+                } else Modifier
+            )
     ) {
         Row(
             modifier = Modifier
@@ -882,21 +1463,46 @@ private fun PlayerInfoBar(
                 }
             }
 
-            // Zone counts
+            // Zone counts - tap to draw/view, long-press to open dialog
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                ZoneButton("L", libraryCount) { gameViewModel.drawCard(player.id) }
-                ZoneButton("G", graveyardCount) {}
-                ZoneButton("E", exileCount) {}
+                ZoneButton(
+                    label = "L",
+                    count = libraryCount,
+                    onClick = { gameViewModel.drawCard(player.id) },
+                    onLongClick = onShowLibrary
+                )
+                ZoneButton(
+                    label = "G",
+                    count = graveyardCount,
+                    onClick = onShowGraveyard,
+                    onLongClick = onShowGraveyard
+                )
+                ZoneButton(
+                    label = "E",
+                    count = exileCount,
+                    onClick = onShowExile,
+                    onLongClick = onShowExile
+                )
             }
         }
     }
 }
 
 @Composable
-private fun ZoneButton(label: String, count: Int, onClick: () -> Unit) {
+private fun ZoneButton(
+    label: String,
+    count: Int,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit = {}
+) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.clickable(onClick = onClick)
+        modifier = Modifier.pointerInput(Unit) {
+            detectTapGestures(
+                onTap = { onClick() },
+                onLongPress = { onLongClick() }
+            )
+        }
     ) {
         Text(count.toString(), color = Color.White, fontWeight = FontWeight.Bold)
         Text(label, color = Color.White.copy(alpha = 0.7f), fontSize = 10.sp)
@@ -908,23 +1514,48 @@ private fun HandStrip(
     handCards: List<CardInstance>,
     onCardClick: (CardInstance) -> Unit,
     onCardLongPress: (CardInstance) -> Unit,
-    onCardAction: (CardAction) -> Unit,
+    onViewHand: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     Surface(
         color = Color(0xFF1565C0),
         modifier = modifier
     ) {
-        LazyRow(
-            horizontalArrangement = Arrangement.spacedBy((-20).dp),
-            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-            modifier = Modifier.fillMaxSize()
-        ) {
-            items(handCards) { card ->
-                HandCard(
-                    cardInstance = card,
-                    onClick = { onCardClick(card) },
-                    onLongClick = { onCardLongPress(card) }
+        Box(modifier = Modifier.fillMaxSize()) {
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy((-20).dp),
+                contentPadding = PaddingValues(start = 8.dp, end = 50.dp, top = 4.dp, bottom = 4.dp),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .pointerInput(Unit) {
+                        detectTapGestures(
+                            onLongPress = { onViewHand() }
+                        )
+                    }
+            ) {
+                items(handCards) { card ->
+                    HandCard(
+                        cardInstance = card,
+                        onDoubleClick = { onCardClick(card) },
+                        onLongClick = { onCardLongPress(card) }
+                    )
+                }
+            }
+
+            // Hand count badge
+            Surface(
+                color = Color.Black.copy(alpha = 0.7f),
+                shape = RoundedCornerShape(4.dp),
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .padding(end = 8.dp)
+                    .clickable { onViewHand() }
+            ) {
+                Text(
+                    text = "${handCards.size}",
+                    color = Color.White,
+                    style = MaterialTheme.typography.labelMedium,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                 )
             }
         }
@@ -934,9 +1565,11 @@ private fun HandStrip(
 @Composable
 private fun HandCard(
     cardInstance: CardInstance,
-    onClick: () -> Unit,
+    onDoubleClick: () -> Unit,
     onLongClick: () -> Unit
 ) {
+    var lastClickTime by remember { mutableStateOf(0L) }
+
     Box(
         modifier = Modifier
             .size(width = 60.dp, height = 90.dp)
@@ -944,7 +1577,15 @@ private fun HandCard(
             .border(1.dp, Color.White, RoundedCornerShape(4.dp))
             .pointerInput(Unit) {
                 detectTapGestures(
-                    onTap = { onClick() },
+                    onTap = {
+                        val now = System.currentTimeMillis()
+                        if (now - lastClickTime < UIConstants.DOUBLE_CLICK_DELAY_MS) {
+                            onDoubleClick()
+                            lastClickTime = 0L // Reset to prevent triple-click triggering
+                        } else {
+                            lastClickTime = now
+                        }
+                    },
                     onLongPress = { onLongClick() }
                 )
             }
@@ -963,13 +1604,14 @@ private fun BottomActionBar(
     localPlayer: Player?,
     gameViewModel: GameViewModel,
     onShowDieRoller: () -> Unit,
-    onShowSetLife: () -> Unit,
     onShowTokenCreation: () -> Unit,
-    onShowPlayerCounters: () -> Unit,
-    onShowLibrary: () -> Unit,
-    onShowGraveyard: () -> Unit,
-    onShowExile: () -> Unit
+    onShowLibraryActions: () -> Unit,
+    onShowTopCardDetails: (CardInstance) -> Unit
 ) {
+    val libraryCards = localPlayer?.let { gameViewModel.getCards(it.id, Zone.LIBRARY) } ?: emptyList()
+    val topCard = libraryCards.lastOrNull()
+    val showTopCard = localPlayer?.revealTopCard == true || localPlayer?.lookAtTopCard == true
+
     Surface(
         color = MaterialTheme.colorScheme.surfaceVariant,
         modifier = Modifier.fillMaxWidth()
@@ -978,25 +1620,91 @@ private fun BottomActionBar(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(4.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(onClick = { activePlayer?.let { gameViewModel.passTurn() } }) {
                 Icon(Icons.Default.KeyboardArrowRight, "Pass Turn")
             }
-            IconButton(onClick = { activePlayer?.let { gameViewModel.untapAll(it.id) } }) {
+            IconButton(onClick = { localPlayer?.let { gameViewModel.untapAll(it.id) } }) {
                 Icon(Icons.Default.Refresh, "Untap All")
             }
             IconButton(onClick = { localPlayer?.let { gameViewModel.drawCard(it.id) } }) {
                 Icon(Icons.Default.Add, "Draw")
             }
             IconButton(onClick = onShowTokenCreation) {
-                Icon(Icons.Default.Create, "Token")
+                Text("🪙", fontSize = 20.sp)
             }
             IconButton(onClick = onShowDieRoller) {
-                Icon(Icons.Default.Star, "Dice")
+                Text("🎲", fontSize = 20.sp)
             }
-            IconButton(onClick = onShowLibrary) {
-                Icon(Icons.Default.Search, "Library")
+
+            // Library zone button - shows card back or top card
+            var lastClickTime by remember { mutableStateOf(0L) }
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(RoundedCornerShape(4.dp))
+                    .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(4.dp))
+                    .pointerInput(showTopCard, topCard) {
+                        detectTapGestures(
+                            onTap = {
+                                val now = System.currentTimeMillis()
+                                if (now - lastClickTime < UIConstants.DOUBLE_CLICK_DELAY_MS) {
+                                    // Double-tap: view top card details if visible
+                                    if (showTopCard && topCard != null) {
+                                        onShowTopCardDetails(topCard)
+                                    }
+                                    lastClickTime = 0L
+                                } else {
+                                    // Single tap: show library actions
+                                    onShowLibraryActions()
+                                    lastClickTime = now
+                                }
+                            },
+                            onLongPress = {
+                                if (showTopCard && topCard != null) {
+                                    onShowTopCardDetails(topCard)
+                                } else {
+                                    onShowLibraryActions()
+                                }
+                            }
+                        )
+                    }
+            ) {
+                if (showTopCard && topCard != null) {
+                    // Show top card image
+                    CardImage(
+                        imageUrl = topCard.card.imageUri,
+                        contentDescription = "Top of Library: ${topCard.card.name}",
+                        modifier = Modifier.fillMaxSize()
+                    )
+                } else {
+                    // Show card back image from Scryfall
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CardImage(
+                            imageUrl = "https://cards.scryfall.io/back.png",
+                            contentDescription = "Library",
+                            modifier = Modifier.fillMaxSize()
+                        )
+                        // Card count overlay
+                        Text(
+                            text = "${libraryCards.size}",
+                            color = Color.White,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier
+                                .background(
+                                    Color.Black.copy(alpha = 0.6f),
+                                    RoundedCornerShape(4.dp)
+                                )
+                                .padding(horizontal = 4.dp, vertical = 2.dp)
+                        )
+                    }
+                }
             }
         }
     }

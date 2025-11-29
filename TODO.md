@@ -1,9 +1,10 @@
 # Dong-A-Deuce - Development TODO
 
-**Current Version:** v3.2.0
-**Hotseat Mode:** 99% complete (fully playable!)
-**Network Mode:** 97% complete (fully playable!)
-**Last Updated:** 2025-11-28
+**Current Version:** v4.1.0-alpha
+**Desktop:** 99% complete (fully playable!)
+**Android:** 95% complete (fully playable!)
+**Network Mode:** 96% complete (fully playable!)
+**Last Updated:** 2025-11-29
 
 ---
 
@@ -95,6 +96,14 @@ These are nice-to-have features that would improve the experience but aren't req
 
 ---
 
+## Known Issues (Android)
+
+### Battlefield Drag-and-Drop
+- [ ] Dragging cards around battlefield not working on Android
+- Needs investigation - touch gestures may conflict with scroll behavior
+
+---
+
 ## Code Quality (Low Priority)
 
 ### Refactor GameScreen.kt
@@ -123,7 +132,8 @@ These are nice-to-have features that would improve the experience but aren't req
 - Life Tracking with auto-loss detection
 - Card Context Menus for all zones
 - Library Operations (draw, mill, shuffle, search, tutor, peek, mulligan)
-- Zone Viewers (Graveyard, Exile, Command Zone)
+- Zone Viewers (Graveyard, Exile, Command Zone, Sideboard)
+- Sideboard support with deck loading
 - Drag-and-Drop Battlefield with grid positioning
 - Card Images with async loading and offline cache
 - Tap/Untap cards
@@ -179,13 +189,16 @@ These are nice-to-have features that would improve the experience but aren't req
 
 | Version | Highlights |
 |---------|------------|
+| v4.1.0-alpha | Sideboard support, Android feature parity, scry/peek fix |
+| v4.0.0-alpha | Android support with KMP |
+| v3.5.0 | UI state testing suite (132 tests) |
+| v3.4.0 | Comprehensive test suite (270 tests) |
+| v3.3.0 | Reveal cards feature, view opponents' zones |
 | v3.2.0 | View Hand dialog with Cockatrice-style column layout |
 | v3.1.0 | Settings Dialog UI |
 | v3.0.0 | 120+ shortcuts, Stack Until Found, build fixes |
 | v2.27.0 | Keyboard shortcuts system (65+) |
 | v2.26.0 | Network multiplayer, player counters, game log |
-| v2.25.0 | Card cloning, die rolling |
-| v2.24.0 | Advanced library operations |
 
 ---
 

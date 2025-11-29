@@ -306,6 +306,13 @@ private fun buildMainMenuItems(
             items.add(MenuItemData("To Exile") { onAction(CardAction.ToExile(cardInstance)) })
             items.add(MenuItemData("View Details") { onAction(CardAction.ViewDetails(cardInstance)) })
         }
+
+        Zone.SIDEBOARD -> {
+            items.add(MenuItemData("To Hand") { onAction(CardAction.ToHand(cardInstance)) })
+            items.add(MenuItemData("To Battlefield") { onAction(CardAction.ToBattlefield(cardInstance)) })
+            items.add(MenuItemData("To Graveyard") { onAction(CardAction.ToGraveyard(cardInstance)) })
+            items.add(MenuItemData("View Details") { onAction(CardAction.ViewDetails(cardInstance)) })
+        }
     }
 
     return items
@@ -399,7 +406,7 @@ private fun buildMoveToMenuItems(
             items.add(MenuItemData("To Library (Bottom)") { onAction(CardAction.ToLibrary(cardInstance)) })
             items.add(MenuItemData("To Library (Position)...") { onAction(CardAction.ShowLibraryPositionDialog(cardInstance)) })
 
-            if (cardInstance.card.isLegendary && cardInstance.card.isCreature) {
+            if (cardInstance.card.canBeCommander) {
                 items.add(MenuItemData("To Command Zone") { onAction(CardAction.ToCommandZone(cardInstance)) })
             }
         }
@@ -410,7 +417,7 @@ private fun buildMoveToMenuItems(
             items.add(MenuItemData("To Library (Top)") { onAction(CardAction.ToTop(cardInstance)) })
             items.add(MenuItemData("To Library (Position)...") { onAction(CardAction.ShowLibraryPositionDialog(cardInstance)) })
 
-            if (cardInstance.card.isLegendary && cardInstance.card.isCreature) {
+            if (cardInstance.card.canBeCommander) {
                 items.add(MenuItemData("To Command Zone") { onAction(CardAction.ToCommandZone(cardInstance)) })
             }
         }
@@ -419,7 +426,7 @@ private fun buildMoveToMenuItems(
             items.add(MenuItemData("To Library (Bottom)") { onAction(CardAction.ToLibrary(cardInstance)) })
             items.add(MenuItemData("To Library (Top)") { onAction(CardAction.ToTop(cardInstance)) })
 
-            if (cardInstance.card.isLegendary && cardInstance.card.isCreature) {
+            if (cardInstance.card.canBeCommander) {
                 items.add(MenuItemData("To Command Zone") { onAction(CardAction.ToCommandZone(cardInstance)) })
             }
         }
@@ -427,7 +434,7 @@ private fun buildMoveToMenuItems(
             items.add(MenuItemData("To Graveyard") { onAction(CardAction.ToGraveyard(cardInstance)) })
             items.add(MenuItemData("To Library (Bottom)") { onAction(CardAction.ToLibrary(cardInstance)) })
 
-            if (cardInstance.card.isLegendary && cardInstance.card.isCreature) {
+            if (cardInstance.card.canBeCommander) {
                 items.add(MenuItemData("To Command Zone") { onAction(CardAction.ToCommandZone(cardInstance)) })
             }
         }
@@ -546,5 +553,9 @@ fun handleCardAction(
             listOf(action.cardInstance.instanceId),
             action.targetPlayerIds
         )
+        is CardAction.ViewHand -> {
+            // Handled in UI layer (GameScreen)
+            // Will show hand dialog
+        }
     }
 }

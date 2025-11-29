@@ -10,5 +10,6 @@ enum class Zone {
     GRAVEYARD,
     EXILE,
     COMMAND_ZONE,
-    STACK
+    STACK,
+    SIDEBOARD
 }

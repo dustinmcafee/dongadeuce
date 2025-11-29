@@ -19,6 +19,7 @@ object DeckParser {
         val lines = content.lines()
         var commander: Card? = null
         val cards = mutableListOf<Card>()
+        val sideboard = mutableListOf<Card>()
         var currentCategory = ""
         var lineNumber = 0
 
@@ -59,8 +60,13 @@ object DeckParser {
             if (currentCategory.equals("Commander", ignoreCase = true) && commander == null) {
                 require(quantity == 1) { "Commander must have quantity of 1, found $quantity on line $lineNumber" }
                 commander = card
+            } else if (currentCategory.equals("Sideboard", ignoreCase = true)) {
+                // Add to sideboard
+                repeat(quantity) {
+                    sideboard.add(card)
+                }
             } else {
-                // Add copies based on quantity
+                // Add copies based on quantity to main deck
                 repeat(quantity) {
                     cards.add(card)
                 }
@@ -75,7 +81,8 @@ object DeckParser {
         return Deck(
             name = "Imported Deck",
             commander = commander,
-            cards = cards
+            cards = cards,
+            sideboard = sideboard
         )
     }
 

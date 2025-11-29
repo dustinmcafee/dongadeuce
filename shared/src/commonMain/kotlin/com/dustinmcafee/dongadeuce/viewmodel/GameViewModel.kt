@@ -241,8 +241,21 @@ class GameViewModel(
             )
         }
 
-        // Shuffle library (simple random shuffle)
-        val shuffledInstances = cardInstances.shuffled()
+        // Sideboard cards go to sideboard zone
+        deck.sideboard.forEach { card ->
+            cardInstances.add(
+                CardInstance(
+                    card = card,
+                    ownerId = localPlayer.id,
+                    zone = Zone.SIDEBOARD
+                )
+            )
+        }
+
+        // Shuffle library (simple random shuffle) - only library cards
+        val libraryCards = cardInstances.filter { it.zone == Zone.LIBRARY }.shuffled()
+        val nonLibraryCards = cardInstances.filter { it.zone != Zone.LIBRARY }
+        val shuffledInstances = nonLibraryCards + libraryCards
 
         // Replace existing cards for this player to avoid duplicates
         val otherPlayerCards = gameState.cardInstances.filter { it.ownerId != localPlayer.id }
@@ -286,8 +299,21 @@ class GameViewModel(
                 )
             }
 
-            // Shuffle library (simple random shuffle)
-            val shuffledInstances = cardInstances.shuffled()
+            // Sideboard cards go to sideboard zone
+            deck.sideboard.forEach { card ->
+                cardInstances.add(
+                    CardInstance(
+                        card = card,
+                        ownerId = playerId,
+                        zone = Zone.SIDEBOARD
+                    )
+                )
+            }
+
+            // Shuffle library (simple random shuffle) - only library cards
+            val libraryCards = cardInstances.filter { it.zone == Zone.LIBRARY }.shuffled()
+            val nonLibraryCards = cardInstances.filter { it.zone != Zone.LIBRARY }
+            val shuffledInstances = nonLibraryCards + libraryCards
 
             // Replace existing cards for this player to avoid duplicates
             val otherPlayerCards = gameState.cardInstances.filter { it.ownerId != playerId }
@@ -2003,6 +2029,45 @@ class GameViewModel(
     }
 
     /**
+     * Reorder the top cards of a player's library (for scry and similar effects).
+     * The orderedCardIds list should be in top-to-bottom order (first = top of library).
+     * Cards not in the list remain in their current positions below the reordered cards.
+     */
+    fun reorderLibraryTop(playerId: String, orderedCardIds: List<String>) {
+        if (orderedCardIds.isEmpty()) return
+
+        // In network mode, would need to send network action (TODO: implement network support)
+        // For now, just handle locally
+
+        _uiState.update { currentState ->
+            val gameState = currentState.gameState ?: return@update currentState
+
+            // Get all library cards for this player
+            val libraryCards = gameState.cardInstances.filter { it.ownerId == playerId && it.zone == Zone.LIBRARY }.toMutableList()
+
+            // Get non-library cards
+            val nonLibraryCards = gameState.cardInstances.filter { !(it.ownerId == playerId && it.zone == Zone.LIBRARY) }
+
+            // Find the cards to reorder (these are in the orderedCardIds list)
+            val cardsToReorder = orderedCardIds.mapNotNull { id ->
+                libraryCards.find { it.instanceId == id }
+            }
+
+            // Remove the reordered cards from the library list
+            val remainingLibrary = libraryCards.filter { it.instanceId !in orderedCardIds }
+
+            // Rebuild library: remaining cards + reordered cards (reversed because orderedCardIds is top-first)
+            // Library convention: index 0 = bottom, last index = top
+            // So we add reordered cards (reversed) at the end
+            val newLibrary = remainingLibrary + cardsToReorder.reversed()
+
+            currentState.copy(
+                gameState = gameState.copy(cardInstances = nonLibraryCards + newLibrary)
+            )
+        }
+    }
+
+    /**
      * Move a card to a specific position from the top of its owner's library
      * Convention: position 1 = top (last in list), position 2 = second from top, etc.
      */
@@ -2584,6 +2649,9 @@ class GameViewModel(
             is CardAction.RemoveCounter -> action.cardInstance
             is CardAction.GiveControlTo -> action.cardInstance
             is CardAction.RevealTo -> action.cardInstance
+            is CardAction.PlayFaceDown -> action.cardInstance
+            is CardAction.ToggleFaceDown -> action.cardInstance
+            is CardAction.ToggleDoesntUntap -> action.cardInstance
             else -> return 0
         }
 
@@ -2632,6 +2700,9 @@ class GameViewModel(
                         }
                         return cardIdsToReveal.size // Return early since we handle all at once
                     }
+                    is CardAction.PlayFaceDown -> playFaceDown(card.instanceId)
+                    is CardAction.ToggleFaceDown -> toggleFaceDown(card.instanceId)
+                    is CardAction.ToggleDoesntUntap -> toggleDoesntUntap(card.instanceId)
                     else -> {}
                 }
                 actionCount++

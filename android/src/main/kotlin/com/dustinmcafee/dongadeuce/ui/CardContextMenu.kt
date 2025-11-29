@@ -162,6 +162,7 @@ private fun MainMenu(
                     SubMenuItem("Give Control") { onNavigate(BottomSheetMenuState.GIVE_CONTROL) }
                 }
 
+                MenuItem("View Hand") { onAction(CardAction.ViewHand(cardInstance.ownerId)) }
                 MenuItem("View Details") { onAction(CardAction.ViewDetails(cardInstance)) }
             }
 
@@ -213,6 +214,13 @@ private fun MainMenu(
                 MenuItem("To Exile") { onAction(CardAction.ToExile(cardInstance)) }
                 MenuItem("View Details") { onAction(CardAction.ViewDetails(cardInstance)) }
             }
+
+            Zone.SIDEBOARD -> {
+                MenuItem("To Hand") { onAction(CardAction.ToHand(cardInstance)) }
+                MenuItem("To Battlefield") { onAction(CardAction.ToBattlefield(cardInstance)) }
+                MenuItem("To Graveyard") { onAction(CardAction.ToGraveyard(cardInstance)) }
+                MenuItem("View Details") { onAction(CardAction.ViewDetails(cardInstance)) }
+            }
         }
     }
 }
@@ -255,6 +263,9 @@ private fun MoveToMenu(
     Column {
         BackMenuItem(onBack)
 
+        // Allow creatures and planeswalkers to command zone (supports house rules)
+        val canGoToCommandZone = cardInstance.card.canBeCommander
+
         when (cardInstance.zone) {
             Zone.BATTLEFIELD -> {
                 MenuItem("To Hand") { onAction(CardAction.ToHand(cardInstance)) }
@@ -264,7 +275,7 @@ private fun MoveToMenu(
                 MenuItem("To Library (Position)...") {
                     onAction(CardAction.ShowLibraryPositionDialog(cardInstance))
                 }
-                if (cardInstance.card.isLegendary && cardInstance.card.isCreature) {
+                if (canGoToCommandZone) {
                     MenuItem("To Command Zone") { onAction(CardAction.ToCommandZone(cardInstance)) }
                 }
             }
@@ -276,7 +287,7 @@ private fun MoveToMenu(
                 MenuItem("To Library (Position)...") {
                     onAction(CardAction.ShowLibraryPositionDialog(cardInstance))
                 }
-                if (cardInstance.card.isLegendary && cardInstance.card.isCreature) {
+                if (canGoToCommandZone) {
                     MenuItem("To Command Zone") { onAction(CardAction.ToCommandZone(cardInstance)) }
                 }
             }
@@ -284,19 +295,22 @@ private fun MoveToMenu(
                 MenuItem("To Exile") { onAction(CardAction.ToExile(cardInstance)) }
                 MenuItem("To Library (Bottom)") { onAction(CardAction.ToLibrary(cardInstance)) }
                 MenuItem("To Library (Top)") { onAction(CardAction.ToTop(cardInstance)) }
-                if (cardInstance.card.isLegendary && cardInstance.card.isCreature) {
+                if (canGoToCommandZone) {
                     MenuItem("To Command Zone") { onAction(CardAction.ToCommandZone(cardInstance)) }
                 }
             }
             Zone.EXILE -> {
                 MenuItem("To Graveyard") { onAction(CardAction.ToGraveyard(cardInstance)) }
                 MenuItem("To Library (Bottom)") { onAction(CardAction.ToLibrary(cardInstance)) }
-                if (cardInstance.card.isLegendary && cardInstance.card.isCreature) {
+                if (canGoToCommandZone) {
                     MenuItem("To Command Zone") { onAction(CardAction.ToCommandZone(cardInstance)) }
                 }
             }
             Zone.LIBRARY -> {
                 MenuItem("To Top of Library") { onAction(CardAction.ToTop(cardInstance)) }
+                if (canGoToCommandZone) {
+                    MenuItem("To Command Zone") { onAction(CardAction.ToCommandZone(cardInstance)) }
+                }
             }
             else -> {}
         }

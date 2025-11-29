@@ -23,4 +23,11 @@ data class Card(
 
     val isCreature: Boolean
         get() = type?.contains("Creature", ignoreCase = true) == true
+
+    val isPlaneswalker: Boolean
+        get() = type?.contains("Planeswalker", ignoreCase = true) == true
+
+    /** Can be used as a commander (creature or planeswalker for house rules) */
+    val canBeCommander: Boolean
+        get() = isCreature || isPlaneswalker
 }

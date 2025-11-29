@@ -6,7 +6,8 @@ import kotlinx.serialization.Serializable
 data class Deck(
     val name: String,
     val commander: Card,
-    val cards: List<Card> // Should be exactly 99 cards for Commander
+    val cards: List<Card>, // Should be exactly 99 cards for Commander
+    val sideboard: List<Card> = emptyList() // Optional sideboard (typically 15 cards max)
 ) {
     init {
         require(cards.size == GameConstants.DECK_SIZE) {

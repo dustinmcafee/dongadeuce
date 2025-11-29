@@ -1,6 +1,5 @@
 package com.dustinmcafee.dongadeuce.ui.theme
 
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
@@ -22,13 +21,32 @@ private val DarkColorScheme = darkColorScheme(
     onError = Color.Black
 )
 
+private val LightColorScheme = lightColorScheme(
+    primary = Color(0xFF1976D2),
+    onPrimary = Color.White,
+    secondary = Color(0xFF7B1FA2),
+    onSecondary = Color.White,
+    tertiary = Color(0xFF00796B),
+    onTertiary = Color.White,
+    background = Color(0xFFFAFAFA),
+    onBackground = Color.Black,
+    surface = Color.White,
+    onSurface = Color.Black,
+    surfaceVariant = Color(0xFFE0E0E0),
+    onSurfaceVariant = Color(0xFF424242),
+    error = Color(0xFFB00020),
+    onError = Color.White
+)
+
 @Composable
 fun DongAdeuceTheme(
-    darkTheme: Boolean = true, // Always dark theme for game
+    darkTheme: Boolean = true,
     content: @Composable () -> Unit
 ) {
+    val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
+
     MaterialTheme(
-        colorScheme = DarkColorScheme,
+        colorScheme = colorScheme,
         typography = Typography(),
         content = content
     )
