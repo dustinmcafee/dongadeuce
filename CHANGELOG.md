@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.0.0-alpha] - 2025-11-29
+
+### Added
+- **Android Support** - Initial Android build with Kotlin Multiplatform
+  - Full hotseat gameplay on Android devices
+  - Touch-friendly UI with Compose Multiplatform
+  - Card cache download and deck loading working on Android
+
+### Changed
+- **Memory-Efficient Card Cache** - Complete rewrite for mobile compatibility
+  - Streaming download using `HttpURLConnection` to bypass Ktor buffering (fixes OOM on 500MB download)
+  - Single-pass card lookup algorithm: O(n) instead of O(n×m)
+  - Card search now completes in seconds instead of 7+ minutes
+  - Minimal GC pressure with reusable buffers and StringBuilder
+  - Platform-specific `FileInputStream`/`FileOutputStream` for streaming I/O
+
+### Technical Details
+- Added `expect/actual` pattern for platform-specific file streaming
+- `streamingDownload()` function uses 64KB buffer for constant memory usage
+- `findCardsInFile()` extracts JSON objects on-the-fly with HashSet lookup
+- Debug logging behind `CardCache.DEBUG` flag for troubleshooting
+- Android heap limit (~256MB) no longer a constraint for card operations
+
 ## [3.5.0] - 2025-11-28
 
 ### Added

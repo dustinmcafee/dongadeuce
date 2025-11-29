@@ -188,9 +188,10 @@ fun MenuScreen(
                         modifier = Modifier.padding(16.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
+                        val deck = uiState.loadedDeck
                         Text("Deck Loaded", style = MaterialTheme.typography.labelMedium)
-                        Text(uiState.loadedDeck.commander.name, style = MaterialTheme.typography.titleMedium)
-                        Text("${uiState.loadedDeck.totalCards} cards", style = MaterialTheme.typography.bodySmall)
+                        Text(deck?.commander?.name ?: "", style = MaterialTheme.typography.titleMedium)
+                        Text("${deck?.totalCards ?: 0} cards", style = MaterialTheme.typography.bodySmall)
                     }
                 }
             }
@@ -282,9 +283,10 @@ fun MenuScreen(
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        if (uiState.cacheLastUpdated != null) {
+                        val cacheTimestamp = uiState.cacheLastUpdated
+                        if (cacheTimestamp != null) {
                             val lastUpdated = java.text.SimpleDateFormat("MMM dd, yyyy").format(
-                                java.util.Date(uiState.cacheLastUpdated)
+                                java.util.Date(cacheTimestamp)
                             )
                             Text(
                                 "Last updated: $lastUpdated",
