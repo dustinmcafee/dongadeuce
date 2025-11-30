@@ -1,6 +1,6 @@
 # Dong-A-Deuce - Development TODO
 
-**Current Version:** v4.5.1
+**Current Version:** v4.5.2
 **Desktop:** 99% complete (fully playable!)
 **Android:** 97% complete (fully playable!)
 **Network Mode:** 96% complete (fully playable!)
@@ -17,6 +17,7 @@ Dong-A-Deuce is a **fully functional multiplayer Commander game** with:
 - Card images from Scryfall with offline cache
 - Settings persistence
 - Game log with chat
+- Persistent card viewer (Desktop)
 
 ---
 
@@ -34,16 +35,16 @@ These features have been evaluated and won't be implemented:
 
 ---
 
-## High Priority
+## Recently Completed
 
-### Persistent Card Viewer
-**Effort:** 1-2 days
+### Persistent Card Viewer (Desktop) ✅
+**Completed:** v4.5.2
 
-- [ ] Create persistent card viewer composable showing last interacted/hovered card
-- [ ] Display enlarged card image in fixed position (e.g., bottom-left corner)
-- [ ] Update on card click, right-click, or mouse hover
-- [ ] Show card details (oracle text, P/T, counters) alongside image
-- [ ] Works on both Desktop (hover) and Android (tap)
+- [x] Create persistent card viewer composable showing last hovered card
+- [x] Display enlarged card image in sidebar (between turn indicator and game log)
+- [x] Update on card hover (battlefield and hand cards)
+- [x] Tabs to switch between Image and Text views
+- [ ] Android version (future enhancement)
 
 ---
 

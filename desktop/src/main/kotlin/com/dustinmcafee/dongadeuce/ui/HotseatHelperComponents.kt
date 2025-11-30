@@ -296,7 +296,8 @@ fun CompactHandStrip(
     viewModel: GameViewModel? = null,
     selectionState: SelectionState? = null,
     allPlayers: List<Player> = emptyList(),
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onCardFocus: ((CardInstance) -> Unit)? = null
 ) {
     // State for right-click context menu and View Hand dialog
     var showContextMenu by remember { mutableStateOf(false) }
@@ -446,7 +447,8 @@ fun CompactHandStrip(
                                                     draggedHandCardIds = draggedIds
                                                     handDragOffset = offset
                                                 },
-                                                allPlayers = allPlayers
+                                                allPlayers = allPlayers,
+                                                onCardFocus = onCardFocus
                                             )
                                         }
                                     }

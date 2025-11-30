@@ -1122,7 +1122,8 @@ fun HandCardDisplay(
     sharedDraggedCardIds: Set<String> = emptySet(),
     sharedDragOffset: Offset = Offset.Zero,
     onDragStateChange: (Set<String>, Offset) -> Unit = { _, _ -> },
-    allPlayers: List<Player> = emptyList()
+    allPlayers: List<Player> = emptyList(),
+    onCardFocus: ((CardInstance) -> Unit)? = null
 ) {
     var lastClickTime by remember { mutableStateOf(0L) }
     val isSelected = selectionState?.isSelected(cardInstance.instanceId) == true
@@ -1133,7 +1134,18 @@ fun HandCardDisplay(
         onAction = onContextAction,
         allPlayers = allPlayers
     ) {
-        Box {
+        Box(
+            modifier = Modifier.pointerInput(cardInstance.instanceId) {
+                awaitPointerEventScope {
+                    while (true) {
+                        val event = awaitPointerEvent(PointerEventPass.Initial)
+                        if (event.type == PointerEventType.Enter) {
+                            onCardFocus?.invoke(cardInstance)
+                        }
+                    }
+                }
+            }
+        ) {
             Card(
                 modifier = Modifier
                     .width(UIConstants.HAND_CARD_WIDTH)

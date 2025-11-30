@@ -49,7 +49,8 @@ fun DraggableBattlefieldGrid(
     allPlayers: List<com.dustinmcafee.dongadeuce.models.Player> = emptyList(),
     dragDropState: DragDropState? = null,
     onDropToZone: ((Set<String>, com.dustinmcafee.dongadeuce.models.Zone) -> Unit)? = null,
-    invertRows: Boolean = false // True if this battlefield is across from viewer (flip row order)
+    invertRows: Boolean = false, // True if this battlefield is across from viewer (flip row order)
+    onCardFocus: ((CardInstance) -> Unit)? = null // Callback when card is hovered
 ) {
     if (cards.isEmpty()) {
         Box(
@@ -485,7 +486,8 @@ fun DraggableBattlefieldGrid(
                             selectionState = selectionState,
                             allPlayers = allPlayers,
                             ownerName = allPlayers.firstOrNull { it.id == card.ownerId }?.name ?: "",
-                            cardSize = dynamicCardSize
+                            cardSize = dynamicCardSize,
+                            onCardFocus = onCardFocus
                         )
                     }
             }

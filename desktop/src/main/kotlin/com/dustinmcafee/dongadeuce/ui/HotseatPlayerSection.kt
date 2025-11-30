@@ -32,7 +32,8 @@ fun HotseatPlayerSection(
     allPlayers: List<Player> = emptyList(),
     modifier: Modifier = Modifier,
     inverted: Boolean = false, // If true, hand at bottom; if false, hand at top
-    isLocalPlayer: Boolean = isActivePlayer // Defaults to isActivePlayer for hotseat mode compatibility
+    isLocalPlayer: Boolean = isActivePlayer, // Defaults to isActivePlayer for hotseat mode compatibility
+    onCardFocus: ((CardInstance) -> Unit)? = null // Callback when card is hovered for persistent viewer
 ) {
     // Show hand cards if this is the local player (in network mode) or active player (in hotseat mode)
     val handCards = if (isLocalPlayer) viewModel.getCards(player.id, Zone.HAND) else emptyList()
@@ -83,7 +84,8 @@ fun HotseatPlayerSection(
                     viewModel = viewModel,
                     selectionState = selectionState,
                     allPlayers = allPlayers,
-                    modifier = Modifier.fillMaxWidth().height(100.dp)
+                    modifier = Modifier.fillMaxWidth().height(100.dp),
+                    onCardFocus = onCardFocus
                 )
             } else {
                 // Minimal hand count indicator for opponents
@@ -164,7 +166,8 @@ fun HotseatPlayerSection(
                             }
                         } else null,
                         // Invert rows for opponents across from us (at top of screen, inverted=false)
-                        invertRows = !inverted
+                        invertRows = !inverted,
+                        onCardFocus = onCardFocus
                     )
                 }
             }
@@ -183,7 +186,8 @@ fun HotseatPlayerSection(
                     viewModel = viewModel,
                     selectionState = selectionState,
                     allPlayers = allPlayers,
-                    modifier = Modifier.fillMaxWidth().height(100.dp)
+                    modifier = Modifier.fillMaxWidth().height(100.dp),
+                    onCardFocus = onCardFocus
                 )
             } else {
                 // Minimal hand count indicator for opponents

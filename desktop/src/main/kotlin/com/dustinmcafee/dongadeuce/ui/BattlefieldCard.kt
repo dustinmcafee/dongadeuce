@@ -37,7 +37,8 @@ fun BattlefieldCard(
     modifier: Modifier = Modifier,
     allPlayers: List<com.dustinmcafee.dongadeuce.models.Player> = emptyList(),
     ownerName: String = "",
-    cardSize: Float = BATTLEFIELD_CARD_TAPPED_SIZE.value // Dynamic card size in dp
+    cardSize: Float = BATTLEFIELD_CARD_TAPPED_SIZE.value, // Dynamic card size in dp
+    onCardFocus: ((CardInstance) -> Unit)? = null // Callback for hover/focus
 ) {
     var lastClickTime by remember { mutableStateOf(0L) }
     val isSelected = selectionState?.isSelected(cardInstance.instanceId) == true
@@ -69,7 +70,18 @@ fun BattlefieldCard(
     val showOwnerTag = cardInstance.ownerId != cardInstance.controllerId && ownerName.isNotEmpty()
 
     Box(
-        modifier = modifier.then(containerSize),
+        modifier = modifier
+            .then(containerSize)
+            .pointerInput(cardInstance.instanceId) {
+                awaitPointerEventScope {
+                    while (true) {
+                        val event = awaitPointerEvent(PointerEventPass.Initial)
+                        if (event.type == PointerEventType.Enter) {
+                            onCardFocus?.invoke(cardInstance)
+                        }
+                    }
+                }
+            },
         contentAlignment = Alignment.Center
     ) {
         CardWithContextMenu(

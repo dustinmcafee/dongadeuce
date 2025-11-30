@@ -31,6 +31,7 @@ fun GameScreen(
 ) {
     val dragDropState = rememberDragDropState()
     val selectionState = rememberSelectionState()
+    val focusedCardState = rememberFocusedCardState()
 
     val uiState by viewModel.uiState.collectAsState()
     val revealedCardsState by viewModel.revealedCardsState.collectAsState()
@@ -280,7 +281,8 @@ fun GameScreen(
                                     dragDropState = dragDropState,
                                     selectionState = selectionState,
                                     allPlayers = rotatedPlayers,
-                                    modifier = Modifier.fillMaxWidth().weight(1f)
+                                    modifier = Modifier.fillMaxWidth().weight(1f),
+                                    onCardFocus = { focusedCardState.updateFocusedCard(it) }
                                 )
                                 HotseatPlayerSection(
                                     player = rotatedPlayers[0],
@@ -292,7 +294,8 @@ fun GameScreen(
                                     selectionState = selectionState,
                                     allPlayers = rotatedPlayers,
                                     modifier = Modifier.fillMaxWidth().weight(1f),
-                                    inverted = true
+                                    inverted = true,
+                                    onCardFocus = { focusedCardState.updateFocusedCard(it) }
                                 )
                             }
                             3 -> {
@@ -469,39 +472,47 @@ fun GameScreen(
                         }
                     }
                 }
-        }
+            }
 
-        // Right sidebar with Turn indicator and Game Log
-        val gameState = uiState.gameState
-        if (gameState != null) {
-            Column(
-                modifier = Modifier.width(280.dp).fillMaxHeight(),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                // Turn indicator at top
-                TurnIndicator(
-                    activePlayer = gameState.activePlayer,
-                    currentPhase = gameState.phase,
-                    turnNumber = gameState.turnNumber,
-                    onNextPhase = { viewModel.nextPhase() },
-                    onPassTurn = { viewModel.passTurn() },
-                    onUntapAll = { viewModel.untapAll(gameState.activePlayer.id) },
-                    onRollDice = { showDieRollerDialog = true },
-                    modifier = Modifier.fillMaxWidth()
-                )
+            // Right sidebar with Turn indicator and Game Log
+            val sidebarGameState = uiState.gameState
+            if (sidebarGameState != null) {
+                Column(
+                    modifier = Modifier.width(280.dp).fillMaxHeight(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    // Turn indicator at top
+                    TurnIndicator(
+                        activePlayer = sidebarGameState.activePlayer,
+                        currentPhase = sidebarGameState.phase,
+                        turnNumber = sidebarGameState.turnNumber,
+                        onNextPhase = { viewModel.nextPhase() },
+                        onPassTurn = { viewModel.passTurn() },
+                        onUntapAll = { viewModel.untapAll(sidebarGameState.activePlayer.id) },
+                        onRollDice = { showDieRollerDialog = true },
+                        modifier = Modifier.fillMaxWidth()
+                    )
 
-                // Game log panel fills remaining space
-                GameLogPanel(
-                    gameLog = gameState.gameLog,
-                    players = gameState.players,
-                    onSendMessage = { message ->
-                        viewModel.sendChatMessage(gameState.activePlayer.id, message)
-                    },
-                    modifier = Modifier.fillMaxWidth().weight(1f)
-                )
+                    // Persistent card viewer in sidebar
+                    PersistentCardViewer(
+                        cardInstance = focusedCardState.focusedCard,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 350.dp)
+                    )
+
+                    // Game log panel fills remaining space
+                    GameLogPanel(
+                        gameLog = sidebarGameState.gameLog,
+                        players = sidebarGameState.players,
+                        onSendMessage = { message ->
+                            viewModel.sendChatMessage(sidebarGameState.activePlayer.id, message)
+                        },
+                        modifier = Modifier.fillMaxWidth().weight(1f)
+                    )
+                }
             }
         }
-    }
 
     // Card details dialog
     cardDetailsToShow?.let { cardInstance ->

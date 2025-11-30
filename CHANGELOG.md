@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.5.2] - 2025-11-30
+
+### Added
+- **Persistent card viewer (Desktop)** - Sidebar card viewer shows enlarged card image when hovering over cards
+  - Located in right sidebar between turn indicator and game log
+  - Tabs to switch between Image and Text views
+  - Hover over battlefield or hand cards to preview
+
+### Fixed
+- **Desktop layout structure** - Sidebar now properly positioned as sibling to main content in Row layout
+  - Main game area and sidebar display correctly side-by-side
+  - Fixes issue where game content wasn't rendering
+
 ## [4.5.1] - 2025-11-30
 
 ### Added
