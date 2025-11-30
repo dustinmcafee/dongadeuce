@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 fun OpponentsArea(
     opponents: List<Player>,
     viewModel: GameViewModel,
+    gameState: GameState?,
     onCardAction: (CardAction) -> Unit,
     modifier: Modifier = Modifier,
     selectionState: SelectionState? = null,
@@ -29,10 +30,10 @@ fun OpponentsArea(
             OpponentArea(
                 player = opponents[0],
                 viewModel = viewModel,
+                gameState = gameState,
                 onCardAction = onCardAction,
                 modifier = modifier,
                 selectionState = selectionState,
-                otherPlayers = allPlayers.filter { it.id != opponents[0].id },
                 allPlayers = allPlayers
             )
         }
@@ -45,19 +46,19 @@ fun OpponentsArea(
                 OpponentArea(
                     player = opponents[0],
                     viewModel = viewModel,
+                    gameState = gameState,
                     onCardAction = onCardAction,
                     modifier = Modifier.weight(1f),
                     selectionState = selectionState,
-                    otherPlayers = allPlayers.filter { it.id != opponents[0].id },
                     allPlayers = allPlayers
                 )
                 OpponentArea(
                     player = opponents[1],
                     viewModel = viewModel,
+                    gameState = gameState,
                     onCardAction = onCardAction,
                     modifier = Modifier.weight(1f),
                     selectionState = selectionState,
-                    otherPlayers = allPlayers.filter { it.id != opponents[1].id },
                     allPlayers = allPlayers
                 )
             }
@@ -72,10 +73,10 @@ fun OpponentsArea(
                     OpponentArea(
                         player = opponent,
                         viewModel = viewModel,
+                        gameState = gameState,
                         onCardAction = onCardAction,
                         modifier = Modifier.weight(1f),
                         selectionState = selectionState,
-                        otherPlayers = allPlayers.filter { it.id != opponent.id },
                         allPlayers = allPlayers
                     )
                 }
@@ -92,10 +93,10 @@ fun OpponentsArea(
                     OpponentArea(
                         player = opponent,
                         viewModel = viewModel,
+                        gameState = gameState,
                         onCardAction = onCardAction,
                         modifier = Modifier.weight(1f),
                         selectionState = selectionState,
-                        otherPlayers = allPlayers.filter { it.id != opponent.id },
                         allPlayers = allPlayers
                     )
                 }
@@ -112,10 +113,10 @@ fun OpponentsArea(
 fun OpponentArea(
     player: Player,
     viewModel: GameViewModel,
+    gameState: GameState?,
     onCardAction: (CardAction) -> Unit,
     modifier: Modifier = Modifier,
     selectionState: SelectionState? = null,
-    otherPlayers: List<Player> = emptyList(),
     allPlayers: List<Player> = emptyList()
 ) {
     var showGraveyardDialog by remember { mutableStateOf(false) }
@@ -127,6 +128,11 @@ fun OpponentArea(
     val exileCount = viewModel.getCardCount(player.id, Zone.EXILE)
     val commanderCount = viewModel.getCardCount(player.id, Zone.COMMAND_ZONE)
     val battlefieldCards = viewModel.getCards(player.id, Zone.BATTLEFIELD)
+
+    // Compute grid positions for this opponent's battlefield (single source of truth)
+    val gridPositions = remember(gameState, player.id) {
+        gameState?.computeBattlefieldPositions(player.id) ?: emptyMap()
+    }
 
     // Show graveyard dialog if requested
     if (showGraveyardDialog) {
@@ -236,6 +242,7 @@ fun OpponentArea(
         ) {
             DraggableBattlefieldGrid(
                 cards = battlefieldCards,
+                gridPositions = gridPositions,
                 isLocalPlayer = false,
                 onCardClick = { viewModel.toggleTap(it.instanceId) },
                 onContextAction = onCardAction,
@@ -245,7 +252,6 @@ fun OpponentArea(
                 modifier = Modifier.fillMaxSize().padding(8.dp),
                 selectionState = selectionState,
                 currentPlayerId = null, // Opponent cards cannot be dragged
-                otherPlayers = otherPlayers,
                 allPlayers = allPlayers
             )
         }

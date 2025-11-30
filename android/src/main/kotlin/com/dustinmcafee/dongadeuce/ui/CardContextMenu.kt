@@ -32,11 +32,15 @@ enum class BottomSheetMenuState {
 @Composable
 fun CardContextMenuBottomSheet(
     cardInstance: CardInstance,
-    otherPlayers: List<Player>,
+    allPlayers: List<Player>,
     onAction: (CardAction) -> Unit,
     onDismiss: () -> Unit
 ) {
     var menuState by remember { mutableStateOf(BottomSheetMenuState.MAIN) }
+
+    // For "Give Control", exclude the current controller (not just the local player)
+    // This allows giving control back to the original owner
+    val otherPlayers = allPlayers.filter { it.id != cardInstance.controllerId }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,

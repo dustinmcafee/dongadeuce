@@ -175,24 +175,25 @@ class GameServer(
                                 }
 
                                 // Assign player ID and register
-                                playerId = generateUUID()
+                                val newPlayerId = generateUUID()
+                                playerId = newPlayerId
                                 mutex.withLock {
-                                    clients[playerId!!] = session
+                                    clients[newPlayerId] = session
 
                                     // Generate unique name if there's a duplicate
                                     val uniqueName = generateUniqueName(message.playerName)
 
-                                    players[playerId!!] = LobbyPlayer(
-                                        id = playerId!!,
+                                    players[newPlayerId] = LobbyPlayer(
+                                        id = newPlayerId,
                                         name = uniqueName,
                                         hasDeck = true,
                                         isReady = false,
                                         isHost = false
                                     )
-                                    playerDecks[playerId!!] = message.deck
+                                    playerDecks[newPlayerId] = message.deck
 
                                     // Confirm join to the player with the (possibly modified) unique name
-                                    sendTo(session, GameMessage.PlayerJoined(playerId!!, uniqueName))
+                                    sendTo(session, GameMessage.PlayerJoined(newPlayerId, uniqueName))
                                 }
 
                                 // Broadcast updated lobby state
@@ -564,6 +565,18 @@ class GameServer(
                 }
             }
 
+            // GiveControlTo - verify the player controls the card (not just owns it)
+            is NetworkAction.GiveControlTo -> {
+                val card = state.cardInstances.find { it.instanceId == action.cardId }
+                if (card == null) {
+                    ValidationResult(false, "Card not found")
+                } else if (card.controllerId != playerId) {
+                    ValidationResult(false, "You don't control this card")
+                } else {
+                    ValidationResult(true)
+                }
+            }
+
             // Player-specific actions
             is NetworkAction.UpdateLife,
             is NetworkAction.AddPlayerCounter,
@@ -615,7 +628,13 @@ class GameServer(
             is NetworkAction.MoveCard -> {
                 val card = state.cardInstances.find { it.instanceId == action.cardId } ?: return state
                 val oldZone = card.zone
-                val event = if (action.targetZone == Zone.BATTLEFIELD) {
+
+                // Tokens and clones cease to exist when they leave the battlefield
+                val shouldRemove = (card.isToken || card.isClone) &&
+                    oldZone == Zone.BATTLEFIELD &&
+                    action.targetZone != Zone.BATTLEFIELD
+
+                val event = if (action.targetZone == Zone.BATTLEFIELD && oldZone != Zone.BATTLEFIELD) {
                     GameEvent.CardPlayed(
                         playerId = playerId,
                         playerName = player.name,
@@ -631,9 +650,43 @@ class GameServer(
                         toZone = action.targetZone
                     )
                 }
-                state.updateCardInstance(action.cardId) {
-                    it.moveToZone(action.targetZone)
-                }.addEvent(event)
+
+                if (shouldRemove) {
+                    // Remove the token/clone from the game entirely
+                    state.copy(
+                        cardInstances = state.cardInstances.filter { it.instanceId != action.cardId }
+                    ).addEvent(event)
+                } else {
+                    state.updateCardInstance(action.cardId) { c ->
+                        var updated = c.moveToZone(action.targetZone)
+
+                        // Reset battlefield-specific state when leaving battlefield
+                        if (oldZone == Zone.BATTLEFIELD && action.targetZone != Zone.BATTLEFIELD) {
+                            updated = updated.copy(
+                                counters = emptyMap(),
+                                powerModifier = 0,
+                                toughnessModifier = 0,
+                                isTapped = false,
+                                isFlipped = false,
+                                doesntUntap = false,
+                                attachedTo = null,
+                                // Control reverts to owner when leaving battlefield (MTG rules)
+                                controllerId = c.ownerId
+                            )
+                        }
+
+                        // Assign grid position when entering battlefield
+                        if (action.targetZone == Zone.BATTLEFIELD && oldZone != Zone.BATTLEFIELD) {
+                            val (gridX, gridY) = state.findNextGridPosition(c.controllerId, excludeCardId = action.cardId)
+                            updated = updated.copy(
+                                placedTimestamp = currentTimeMillis(),
+                                gridX = gridX,
+                                gridY = gridY
+                            )
+                        }
+                        updated
+                    }.addEvent(event)
+                }
             }
 
             is NetworkAction.ToggleTap -> {
@@ -936,6 +989,8 @@ class GameServer(
                 val card = state.cardInstances.find { it.instanceId == action.cardId } ?: return state
                 val fromPlayer = state.players.find { it.id == card.controllerId } ?: return state
                 val toPlayer = state.players.find { it.id == action.newControllerId } ?: return state
+                // Get new grid position for the new controller's battlefield
+                val (gridX, gridY) = state.findNextGridPosition(action.newControllerId, excludeCardId = action.cardId)
                 val event = GameEvent.ControlChanged(
                     playerId = fromPlayer.id,
                     playerName = fromPlayer.name,
@@ -944,6 +999,7 @@ class GameServer(
                 )
                 state.updateCardInstance(action.cardId) {
                     it.changeController(action.newControllerId).moveToZone(Zone.BATTLEFIELD)
+                        .copy(gridX = gridX, gridY = gridY, placedTimestamp = currentTimeMillis())
                 }.addEvent(event)
             }
 
@@ -1026,11 +1082,15 @@ class GameServer(
             }
 
             is NetworkAction.PlayFaceDown -> {
-                state.updateCardInstance(action.cardId) { card ->
-                    card.copy(
+                val card = state.cardInstances.find { it.instanceId == action.cardId } ?: return state
+                val (gridX, gridY) = state.findNextGridPosition(card.controllerId, excludeCardId = action.cardId)
+                state.updateCardInstance(action.cardId) { c ->
+                    c.copy(
                         isFaceDown = true,
                         zone = Zone.BATTLEFIELD,
-                        placedTimestamp = currentTimeMillis()
+                        placedTimestamp = currentTimeMillis(),
+                        gridX = gridX,
+                        gridY = gridY
                     )
                 }
             }
@@ -1268,12 +1328,20 @@ class GameServer(
                     imageUri = action.imageUri,
                     scryfallId = null
                 )
+                // Create tokens with grid positions
+                var tempState = state
                 val tokenInstances = List(action.quantity) {
-                    CardInstance(
+                    val (gridX, gridY) = tempState.findNextGridPosition(action.playerId)
+                    val token = CardInstance(
                         card = tokenCard,
                         ownerId = action.playerId,
-                        zone = Zone.BATTLEFIELD
+                        zone = Zone.BATTLEFIELD,
+                        gridX = gridX,
+                        gridY = gridY,
+                        isToken = true
                     )
+                    tempState = tempState.copy(cardInstances = tempState.cardInstances + token)
+                    token
                 }
                 val event = GameEvent.TokenCreated(
                     playerId = action.playerId,
@@ -1287,8 +1355,16 @@ class GameServer(
             is NetworkAction.CloneCard -> {
                 val targetPlayer = state.players.find { it.id == action.newOwnerId } ?: return state
                 val originalCard = state.cardInstances.find { it.instanceId == action.cardId } ?: return state
+                // Create clones with grid positions if going to battlefield
+                var tempState = state
                 val clones = List(action.quantity) {
-                    originalCard.createClone(action.newOwnerId, action.targetZone)
+                    var clone = originalCard.createClone(action.newOwnerId, action.targetZone)
+                    if (action.targetZone == Zone.BATTLEFIELD) {
+                        val (gridX, gridY) = tempState.findNextGridPosition(action.newOwnerId)
+                        clone = clone.copy(gridX = gridX, gridY = gridY)
+                        tempState = tempState.copy(cardInstances = tempState.cardInstances + clone)
+                    }
+                    clone
                 }
                 val event = GameEvent.CardCloned(
                     playerId = action.newOwnerId,
@@ -1312,8 +1388,18 @@ class GameServer(
             }
 
             is NetworkAction.UpdateCardGridPosition -> {
-                state.updateCardInstance(action.cardId) { card ->
-                    card.setGridPosition(action.gridX, action.gridY)
+                val card = state.cardInstances.find { it.instanceId == action.cardId } ?: return state
+                // Check if target position already has 3 cards (max stack size)
+                val positions = state.computeBattlefieldPositions(card.controllerId)
+                val targetPos = Pair(action.gridX, action.gridY)
+                val cardsAtTarget = positions.count { (id, pos) -> id != action.cardId && pos == targetPos }
+                if (cardsAtTarget >= 3) {
+                    // Don't allow stacking more than 3 - keep card at current position
+                    state
+                } else {
+                    state.updateCardInstance(action.cardId) { c ->
+                        c.setGridPosition(action.gridX, action.gridY)
+                    }
                 }
             }
         }

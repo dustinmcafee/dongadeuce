@@ -17,7 +17,7 @@ import com.dustinmcafee.dongadeuce.models.Zone
 fun LibraryOperationsDialog(
     playerName: String,
     librarySize: Int,
-    otherPlayers: List<Player> = emptyList(),
+    allPlayers: List<Player> = emptyList(),
     onDismiss: () -> Unit,
     onViewTopCards: (Int) -> Unit,
     onViewBottomCards: (Int) -> Unit,
@@ -130,7 +130,7 @@ fun LibraryOperationsDialog(
                 }
 
                 // Reveal Top/Bottom N cards with player selection
-                if (otherPlayers.isNotEmpty()) {
+                if (allPlayers.size > 1) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -158,7 +158,7 @@ fun LibraryOperationsDialog(
                                         onDismiss()
                                     }
                                 )
-                                otherPlayers.forEach { player ->
+                                allPlayers.forEach { player ->
                                     DropdownMenuItem(
                                         text = { Text("Reveal to ${player.name}") },
                                         onClick = {
@@ -195,7 +195,7 @@ fun LibraryOperationsDialog(
                                         onDismiss()
                                     }
                                 )
-                                otherPlayers.forEach { player ->
+                                allPlayers.forEach { player ->
                                     DropdownMenuItem(
                                         text = { Text("Reveal to ${player.name}") },
                                         onClick = {

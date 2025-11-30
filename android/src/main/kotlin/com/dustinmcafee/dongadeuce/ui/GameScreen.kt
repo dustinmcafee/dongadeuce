@@ -44,7 +44,7 @@ import com.dustinmcafee.dongadeuce.viewmodel.MenuUiState
 fun AndroidGameScreen(
     menuViewModel: AndroidMenuViewModel,
     uiState: MenuUiState,
-    gameViewModel: GameViewModel = remember { GameViewModel() }
+    gameViewModel: GameViewModel
 ) {
     val gameUiState by gameViewModel.uiState.collectAsState()
     val revealedCardsState by gameViewModel.revealedCardsState.collectAsState()
@@ -280,6 +280,7 @@ fun AndroidGameScreen(
                     localPlayer?.let { player ->
                         LocalPlayerSection(
                             player = player,
+                            gameState = gameState,
                             gameViewModel = gameViewModel,
                             isActivePlayer = player.id == activePlayer?.id,
                             onCardAction = handleAction,
@@ -336,7 +337,7 @@ fun AndroidGameScreen(
         if (showContextMenu) {
             CardContextMenuBottomSheet(
                 cardInstance = card,
-                otherPlayers = allPlayers.filter { it.id != localPlayer?.id },
+                allPlayers = allPlayers,
                 onAction = handleAction,
                 onDismiss = {
                     showContextMenu = false
@@ -994,6 +995,7 @@ private fun SmallBattlefieldCard(
 @Composable
 private fun LocalPlayerSection(
     player: Player,
+    gameState: GameState?,
     gameViewModel: GameViewModel,
     isActivePlayer: Boolean,
     onCardAction: (CardAction) -> Unit,
@@ -1008,6 +1010,11 @@ private fun LocalPlayerSection(
     val battlefieldCards = gameViewModel.getCards(player.id, Zone.BATTLEFIELD)
     val handCards = gameViewModel.getCards(player.id, Zone.HAND)
     val commandZoneCards = gameViewModel.getCards(player.id, Zone.COMMAND_ZONE)
+
+    // Compute grid positions for this player's battlefield
+    val gridPositions = remember(gameState, player.id) {
+        gameState?.computeBattlefieldPositions(player.id) ?: emptyMap()
+    }
 
     Column(modifier = modifier.background(Color(0xFF1B5E20))) {
         // Battlefield
@@ -1026,6 +1033,8 @@ private fun LocalPlayerSection(
             } else {
                 BattlefieldGrid(
                     cards = battlefieldCards,
+                    gridPositions = gridPositions,
+                    players = gameState?.players ?: emptyList(),
                     selectionState = selectionState,
                     onCardClick = { card ->
                         gameViewModel.toggleTap(card.instanceId)
@@ -1071,9 +1080,19 @@ private fun LocalPlayerSection(
     }
 }
 
+/**
+ * Data class to track card stacking info
+ */
+private data class CardStackInfo(
+    val gridPos: Pair<Int, Int>,
+    val stackIndex: Int  // 0 = bottom, 1 = middle, 2 = top
+)
+
 @Composable
 private fun BattlefieldGrid(
     cards: List<CardInstance>,
+    gridPositions: Map<String, Pair<Int, Int>>,
+    players: List<Player>,
     selectionState: SelectionState,
     onCardClick: (CardInstance) -> Unit,
     onCardLongPress: (CardInstance) -> Unit,
@@ -1096,26 +1115,34 @@ private fun BattlefieldGrid(
     val spacingPx = with(density) { spacing.toPx() }
     val cellSize = cardSizePx + spacingPx
 
-    // Build grid positions map - cards with gridX/gridY use those, others auto-arrange
-    val gridPositions = remember(cards) {
-        val positions = mutableMapOf<String, Pair<Int, Int>>()
-        var nextCol = 0
-        var nextRow = 0
+    // Stack offset (10% of card size for visual separation)
+    val stackOffsetPx = cardSizePx * UIConstants.STACK_OFFSET_RATIO
 
-        cards.forEach { card ->
-            if (card.gridX != null && card.gridY != null) {
-                positions[card.instanceId] = Pair(card.gridX!!, card.gridY!!)
-            } else {
-                // Auto-assign position
-                positions[card.instanceId] = Pair(nextCol, nextRow)
-                nextCol++
-                if (nextCol >= columns) {
-                    nextCol = 0
-                    nextRow++
-                }
+    // Calculate stack indices for visual stacking
+    val stackInfoMap = remember(gridPositions, cards) {
+        val stackInfo = mutableMapOf<String, CardStackInfo>()
+
+        // Group cards by position
+        val positionToCards = mutableMapOf<Pair<Int, Int>, MutableList<String>>()
+        gridPositions.forEach { (cardId, pos) ->
+            positionToCards.getOrPut(pos) { mutableListOf() }.add(cardId)
+        }
+
+        positionToCards.forEach { (gridPos, cardIds) ->
+            // Sort cards by placement timestamp to maintain stack order
+            val sortedCardIds = cardIds.sortedBy { cardId ->
+                cards.find { it.instanceId == cardId }?.placedTimestamp ?: 0L
+            }
+
+            sortedCardIds.forEachIndexed { index, cardId ->
+                stackInfo[cardId] = CardStackInfo(
+                    gridPos = gridPos,
+                    stackIndex = index.coerceAtMost(2) // Visual limit of 3 visible
+                )
             }
         }
-        positions
+
+        stackInfo
     }
 
     // Calculate total rows needed
@@ -1129,13 +1156,20 @@ private fun BattlefieldGrid(
     ) {
         cards.forEach { card ->
             // Use card's actual gridX/gridY if set, otherwise use computed position
-            val col = card.gridX ?: (gridPositions[card.instanceId]?.first ?: 0)
-            val row = card.gridY ?: (gridPositions[card.instanceId]?.second ?: 0)
+            val position = gridPositions[card.instanceId] ?: Pair(0, 0)
+            val (col, row) = position
+            val stackInfo = stackInfoMap[card.instanceId]
             val isDragging = draggingCard?.instanceId == card.instanceId
 
-            // Calculate pixel position
-            val xPos = col * cellSize
-            val yPos = row * cellSize
+            // Base pixel position
+            var xPos = col * cellSize
+            var yPos = row * cellSize
+
+            // Apply stacking offset for visual separation
+            if (stackInfo != null) {
+                xPos += stackInfo.stackIndex * stackOffsetPx
+                yPos += stackInfo.stackIndex * stackOffsetPx
+            }
 
             val finalOffset = if (isDragging) {
                 IntOffset(
@@ -1146,12 +1180,24 @@ private fun BattlefieldGrid(
                 IntOffset(xPos.roundToInt(), yPos.roundToInt())
             }
 
+            // Z-index: dragging cards on top, otherwise based on row, col, and stack index
+            val zIndex = if (isDragging) {
+                100f
+            } else {
+                (row * 1000 + col * 10 + (stackInfo?.stackIndex ?: 0)).toFloat()
+            }
+
             key(card.instanceId) {
+                // Look up owner name if owner != controller
+                val ownerName = if (card.ownerId != card.controllerId) {
+                    players.find { it.id == card.ownerId }?.name ?: ""
+                } else ""
+
                 Box(
                     modifier = Modifier
                         .offset { finalOffset }
                         .size(cardSize)
-                        .zIndex(if (isDragging) 100f else (row * 10 + col).toFloat())
+                        .zIndex(zIndex)
                 ) {
                     DraggableBattlefieldCard(
                         cardInstance = card,
@@ -1160,6 +1206,7 @@ private fun BattlefieldGrid(
                         onClick = { onCardClick(card) },
                         onLongClick = { onCardLongPress(card) },
                         onDoubleClick = { onCardAction(CardAction.ViewDetails(card)) },
+                        ownerName = ownerName,
                         onDragStart = {
                             draggingCard = card
                             dragStartCol = col
@@ -1179,10 +1226,10 @@ private fun BattlefieldGrid(
                             }
 
                             val targetCol = (dragStartCol + cellsMoveX).coerceIn(0, columns - 1)
-                            val targetRow = (dragStartRow + cellsMoveY).coerceAtLeast(0)
+                            val targetRow = (dragStartRow + cellsMoveY).coerceAtLeast(0).coerceAtMost(9)
 
-                            // Notify position change
                             draggingCard?.let { dragCard ->
+                                // Report user intent to ViewModel - it will enforce the 3-card stack limit
                                 onCardPositionChanged?.invoke(dragCard.instanceId, targetCol, targetRow)
                             }
 
@@ -1302,7 +1349,8 @@ private fun DraggableBattlefieldCard(
     onDragStart: () -> Unit,
     onDrag: (Offset) -> Unit,
     onDragEnd: () -> Unit,
-    onDragCancel: () -> Unit
+    onDragCancel: () -> Unit,
+    ownerName: String = ""
 ) {
     var lastClickTime by remember { mutableStateOf(0L) }
     var isDragInProgress by remember { mutableStateOf(false) }
@@ -1382,32 +1430,135 @@ private fun DraggableBattlefieldCard(
                 modifier = Modifier.fillMaxSize()
             )
 
-            // Counter indicators
-            if (cardInstance.counters.isNotEmpty()) {
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .background(Color.Black.copy(alpha = 0.7f), CircleShape)
-                        .padding(2.dp)
-                ) {
-                    Text(
-                        text = cardInstance.counters.values.sum().toString(),
-                        color = Color.White,
-                        fontSize = 10.sp
-                    )
+            // Check if owner != controller
+            val showOwnerTag = cardInstance.ownerId != cardInstance.controllerId && ownerName.isNotEmpty()
+
+            // Top-left column for status overlays
+            Column(
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(2.dp),
+                verticalArrangement = Arrangement.spacedBy(1.dp)
+            ) {
+                // Owner tag (only show if controller != owner)
+                if (showOwnerTag) {
+                    Box(
+                        modifier = Modifier
+                            .background(Color.Blue.copy(alpha = 0.8f), RoundedCornerShape(2.dp))
+                            .padding(horizontal = 2.dp)
+                    ) {
+                        Text(
+                            text = ownerName,
+                            color = Color.White,
+                            fontSize = 6.sp,
+                            maxLines = 1
+                        )
+                    }
+                }
+
+                // Counters - show each type with color
+                cardInstance.counters.forEach { (counterTypeId, count) ->
+                    val counterType = UIConstants.COUNTER_TYPES.find { it.id == counterTypeId }
+                    val counterColor = counterType?.color ?: Color.White
+                    Box(
+                        modifier = Modifier
+                            .background(counterColor.copy(alpha = 0.9f), RoundedCornerShape(2.dp))
+                            .padding(horizontal = 2.dp)
+                    ) {
+                        Text(
+                            text = "$count",
+                            color = Color.Black,
+                            fontSize = 8.sp
+                        )
+                    }
+                }
+
+                // "Doesn't Untap" indicator
+                if (cardInstance.doesntUntap) {
+                    Box(
+                        modifier = Modifier
+                            .background(Color.Magenta.copy(alpha = 0.8f), RoundedCornerShape(2.dp))
+                            .padding(horizontal = 2.dp)
+                    ) {
+                        Text(
+                            text = "⊘",
+                            color = Color.White,
+                            fontSize = 8.sp
+                        )
+                    }
+                }
+
+                // Annotation indicator
+                if (!cardInstance.annotation.isNullOrBlank()) {
+                    Box(
+                        modifier = Modifier
+                            .background(Color.Yellow.copy(alpha = 0.8f), RoundedCornerShape(2.dp))
+                            .padding(horizontal = 2.dp)
+                    ) {
+                        Text(
+                            text = "📝",
+                            color = Color.Black,
+                            fontSize = 8.sp
+                        )
+                    }
+                }
+
+                // Clone indicator
+                if (cardInstance.isClone) {
+                    Box(
+                        modifier = Modifier
+                            .background(Color.Cyan.copy(alpha = 0.8f), RoundedCornerShape(2.dp))
+                            .padding(horizontal = 2.dp)
+                    ) {
+                        Text(
+                            text = "Copy",
+                            color = Color.Black,
+                            fontSize = 6.sp
+                        )
+                    }
+                }
+
+                // Token indicator
+                if (cardInstance.isToken) {
+                    Box(
+                        modifier = Modifier
+                            .background(Color.Green.copy(alpha = 0.8f), RoundedCornerShape(2.dp))
+                            .padding(horizontal = 2.dp)
+                    ) {
+                        Text(
+                            text = "Token",
+                            color = Color.Black,
+                            fontSize = 6.sp
+                        )
+                    }
                 }
             }
 
-            // P/T modification indicator
-            if (cardInstance.powerModifier != 0 || cardInstance.toughnessModifier != 0) {
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .background(Color.Blue.copy(alpha = 0.7f), RoundedCornerShape(2.dp))
-                        .padding(horizontal = 2.dp)
-                ) {
-                    val mod = "${if (cardInstance.powerModifier >= 0) "+" else ""}${cardInstance.powerModifier}/${if (cardInstance.toughnessModifier >= 0) "+" else ""}${cardInstance.toughnessModifier}"
-                    Text(text = mod, color = Color.White, fontSize = 8.sp)
+            // P/T indicator (bottom right for creatures)
+            if (!cardInstance.isFaceDown) {
+                val basePower = cardInstance.card.power
+                val baseToughness = cardInstance.card.toughness
+                if (basePower != null && baseToughness != null) {
+                    val currentPower = (basePower.toIntOrNull() ?: 0) + cardInstance.powerModifier
+                    val currentToughness = (baseToughness.toIntOrNull() ?: 0) + cardInstance.toughnessModifier
+                    val isModified = cardInstance.powerModifier != 0 || cardInstance.toughnessModifier != 0
+
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .background(Color.Black.copy(alpha = 0.7f), RoundedCornerShape(2.dp))
+                            .padding(horizontal = 2.dp)
+                    ) {
+                        Text(
+                            text = "$currentPower/$currentToughness",
+                            color = when {
+                                !isModified -> Color.White
+                                cardInstance.powerModifier > 0 || cardInstance.toughnessModifier > 0 -> Color.Green
+                                else -> Color.Red
+                            },
+                            fontSize = 8.sp
+                        )
+                    }
                 }
             }
         }

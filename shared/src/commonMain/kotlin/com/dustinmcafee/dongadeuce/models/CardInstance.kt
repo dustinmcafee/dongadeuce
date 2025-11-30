@@ -29,7 +29,8 @@ data class CardInstance(
     val placedTimestamp: Long = currentTimeMillis(), // When card was placed at this position
     val isClone: Boolean = false, // True if this is a copy/clone of another card
     val clonedFromId: String? = null, // instanceId of the original card this was cloned from
-    val handPosition: Int? = null // Position in hand for sorting (null = default order)
+    val handPosition: Int? = null, // Position in hand for sorting (null = default order)
+    val isToken: Boolean = false // True if this is a token (should be removed when leaving battlefield)
 ) {
     fun tap() = copy(isTapped = true)
     fun untap() = copy(isTapped = false)

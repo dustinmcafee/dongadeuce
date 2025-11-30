@@ -466,13 +466,20 @@ class KeyboardShortcutState(
             ShortcutAction.SelectAll -> {
                 val firstCard = selectedCard
                 if (firstCard != null) {
+                    // For battlefield, use controllerId; for other zones, use ownerId
                     val zoneCards = gameState.cardInstances.filter {
-                        it.ownerId == localPlayer.id && it.zone == firstCard.zone
+                        val matchesPlayer = if (firstCard.zone == Zone.BATTLEFIELD) {
+                            it.controllerId == localPlayer.id
+                        } else {
+                            it.ownerId == localPlayer.id
+                        }
+                        matchesPlayer && it.zone == firstCard.zone
                     }
                     selectionState.selectAll(zoneCards.map { it.instanceId })
                 } else {
+                    // Default to battlefield - use controllerId
                     val battlefieldCards = gameState.cardInstances.filter {
-                        it.ownerId == localPlayer.id && it.zone == Zone.BATTLEFIELD
+                        it.controllerId == localPlayer.id && it.zone == Zone.BATTLEFIELD
                     }
                     selectionState.selectAll(battlefieldCards.map { it.instanceId })
                 }
@@ -480,8 +487,9 @@ class KeyboardShortcutState(
             ShortcutAction.SelectRow -> {
                 val firstCard = selectedCard
                 if (firstCard != null && firstCard.zone == Zone.BATTLEFIELD && firstCard.gridY != null) {
+                    // Battlefield uses controllerId
                     val rowCards = gameState.cardInstances.filter {
-                        it.ownerId == localPlayer.id &&
+                        it.controllerId == localPlayer.id &&
                         it.zone == Zone.BATTLEFIELD &&
                         it.gridY == firstCard.gridY
                     }
@@ -491,8 +499,9 @@ class KeyboardShortcutState(
             ShortcutAction.SelectColumn -> {
                 val firstCard = selectedCard
                 if (firstCard != null && firstCard.zone == Zone.BATTLEFIELD && firstCard.gridX != null) {
+                    // Battlefield uses controllerId
                     val columnCards = gameState.cardInstances.filter {
-                        it.ownerId == localPlayer.id &&
+                        it.controllerId == localPlayer.id &&
                         it.zone == Zone.BATTLEFIELD &&
                         it.gridX == firstCard.gridX
                     }

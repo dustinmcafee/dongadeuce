@@ -47,12 +47,16 @@ fun CardWithContextMenu(
     cardInstance: CardInstance,
     onAction: (CardAction) -> Unit,
     modifier: Modifier = Modifier,
-    otherPlayers: List<Player> = emptyList(),
+    allPlayers: List<Player> = emptyList(),
     content: @Composable () -> Unit
 ) {
     var showMenu by remember { mutableStateOf(false) }
     var menuPosition by remember { mutableStateOf(IntOffset.Zero) }
     var menuState by remember { mutableStateOf(MenuState.MAIN) }
+
+    // For "Give Control", exclude the current controller (not just the local player)
+    // This allows giving control back to the original owner
+    val otherPlayers = allPlayers.filter { it.id != cardInstance.controllerId }
 
     Box(
         modifier = modifier.pointerInput(Unit) {

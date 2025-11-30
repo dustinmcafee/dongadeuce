@@ -35,7 +35,7 @@ fun BattlefieldCard(
     onContextAction: (CardAction) -> Unit = {},
     selectionState: SelectionState? = null,
     modifier: Modifier = Modifier,
-    otherPlayers: List<com.dustinmcafee.dongadeuce.models.Player> = emptyList(),
+    allPlayers: List<com.dustinmcafee.dongadeuce.models.Player> = emptyList(),
     ownerName: String = ""
 ) {
     var lastClickTime by remember { mutableStateOf(0L) }
@@ -69,7 +69,7 @@ fun BattlefieldCard(
         CardWithContextMenu(
             cardInstance = cardInstance,
             onAction = onContextAction,
-            otherPlayers = otherPlayers
+            allPlayers = allPlayers
         ) {
             Card(
                 modifier = Modifier
@@ -238,6 +238,21 @@ fun BattlefieldCard(
                             ) {
                                 Text(
                                     text = "Copy",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = Color.Black,
+                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
+
+                        // Token indicator
+                        if (cardInstance.isToken) {
+                            Surface(
+                                color = Color.Green.copy(alpha = 0.8f),
+                                shape = RoundedCornerShape(4.dp)
+                            ) {
+                                Text(
+                                    text = "Token",
                                     style = MaterialTheme.typography.labelSmall,
                                     color = Color.Black,
                                     modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)

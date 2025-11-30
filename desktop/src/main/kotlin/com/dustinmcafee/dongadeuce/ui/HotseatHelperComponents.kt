@@ -107,7 +107,7 @@ fun CommandZoneDisplay(
     commanderCards: List<CardInstance>,
     isActivePlayer: Boolean,
     onCardAction: (CardAction) -> Unit,
-    otherPlayers: List<Player>,
+    allPlayers: List<Player>,
     dragDropState: DragDropState?,
     onDropCards: ((List<String>) -> Unit)?,
     modifier: Modifier = Modifier
@@ -205,7 +205,7 @@ fun CommandZoneDisplay(
                             cardInstance = commander,
                             isActivePlayer = isActivePlayer,
                             onCardAction = onCardAction,
-                            otherPlayers = otherPlayers
+                            allPlayers = allPlayers
                         )
                     }
                 }
@@ -222,12 +222,12 @@ private fun CommanderCardDisplay(
     cardInstance: CardInstance,
     isActivePlayer: Boolean,
     onCardAction: (CardAction) -> Unit,
-    otherPlayers: List<Player>
+    allPlayers: List<Player>
 ) {
     CardWithContextMenu(
         cardInstance = cardInstance,
         onAction = onCardAction,
-        otherPlayers = otherPlayers
+        allPlayers = allPlayers
     ) {
         Card(
             modifier = Modifier
@@ -295,7 +295,7 @@ fun CompactHandStrip(
     onCardAction: (CardAction) -> Unit,
     viewModel: GameViewModel? = null,
     selectionState: SelectionState? = null,
-    otherPlayers: List<Player> = emptyList(),
+    allPlayers: List<Player> = emptyList(),
     modifier: Modifier = Modifier
 ) {
     // State for right-click context menu and View Hand dialog
@@ -308,7 +308,7 @@ fun CompactHandStrip(
         ViewHandDialog(
             cards = handCards,
             playerName = player.name,
-            otherPlayers = otherPlayers,
+            allPlayers = allPlayers,
             onDismiss = { showViewHandDialog = false },
             onPlayCard = { cardInstance ->
                 viewModel?.moveCard(cardInstance.instanceId, Zone.BATTLEFIELD)
@@ -446,7 +446,7 @@ fun CompactHandStrip(
                                                     draggedHandCardIds = draggedIds
                                                     handDragOffset = offset
                                                 },
-                                                otherPlayers = otherPlayers
+                                                allPlayers = allPlayers
                                             )
                                         }
                                     }

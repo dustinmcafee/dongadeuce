@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.3.0-alpha] - 2025-11-30
+
+### Fixed
+- **Give Control Back in Network Mode** - Fixed issue where player receiving control couldn't give it back
+  - Root cause: `handleBatchCardAction` was checking `ownerId` instead of `controllerId`
+  - When Player A gives control to Player B, `ownerId` stays A but `controllerId` becomes B
+  - Player B's actions were rejected because `ownerId != authorizedPlayerId`
+  - Now properly checks `controllerId` for battlefield cards and `GiveControlTo` actions
+  - Added server-side validation to ensure only the controller can give control
+
+### Changed
+- `handleBatchCardAction` now uses intelligent authorization checks:
+  - `GiveControlTo` actions check `controllerId` (not `ownerId`)
+  - Battlefield card actions check `controllerId` (controller can act on controlled permanents)
+  - Other zone actions still check `ownerId` (hand, library, graveyard, exile)
+- Server-side `GiveControlTo` validation now explicitly verifies the requester is the current controller
+
 ## [4.2.0-alpha] - 2025-11-29
 
 ### Fixed

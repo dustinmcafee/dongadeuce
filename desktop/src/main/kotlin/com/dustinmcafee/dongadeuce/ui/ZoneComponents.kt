@@ -568,7 +568,7 @@ private fun getCardCategory(typeLine: String?): CardTypeCategory {
 fun ViewHandDialog(
     cards: List<CardInstance>,
     playerName: String,
-    otherPlayers: List<Player> = emptyList(),
+    allPlayers: List<Player> = emptyList(),
     onDismiss: () -> Unit,
     onPlayCard: (CardInstance) -> Unit,
     onDiscard: (CardInstance) -> Unit = {},
@@ -721,7 +721,9 @@ fun ViewHandDialog(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    // Reveal Hand dropdown
+                    // Reveal Hand dropdown - exclude hand owner (first card's owner, since all cards in hand belong to same player)
+                    val handOwnerId = cards.firstOrNull()?.ownerId
+                    val otherPlayers = allPlayers.filter { it.id != handOwnerId }
                     if (otherPlayers.isNotEmpty()) {
                         var showRevealMenu by remember { mutableStateOf(false) }
                         Box {
@@ -1120,7 +1122,7 @@ fun HandCardDisplay(
     sharedDraggedCardIds: Set<String> = emptySet(),
     sharedDragOffset: Offset = Offset.Zero,
     onDragStateChange: (Set<String>, Offset) -> Unit = { _, _ -> },
-    otherPlayers: List<Player> = emptyList()
+    allPlayers: List<Player> = emptyList()
 ) {
     var lastClickTime by remember { mutableStateOf(0L) }
     val isSelected = selectionState?.isSelected(cardInstance.instanceId) == true
@@ -1129,7 +1131,7 @@ fun HandCardDisplay(
     CardWithContextMenu(
         cardInstance = cardInstance,
         onAction = onContextAction,
-        otherPlayers = otherPlayers
+        allPlayers = allPlayers
     ) {
         Box {
             Card(

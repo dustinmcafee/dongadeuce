@@ -38,6 +38,16 @@ These features have been evaluated and won't be implemented:
 
 These are nice-to-have features that would improve the experience but aren't required for gameplay.
 
+### Android UI Improvements
+**Effort:** 1-2 weeks
+
+- [ ] Battlefield rows should be limited to 3
+- [ ] Battlefield columns should auto-expand as cards are dragged to the right
+- [ ] Pinch-to-zoom for Android battlefield
+- [ ] Full battlefield UI for opponents on Android (currently minimal)
+- [ ] Enhance "View N cards" from library dialog (match PC client)
+- [ ] Enhance "View Hand" dialog (match PC client)
+
 ### Animations
 **Effort:** 1-2 weeks
 

@@ -23,11 +23,12 @@ import com.dustinmcafee.dongadeuce.viewmodel.GameViewModel
 fun HotseatPlayerSection(
     player: Player,
     viewModel: GameViewModel,
+    gameState: GameState?,
     isActivePlayer: Boolean,
     onCardAction: (CardAction) -> Unit,
     dragDropState: DragDropState? = null,
     selectionState: SelectionState? = null,
-    otherPlayers: List<Player> = emptyList(),
+    allPlayers: List<Player> = emptyList(),
     modifier: Modifier = Modifier,
     inverted: Boolean = false, // If true, hand at bottom; if false, hand at top
     isLocalPlayer: Boolean = isActivePlayer // Defaults to isActivePlayer for hotseat mode compatibility
@@ -36,6 +37,11 @@ fun HotseatPlayerSection(
     val handCards = if (isLocalPlayer) viewModel.getCards(player.id, Zone.HAND) else emptyList()
     val handCount = viewModel.getCardCount(player.id, Zone.HAND)
     val battlefieldCards = viewModel.getCards(player.id, Zone.BATTLEFIELD)
+
+    // Compute grid positions for this player's battlefield (single source of truth)
+    val gridPositions = remember(gameState, player.id) {
+        gameState?.computeBattlefieldPositions(player.id) ?: emptyMap()
+    }
     val commandZoneCards = viewModel.getCards(player.id, Zone.COMMAND_ZONE)
     val libraryCount = viewModel.getCardCount(player.id, Zone.LIBRARY)
     val graveyardCount = viewModel.getCardCount(player.id, Zone.GRAVEYARD)
@@ -72,7 +78,7 @@ fun HotseatPlayerSection(
                 onCardAction = onCardAction,
                 viewModel = viewModel,
                 selectionState = if (isLocalPlayer) selectionState else null,
-                otherPlayers = otherPlayers,
+                allPlayers = allPlayers,
                 modifier = Modifier.fillMaxWidth().height(100.dp)
             )
         }
@@ -95,7 +101,7 @@ fun HotseatPlayerSection(
                     graveyardCount = graveyardCount,
                     exileCount = exileCount,
                     onCardAction = onCardAction,
-                    otherPlayers = otherPlayers,
+                    allPlayers = allPlayers,
                     dragDropState = dragDropState,
                     onShowSetLifeDialog = { showSetLifeDialog = true },
                     onShowPlayerCountersDialog = { showPlayerCountersDialog = true },
@@ -122,6 +128,7 @@ fun HotseatPlayerSection(
                 Box(modifier = Modifier.weight(1f).fillMaxHeight().padding(4.dp)) {
                     DraggableBattlefieldGrid(
                         cards = battlefieldCards,
+                        gridPositions = gridPositions,
                         isLocalPlayer = isLocalPlayer,
                         onCardClick = { viewModel.toggleTap(it.instanceId) },
                         onContextAction = onCardAction,
@@ -131,8 +138,7 @@ fun HotseatPlayerSection(
                         modifier = Modifier.fillMaxSize(),
                         selectionState = selectionState,
                         currentPlayerId = if (isLocalPlayer) player.id else null,
-                        otherPlayers = otherPlayers,
-                        allPlayers = otherPlayers + listOf(player),
+                        allPlayers = allPlayers,
                         dragDropState = if (isLocalPlayer) dragDropState else null,
                         onDropToZone = if (isLocalPlayer) { cardIds, zone ->
                             cardIds.forEach { cardId ->
@@ -158,7 +164,7 @@ fun HotseatPlayerSection(
                 onCardAction = onCardAction,
                 viewModel = viewModel,
                 selectionState = if (isLocalPlayer) selectionState else null,
-                otherPlayers = otherPlayers,
+                allPlayers = allPlayers,
                 modifier = Modifier.fillMaxWidth().height(100.dp)
             )
         }
@@ -170,7 +176,7 @@ fun HotseatPlayerSection(
             player = player,
             viewModel = viewModel,
             onCardAction = onCardAction,
-            otherPlayers = otherPlayers,
+            allPlayers = allPlayers,
             showGraveyardDialog = showGraveyardDialog,
             onDismissGraveyard = { showGraveyardDialog = false },
             showExileDialog = showExileDialog,
@@ -237,7 +243,7 @@ private fun PlayerInfoSidebar(
     graveyardCount: Int,
     exileCount: Int,
     onCardAction: (CardAction) -> Unit,
-    otherPlayers: List<Player>,
+    allPlayers: List<Player>,
     dragDropState: DragDropState?,
     onShowSetLifeDialog: () -> Unit,
     onShowPlayerCountersDialog: () -> Unit,
@@ -295,7 +301,7 @@ private fun PlayerInfoSidebar(
             commanderCards = commandZoneCards,
             isActivePlayer = isLocalPlayer,
             onCardAction = onCardAction,
-            otherPlayers = otherPlayers,
+            allPlayers = allPlayers,
             dragDropState = dragDropState,
             onDropCards = if (isLocalPlayer) {
                 { cardIds ->
@@ -395,7 +401,7 @@ private fun HotseatPlayerDialogs(
     player: Player,
     viewModel: GameViewModel,
     onCardAction: (CardAction) -> Unit,
-    otherPlayers: List<Player>,
+    allPlayers: List<Player>,
     showGraveyardDialog: Boolean,
     onDismissGraveyard: () -> Unit,
     showExileDialog: Boolean,
@@ -473,7 +479,7 @@ private fun HotseatPlayerDialogs(
         LibraryOperationsDialog(
             playerName = player.name,
             librarySize = libraryCount,
-            otherPlayers = otherPlayers,
+            allPlayers = allPlayers,
             onDismiss = onDismissLibraryOperations,
             onViewTopCards = { count ->
                 onShowLibraryPeek(viewModel.getTopCards(player.id, count), PeekLocation.TOP)

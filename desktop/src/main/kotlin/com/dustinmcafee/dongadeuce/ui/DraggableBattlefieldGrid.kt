@@ -33,6 +33,7 @@ import kotlin.math.roundToInt
 @Composable
 fun DraggableBattlefieldGrid(
     cards: List<CardInstance>,
+    gridPositions: Map<String, Pair<Int, Int>>, // Computed from gameState.computeBattlefieldPositions()
     isLocalPlayer: Boolean,
     onCardClick: (CardInstance) -> Unit,
     onContextAction: (CardAction) -> Unit,
@@ -40,7 +41,6 @@ fun DraggableBattlefieldGrid(
     modifier: Modifier = Modifier,
     currentPlayerId: String? = null, // ID of the player who can drag cards
     selectionState: SelectionState? = null,
-    otherPlayers: List<com.dustinmcafee.dongadeuce.models.Player> = emptyList(),
     allPlayers: List<com.dustinmcafee.dongadeuce.models.Player> = emptyList(),
     dragDropState: DragDropState? = null,
     onDropToZone: ((Set<String>, com.dustinmcafee.dongadeuce.models.Zone) -> Unit)? = null
@@ -121,77 +121,13 @@ fun DraggableBattlefieldGrid(
         val stackIndex: Int  // 0 = bottom, 1 = middle, 2 = top
     )
 
-    // Optimize grid position calculation
-    // Recalculate when cards or columns change (O(n) algorithm, not O(n²))
-    val cardPositions = remember(cards, columns) {
-        val positionMap = mutableMapOf<String, Pair<Int, Int>>()
+    // Calculate stack indices from the provided gridPositions (single source of truth from ViewModel)
+    val stackInfoMap = remember(gridPositions, cards) {
         val stackInfo = mutableMapOf<String, CardStackInfo>()
 
-        // First, place cards that have explicit grid positions
-        cards.forEach { card ->
-            if (card.gridX != null && card.gridY != null) {
-                positionMap[card.instanceId] = Pair(card.gridX!!, card.gridY!!)
-            }
-        }
-
-        // Then, auto-arrange cards without positions
-        // Build a count map for O(1) lookups instead of O(n) counts
-        val positionCounts = mutableMapOf<Pair<Int, Int>, Int>()
-        positionMap.values.forEach { pos ->
-            positionCounts[pos] = (positionCounts[pos] ?: 0) + 1
-        }
-
-        var nextRow = 0
-        var nextCol = 0
-
-        // Find next available position (with stacking support)
-        // Returns null if battlefield is full (all positions have 3 cards)
-        fun findNextAvailablePosition(): Pair<Int, Int>? {
-            val maxPositions = columns * 10 // 4 columns x 10 rows = 40 positions
-            var positionsChecked = 0
-
-            while (positionsChecked < maxPositions) {
-                val currentPos = Pair(nextCol, nextRow)
-                val count = positionCounts[currentPos] ?: 0
-
-                // If less than 3 cards, can stack here
-                if (count < 3) {
-                    // Update count map for next iteration
-                    positionCounts[currentPos] = count + 1
-                    return currentPos
-                }
-
-                // Move to next position
-                nextCol++
-                if (nextCol >= columns) {
-                    nextCol = 0
-                    nextRow++
-                }
-
-                positionsChecked++
-            }
-
-            // Battlefield is full
-            return null
-        }
-
-        cards.forEach { card ->
-            if (card.gridX == null || card.gridY == null) {
-                val position = findNextAvailablePosition()
-                if (position != null) {
-                    positionMap[card.instanceId] = position
-                } else {
-                    // Battlefield full - place at (0, 0) and stack (will show at max stack depth)
-                    // This is a fallback to prevent crashes
-                    positionMap[card.instanceId] = Pair(0, 0)
-                }
-            }
-        }
-
-        // Calculate stack indices for all cards
         // Build reverse map for O(1) lookup: position -> list of card IDs
         val positionToCards = mutableMapOf<Pair<Int, Int>, MutableList<String>>()
-        positionMap.forEach { (cardId, pos) ->
+        gridPositions.forEach { (cardId, pos) ->
             positionToCards.getOrPut(pos) { mutableListOf() }.add(cardId)
         }
 
@@ -209,10 +145,8 @@ fun DraggableBattlefieldGrid(
             }
         }
 
-        Pair(positionMap, stackInfo)
+        stackInfo
     }
-
-    val (gridPositions, stackInfoMap) = cardPositions
 
     // Calculate total rows needed
     val totalRows = ((gridPositions.values.maxOfOrNull { it.second } ?: 0) + 1).coerceAtMost(10)
@@ -236,7 +170,8 @@ fun DraggableBattlefieldGrid(
                     val stackInfo = stackInfoMap[card.instanceId]
 
                     val isDragged = draggedCardIds.contains(card.instanceId)
-                    val canDrag = currentPlayerId != null && card.ownerId == currentPlayerId
+                    // Allow dragging cards you control (not just own) - important for "give control" feature
+                    val canDrag = currentPlayerId != null && card.controllerId == currentPlayerId
 
                     // Base position
                     var xPos = col * cellWidth
@@ -296,9 +231,9 @@ fun DraggableBattlefieldGrid(
                                                 // 2. Otherwise, drag just this card
                                                 val cardsToDrag = if (selectionState?.isSelected(card.instanceId) == true &&
                                                                      selectionState.selectedCards.size > 1) {
-                                                    // Drag all selected cards that are owned by current player
+                                                    // Drag all selected cards that are controlled by current player
                                                     selectionState.selectedCards.filter { cardId ->
-                                                        cards.find { it.instanceId == cardId }?.ownerId == currentPlayerId
+                                                        cards.find { it.instanceId == cardId }?.controllerId == currentPlayerId
                                                     }.toSet()
                                                 } else {
                                                     // Drag just this card
@@ -509,7 +444,7 @@ fun DraggableBattlefieldGrid(
                             onCardClick = onCardClick,
                             onContextAction = onContextAction,
                             selectionState = selectionState,
-                            otherPlayers = otherPlayers,
+                            allPlayers = allPlayers,
                             ownerName = allPlayers.firstOrNull { it.id == card.ownerId }?.name ?: ""
                         )
                     }

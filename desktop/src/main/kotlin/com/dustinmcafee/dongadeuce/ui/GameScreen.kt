@@ -274,21 +274,23 @@ fun GameScreen(
                                 HotseatPlayerSection(
                                     player = rotatedPlayers[1],
                                     viewModel = viewModel,
+                                    gameState = uiState.gameState,
                                     isActivePlayer = false,
                                     onCardAction = handleAction,
                                     dragDropState = dragDropState,
                                     selectionState = selectionState,
-                                    otherPlayers = rotatedPlayers.filter { it.id != rotatedPlayers[1].id },
+                                    allPlayers = rotatedPlayers,
                                     modifier = Modifier.fillMaxWidth().weight(1f)
                                 )
                                 HotseatPlayerSection(
                                     player = rotatedPlayers[0],
                                     viewModel = viewModel,
+                                    gameState = uiState.gameState,
                                     isActivePlayer = true,
                                     onCardAction = handleAction,
                                     dragDropState = dragDropState,
                                     selectionState = selectionState,
-                                    otherPlayers = rotatedPlayers.filter { it.id != rotatedPlayers[0].id },
+                                    allPlayers = rotatedPlayers,
                                     modifier = Modifier.fillMaxWidth().weight(1f),
                                     inverted = true
                                 )
@@ -298,21 +300,23 @@ fun GameScreen(
                                     HotseatPlayerSection(
                                         player = rotatedPlayers[1],
                                         viewModel = viewModel,
+                                        gameState = uiState.gameState,
                                         isActivePlayer = false,
                                         onCardAction = handleAction,
                                         dragDropState = dragDropState,
                                         selectionState = selectionState,
-                                        otherPlayers = rotatedPlayers.filter { it.id != rotatedPlayers[1].id },
+                                        allPlayers = rotatedPlayers,
                                         modifier = Modifier.weight(1f)
                                     )
                                     HotseatPlayerSection(
                                         player = rotatedPlayers[2],
                                         viewModel = viewModel,
+                                        gameState = uiState.gameState,
                                         isActivePlayer = false,
                                         onCardAction = handleAction,
                                         dragDropState = dragDropState,
                                         selectionState = selectionState,
-                                        otherPlayers = rotatedPlayers.filter { it.id != rotatedPlayers[2].id },
+                                        allPlayers = rotatedPlayers,
                                         modifier = Modifier.weight(1f)
                                     )
                                 }
@@ -320,11 +324,12 @@ fun GameScreen(
                                     HotseatPlayerSection(
                                         player = rotatedPlayers[0],
                                         viewModel = viewModel,
+                                        gameState = uiState.gameState,
                                         isActivePlayer = true,
                                         onCardAction = handleAction,
                                         dragDropState = dragDropState,
                                         selectionState = selectionState,
-                                        otherPlayers = rotatedPlayers.filter { it.id != rotatedPlayers[0].id },
+                                        allPlayers = rotatedPlayers,
                                         modifier = Modifier.weight(1f),
                                         inverted = true
                                     )
@@ -336,21 +341,23 @@ fun GameScreen(
                                     HotseatPlayerSection(
                                         player = rotatedPlayers[2],
                                         viewModel = viewModel,
+                                        gameState = uiState.gameState,
                                         isActivePlayer = false,
                                         onCardAction = handleAction,
                                         dragDropState = dragDropState,
                                         selectionState = selectionState,
-                                        otherPlayers = rotatedPlayers.filter { it.id != rotatedPlayers[2].id },
+                                        allPlayers = rotatedPlayers,
                                         modifier = Modifier.weight(1f)
                                     )
                                     HotseatPlayerSection(
                                         player = rotatedPlayers[3],
                                         viewModel = viewModel,
+                                        gameState = uiState.gameState,
                                         isActivePlayer = false,
                                         onCardAction = handleAction,
                                         dragDropState = dragDropState,
                                         selectionState = selectionState,
-                                        otherPlayers = rotatedPlayers.filter { it.id != rotatedPlayers[3].id },
+                                        allPlayers = rotatedPlayers,
                                         modifier = Modifier.weight(1f)
                                     )
                                 }
@@ -358,22 +365,24 @@ fun GameScreen(
                                     HotseatPlayerSection(
                                         player = rotatedPlayers[0],
                                         viewModel = viewModel,
+                                        gameState = uiState.gameState,
                                         isActivePlayer = true,
                                         onCardAction = handleAction,
                                         dragDropState = dragDropState,
                                         selectionState = selectionState,
-                                        otherPlayers = rotatedPlayers.filter { it.id != rotatedPlayers[0].id },
+                                        allPlayers = rotatedPlayers,
                                         modifier = Modifier.weight(1f),
                                         inverted = true
                                     )
                                     HotseatPlayerSection(
                                         player = rotatedPlayers[1],
                                         viewModel = viewModel,
+                                        gameState = uiState.gameState,
                                         isActivePlayer = false,
                                         onCardAction = handleAction,
                                         dragDropState = dragDropState,
                                         selectionState = selectionState,
-                                        otherPlayers = rotatedPlayers.filter { it.id != rotatedPlayers[1].id },
+                                        allPlayers = rotatedPlayers,
                                         modifier = Modifier.weight(1f),
                                         inverted = true
                                     )
@@ -394,11 +403,12 @@ fun GameScreen(
                                 HotseatPlayerSection(
                                     player = opponents[0],
                                     viewModel = viewModel,
+                                    gameState = uiState.gameState,
                                     isActivePlayer = opponents[0].id == activePlayerId,
                                     onCardAction = handleAction,
                                     dragDropState = null, // Opponents can't drag
                                     selectionState = null,
-                                    otherPlayers = allPlayers.filter { it.id != opponents[0].id },
+                                    allPlayers = allPlayers,
                                     modifier = Modifier.fillMaxWidth().weight(1f),
                                     isLocalPlayer = false
                                 )
@@ -409,11 +419,12 @@ fun GameScreen(
                                         HotseatPlayerSection(
                                             player = opponent,
                                             viewModel = viewModel,
+                                            gameState = uiState.gameState,
                                             isActivePlayer = opponent.id == activePlayerId,
                                             onCardAction = handleAction,
                                             dragDropState = null,
                                             selectionState = null,
-                                            otherPlayers = allPlayers.filter { it.id != opponent.id },
+                                            allPlayers = allPlayers,
                                             modifier = Modifier.weight(1f),
                                             isLocalPlayer = false
                                         )
@@ -426,11 +437,12 @@ fun GameScreen(
                                         HotseatPlayerSection(
                                             player = opponent,
                                             viewModel = viewModel,
+                                            gameState = uiState.gameState,
                                             isActivePlayer = opponent.id == activePlayerId,
                                             onCardAction = handleAction,
                                             dragDropState = null,
                                             selectionState = null,
-                                            otherPlayers = allPlayers.filter { it.id != opponent.id },
+                                            allPlayers = allPlayers,
                                             modifier = Modifier.weight(1f),
                                             isLocalPlayer = false
                                         )
@@ -444,11 +456,12 @@ fun GameScreen(
                             HotseatPlayerSection(
                                 player = localPlayer,
                                 viewModel = viewModel,
+                                gameState = uiState.gameState,
                                 isActivePlayer = localPlayer.id == activePlayerId,
                                 onCardAction = handleAction,
                                 dragDropState = dragDropState,
                                 selectionState = selectionState,
-                                otherPlayers = opponents,
+                                allPlayers = allPlayers,
                                 modifier = Modifier.fillMaxWidth().weight(1f),
                                 inverted = true,
                                 isLocalPlayer = true

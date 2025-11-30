@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.FlowRow
 fun PlayerArea(
     player: Player,
     viewModel: GameViewModel,
+    gameState: GameState?,
     allPlayers: List<Player>,
     onCardAction: (CardAction) -> Unit,
     dragDropState: DragDropState? = null,
@@ -52,6 +53,11 @@ fun PlayerArea(
     val battlefieldCards = viewModel.getCards(player.id, Zone.BATTLEFIELD)
     val handCards = viewModel.getCards(player.id, Zone.HAND)
     val topCard = viewModel.getTopCards(player.id, 1).firstOrNull()
+
+    // Compute grid positions for this player's battlefield (single source of truth)
+    val gridPositions = remember(gameState, player.id) {
+        gameState?.computeBattlefieldPositions(player.id) ?: emptyMap()
+    }
 
     // Dialogs
     PlayerAreaDialogs(
@@ -87,6 +93,7 @@ fun PlayerArea(
         ) {
             DraggableBattlefieldGrid(
                 cards = battlefieldCards,
+                gridPositions = gridPositions,
                 isLocalPlayer = true,
                 onCardClick = { viewModel.toggleTap(it.instanceId) },
                 onContextAction = onCardAction,
@@ -96,7 +103,6 @@ fun PlayerArea(
                 modifier = Modifier.fillMaxSize().padding(8.dp),
                 selectionState = selectionState,
                 currentPlayerId = player.id,
-                otherPlayers = allPlayers.filter { it.id != player.id },
                 allPlayers = allPlayers,
                 dragDropState = dragDropState,
                 onDropToZone = { cardIds, zone ->
@@ -511,7 +517,7 @@ private fun PlayerHandDisplay(
         ViewHandDialog(
             cards = handCards,
             playerName = player.name,
-            otherPlayers = allPlayers.filter { it.id != player.id },
+            allPlayers = allPlayers,
             onDismiss = { showViewHandDialog = false },
             onPlayCard = { cardInstance ->
                 viewModel.moveCard(cardInstance.instanceId, Zone.BATTLEFIELD)
@@ -641,7 +647,7 @@ private fun PlayerHandDisplay(
                                                     draggedHandCardIds = draggedIds
                                                     handDragOffset = offset
                                                 },
-                                                otherPlayers = allPlayers.filter { it.id != player.id }
+                                                allPlayers = allPlayers
                                             )
                                         }
                                     }

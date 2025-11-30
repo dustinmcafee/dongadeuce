@@ -717,9 +717,22 @@ fun GameScreen(
     viewModel: AndroidMenuViewModel,
     uiState: MenuUiState
 ) {
+    // Create GameViewModel with network client/server if in network mode
+    val networkClient = viewModel.getGameClient()
+    val networkServer = viewModel.getGameServer()
+    val localPlayerId = viewModel.getLocalPlayerId()
+    val gameViewModel = remember(networkClient, networkServer, localPlayerId) {
+        com.dustinmcafee.dongadeuce.viewmodel.GameViewModel(
+            networkClient = networkClient,
+            networkServer = networkServer,
+            localPlayerId = localPlayerId
+        )
+    }
+
     // Use the full-featured Android game screen
     com.dustinmcafee.dongadeuce.ui.AndroidGameScreen(
         menuViewModel = viewModel,
-        uiState = uiState
+        uiState = uiState,
+        gameViewModel = gameViewModel
     )
 }

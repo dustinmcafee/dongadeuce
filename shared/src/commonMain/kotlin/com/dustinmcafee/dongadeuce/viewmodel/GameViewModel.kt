@@ -659,33 +659,62 @@ class GameViewModel(
             val player = gameState.players.find { it.id == card.ownerId } ?: return@update currentState
             val fromZone = card.zone
 
-            var updatedGameState = gameState.updateCardInstance(cardInstanceId) { c ->
-                var updated = c.moveToZone(targetZone)
+            // Tokens and clones cease to exist when they leave the battlefield
+            // (moving to graveyard, exile, hand, or library)
+            val shouldRemove = (card.isToken || card.isClone) &&
+                fromZone == Zone.BATTLEFIELD &&
+                targetZone != Zone.BATTLEFIELD
 
-                // Reset battlefield-specific state when leaving battlefield
-                if (c.zone == Zone.BATTLEFIELD && targetZone != Zone.BATTLEFIELD) {
-                    updated = updated.copy(
-                        counters = emptyMap(),
-                        powerModifier = 0,
-                        toughnessModifier = 0,
-                        isTapped = false,
-                        isFlipped = false,
-                        doesntUntap = false,
-                        attachedTo = null
-                    )
+            var updatedGameState = if (shouldRemove) {
+                // Remove the token/clone from the game entirely
+                gameState.copy(
+                    cardInstances = gameState.cardInstances.filter { it.instanceId != cardInstanceId }
+                )
+            } else {
+                gameState.updateCardInstance(cardInstanceId) { c ->
+                    var updated = c.moveToZone(targetZone)
+
+                    // Reset battlefield-specific state when leaving battlefield
+                    if (c.zone == Zone.BATTLEFIELD && targetZone != Zone.BATTLEFIELD) {
+                        updated = updated.copy(
+                            counters = emptyMap(),
+                            powerModifier = 0,
+                            toughnessModifier = 0,
+                            isTapped = false,
+                            isFlipped = false,
+                            doesntUntap = false,
+                            attachedTo = null,
+                            // Control reverts to owner when leaving battlefield (MTG rules)
+                            controllerId = c.ownerId
+                        )
+                    }
+
+                    // Update timestamp and assign grid position when moving to battlefield
+                    if (targetZone == Zone.BATTLEFIELD && c.zone != Zone.BATTLEFIELD) {
+                        val (gridX, gridY) = gameState.findNextGridPosition(c.controllerId, excludeCardId = cardInstanceId)
+                        updated = updated.copy(
+                            placedTimestamp = System.currentTimeMillis(),
+                            gridX = gridX,
+                            gridY = gridY
+                        )
+                    }
+
+                    updated
                 }
-
-                // Update timestamp when moving to battlefield
-                if (targetZone == Zone.BATTLEFIELD) {
-                    updated = updated.copy(placedTimestamp = System.currentTimeMillis())
-                }
-
-                updated
             }
 
             // Log card moved event (only if zone actually changed)
             if (fromZone != targetZone) {
-                val event = if (targetZone == Zone.BATTLEFIELD && fromZone != Zone.BATTLEFIELD) {
+                val event = if (shouldRemove) {
+                    // Token/clone removed from game
+                    GameEvent.CardMoved(
+                        playerId = player.id,
+                        playerName = player.name,
+                        cardName = card.card.name,
+                        fromZone = fromZone,
+                        toZone = targetZone // Still log the intended destination
+                    )
+                } else if (targetZone == Zone.BATTLEFIELD && fromZone != Zone.BATTLEFIELD) {
                     // Playing a card to battlefield
                     GameEvent.CardPlayed(
                         playerId = player.id,
@@ -727,8 +756,12 @@ class GameViewModel(
             val fromPlayer = gameState.players.find { it.id == card.controllerId } ?: return@update currentState
             val toPlayer = gameState.players.find { it.id == newControllerId } ?: return@update currentState
 
+            // Get new grid position for the new controller's battlefield
+            val (gridX, gridY) = gameState.findNextGridPosition(newControllerId, excludeCardId = cardInstanceId)
+
             var updatedGameState = gameState.updateCardInstance(cardInstanceId) {
                 it.changeController(newControllerId).moveToZone(Zone.BATTLEFIELD)
+                    .copy(gridX = gridX, gridY = gridY, placedTimestamp = System.currentTimeMillis())
             }
 
             // Log control change event
@@ -1736,12 +1769,16 @@ class GameViewModel(
 
         _uiState.update { currentState ->
             val gameState = currentState.gameState ?: return@update currentState
+            val card = gameState.cardInstances.find { it.instanceId == cardId } ?: return@update currentState
+            val (gridX, gridY) = gameState.findNextGridPosition(card.controllerId, excludeCardId = cardId)
 
-            val updatedGameState = gameState.updateCardInstance(cardId) { card ->
-                card.copy(
+            val updatedGameState = gameState.updateCardInstance(cardId) { c ->
+                c.copy(
                     isFaceDown = true,
                     zone = Zone.BATTLEFIELD,
-                    placedTimestamp = System.currentTimeMillis()
+                    placedTimestamp = System.currentTimeMillis(),
+                    gridX = gridX,
+                    gridY = gridY
                 )
             }
 
@@ -2403,13 +2440,23 @@ class GameViewModel(
                 scryfallId = null
             )
 
-            // Create the specified number of token instances
+            // Create the specified number of token instances with grid positions
+            var tempGameState = gameState
             val tokenInstances = List(quantity) {
-                CardInstance(
+                val (gridX, gridY) = tempGameState.findNextGridPosition(playerId)
+                val token = CardInstance(
                     card = tokenCard,
                     ownerId = playerId,
-                    zone = Zone.BATTLEFIELD
+                    zone = Zone.BATTLEFIELD,
+                    gridX = gridX,
+                    gridY = gridY,
+                    isToken = true
                 )
+                // Update tempGameState so next token gets a different position
+                tempGameState = tempGameState.copy(
+                    cardInstances = tempGameState.cardInstances + token
+                )
+                token
             }
 
             // Add tokens to the game state
@@ -2463,9 +2510,18 @@ class GameViewModel(
             val originalCard = gameState.cardInstances.find { it.instanceId == cardId }
                 ?: return@update currentState
 
-            // Create clone(s)
+            // Create clone(s) with grid positions if going to battlefield
+            var tempGameState = gameState
             val clones = List(quantity) {
-                originalCard.createClone(newOwnerId, targetZone)
+                var clone = originalCard.createClone(newOwnerId, targetZone)
+                if (targetZone == Zone.BATTLEFIELD) {
+                    val (gridX, gridY) = tempGameState.findNextGridPosition(newOwnerId)
+                    clone = clone.copy(gridX = gridX, gridY = gridY)
+                    tempGameState = tempGameState.copy(
+                        cardInstances = tempGameState.cardInstances + clone
+                    )
+                }
+                clone
             }
 
             createdCloneId = clones.firstOrNull()?.instanceId
@@ -2556,6 +2612,16 @@ class GameViewModel(
 
         _uiState.update { currentState ->
             val gameState = currentState.gameState ?: return@update currentState
+            val card = gameState.cardInstances.find { it.instanceId == cardId } ?: return@update currentState
+
+            // Check if target position already has 3 cards (max stack size)
+            val positions = gameState.computeBattlefieldPositions(card.controllerId)
+            val targetPos = Pair(gridX, gridY)
+            val cardsAtTarget = positions.count { (id, pos) -> id != cardId && pos == targetPos }
+            if (cardsAtTarget >= 3) {
+                // Don't allow stacking more than 3 - keep card at current position
+                return@update currentState
+            }
 
             val updatedGameState = gameState.updateCardInstance(cardId) {
                 it.setGridPosition(gridX, gridY)
@@ -2673,10 +2739,18 @@ class GameViewModel(
             listOf(primaryCard)
         }
 
-        // Filter to only cards owned by authorized player and perform action
+        // Filter to only cards owned/controlled by authorized player and perform action
+        // For battlefield actions like GiveControlTo, check controllerId instead of ownerId
         var actionCount = 0
         cardsToAct.forEach { card ->
-            if (card.ownerId == authorizedPlayerId) {
+            val canActOnCard = when {
+                // For GiveControlTo, check if player controls the card (not just owns it)
+                action is CardAction.GiveControlTo -> card.controllerId == authorizedPlayerId
+                // For battlefield cards, check controller; for other zones, check owner
+                card.zone == Zone.BATTLEFIELD -> card.controllerId == authorizedPlayerId
+                else -> card.ownerId == authorizedPlayerId
+            }
+            if (canActOnCard) {
                 // Dispatch to appropriate ViewModel method
                 when (action) {
                     is CardAction.Tap -> toggleTap(card.instanceId)
