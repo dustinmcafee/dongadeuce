@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.5.4] - 2025-11-30
+
+### Added
+- **Android card viewer** - Swipe-from-right drawer showing card preview
+  - 75% screen width drawer with Image/Text tabs
+  - Swipe left from right edge to open, swipe right to close
+  - Updates when tapping cards on battlefield or in hand
+
+### Fixed
+- Marked previously completed UI fixes in TODO.md:
+  - Android: Tapped cards cut-off on left/right sides
+  - Desktop: Battlefield auto-scaling replaced with horizontal scrolling
+  - Desktop: Player's hand overlapping bottom row of battlefield
+
 ## [4.5.3] - 2025-11-30
 
 ### Added

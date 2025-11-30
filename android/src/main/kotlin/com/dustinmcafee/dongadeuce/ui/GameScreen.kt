@@ -61,6 +61,8 @@ fun AndroidGameScreen(
     val revealedCardsState by gameViewModel.revealedCardsState.collectAsState()
     val selectionState = rememberSelectionState()
     val keyboardState = rememberKeyboardShortcutState(gameViewModel, selectionState)
+    val focusedCardState = rememberFocusedCardState()
+    val cardViewerDrawerState = rememberCardViewerDrawerState()
 
     // Dialog states
     var cardDetailsToShow by remember { mutableStateOf<CardInstance?>(null) }
@@ -201,7 +203,10 @@ fun AndroidGameScreen(
     // Handle card actions
     val handleAction: (CardAction) -> Unit = { action ->
         when (action) {
-            is CardAction.ViewDetails -> cardDetailsToShow = action.cardInstance
+            is CardAction.ViewDetails -> {
+                cardDetailsToShow = action.cardInstance
+                focusedCardState.updateFocusedCard(action.cardInstance)
+            }
             is CardAction.ShowLibraryPositionDialog -> {
                 cardForLibraryPosition = action.cardInstance
                 showLibraryPositionDialog = true
@@ -304,6 +309,7 @@ fun AndroidGameScreen(
                             onShowGraveyard = { showGraveyardDialog = true },
                             onShowExile = { showExileDialog = true },
                             onShowHand = { showHandDialog = true },
+                            onCardFocus = { card -> focusedCardState.updateFocusedCard(card) },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .weight(0.5f)  // Equal space when opponents present
@@ -341,6 +347,18 @@ fun AndroidGameScreen(
                 onReturnToMenu = { menuViewModel.returnToMenu() }
             )
         }
+
+        // Swipe edge detector on right side of screen
+        SwipeEdgeDetector(
+            drawerState = cardViewerDrawerState,
+            modifier = Modifier.align(Alignment.CenterEnd)
+        )
+
+        // Card viewer drawer (slides in from right)
+        CardViewerDrawer(
+            cardInstance = focusedCardState.focusedCard,
+            drawerState = cardViewerDrawerState
+        )
     }
 
     // Context menu bottom sheet
@@ -1283,6 +1301,7 @@ private fun LocalPlayerSection(
     onShowGraveyard: () -> Unit,
     onShowExile: () -> Unit,
     onShowHand: () -> Unit,
+    onCardFocus: (CardInstance) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val battlefieldCards = gameViewModel.getCards(player.id, Zone.BATTLEFIELD)
@@ -1317,9 +1336,11 @@ private fun LocalPlayerSection(
                     players = gameState?.players ?: emptyList(),
                     selectionState = selectionState,
                     onCardClick = { card ->
+                        onCardFocus(card)
                         gameViewModel.toggleTap(card.instanceId)
                     },
                     onCardLongPress = { card ->
+                        onCardFocus(card)
                         onShowContextMenu(card)
                     },
                     onCardAction = onCardAction,
@@ -1347,11 +1368,14 @@ private fun LocalPlayerSection(
             handCards = handCards,
             onCardClick = { card ->
                 // Play to battlefield on double-tap
+                onCardFocus(card)
                 gameViewModel.moveCard(card.instanceId, Zone.BATTLEFIELD)
             },
             onCardLongPress = { card ->
+                onCardFocus(card)
                 onShowContextMenu(card)
             },
+            onCardFocus = onCardFocus,
             onViewHand = onShowHand,
             modifier = Modifier
                 .fillMaxWidth()
@@ -2032,6 +2056,7 @@ private fun HandStrip(
     handCards: List<CardInstance>,
     onCardClick: (CardInstance) -> Unit,
     onCardLongPress: (CardInstance) -> Unit,
+    onCardFocus: (CardInstance) -> Unit = {},
     onViewHand: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
@@ -2054,6 +2079,7 @@ private fun HandStrip(
                 items(handCards, key = { it.instanceId }) { card ->
                     HandCard(
                         cardInstance = card,
+                        onSingleClick = { onCardFocus(card) },
                         onDoubleClick = { onCardClick(card) },
                         onLongClick = { onCardLongPress(card) }
                     )
@@ -2083,6 +2109,7 @@ private fun HandStrip(
 @Composable
 private fun HandCard(
     cardInstance: CardInstance,
+    onSingleClick: () -> Unit = {},
     onDoubleClick: () -> Unit,
     onLongClick: () -> Unit
 ) {
@@ -2101,6 +2128,7 @@ private fun HandCard(
                             onDoubleClick()
                             lastClickTime = 0L // Reset to prevent triple-click triggering
                         } else {
+                            onSingleClick()
                             lastClickTime = now
                         }
                     },

@@ -1,9 +1,9 @@
 # Dong-A-Deuce - Development TODO
 
-**Current Version:** v4.5.3
+**Current Version:** v4.5.4
 **Desktop:** 99% complete (fully playable!)
-**Android:** 97% complete (fully playable!)
-**Network Mode:** 96% complete (fully playable!)
+**Android:** 99% complete (fully playable!)
+**Network Mode:** 100% complete (fully playable!)
 **Last Updated:** 2025-11-30
 
 ---
@@ -44,7 +44,7 @@ These features have been evaluated and won't be implemented:
 - [x] Display enlarged card image in sidebar (between turn indicator and game log)
 - [x] Update on card hover (battlefield and hand cards)
 - [x] Tabs to switch between Image and Text views
-- [ ] Android version (future enhancement)
+- [x] Android version (swipe-from-right drawer)
 
 ---
 
@@ -59,15 +59,15 @@ These are nice-to-have features that would improve the experience but aren't req
 - [x] Battlefield columns auto-expand as cards are dragged to the right
 - [x] Pinch-to-zoom for Android battlefield
 - [x] Full battlefield UI for opponents on Android
-- [ ] Fix tapped cards cut-off on left/right sides
+- [x] Fix tapped cards cut-off on left/right sides
 - [x] Enhance "View N cards" from library dialog (match PC client)
 - [x] Enhance "View Hand" dialog (match PC client)
 
 ### Desktop UI Improvements
 **Effort:** 1 week
 
-- [ ] Replace battlefield auto-scaling with horizontal scrolling (match Android behavior)
-- [ ] Fix player's hand overlapping bottom row of battlefield
+- [x] Replace battlefield auto-scaling with horizontal scrolling (match Android behavior)
+- [x] Fix player's hand overlapping bottom row of battlefield
 
 ### Drag-and-Drop Enhancements
 **Effort:** 1-2 weeks
@@ -226,6 +226,7 @@ These are nice-to-have features that would improve the experience but aren't req
 
 | Version | Highlights |
 |---------|------------|
+| v4.5.4 | Android card viewer (swipe drawer), UI fixes marked complete |
 | v4.5.3 | Resizable card viewer and sidebar (Desktop) |
 | v4.5.2 | Persistent card viewer (Desktop), layout fix |
 | v4.5.1 | Desktop dynamic card sizing, horizontal scroll, Android zoom 5x, View Details at top of context menu |

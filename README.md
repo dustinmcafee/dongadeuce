@@ -148,11 +148,11 @@ cd dongadeuce
 ./gradlew desktop:packageDeb
 ```
 
-## Current Status (v4.5.3)
+## Current Status (v4.5.4)
 
 **Desktop:** 99% Complete - Fully Playable! ✅
-**Android:** 97% Complete - Fully Playable! ✅
-**Network Mode:** 96% Complete - Fully Playable! ✅
+**Android:** 99% Complete - Fully Playable! ✅
+**Network Mode:** 100% Complete - Fully Playable! ✅
 
 ### ✅ Fully Implemented
 
