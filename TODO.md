@@ -1,6 +1,6 @@
 # Dong-A-Deuce - Development TODO
 
-**Current Version:** v4.4.0
+**Current Version:** v4.5.1
 **Desktop:** 99% complete (fully playable!)
 **Android:** 97% complete (fully playable!)
 **Network Mode:** 96% complete (fully playable!)
@@ -31,6 +31,19 @@ These features have been evaluated and won't be implemented:
 | **AI Opponents** | Requires stack system for meaningful play |
 | **Game Save/Load** | Games meant to be played in one session |
 | **Commander Tax Tracking** | Players track manually (game doesn't enforce mana costs) |
+
+---
+
+## High Priority
+
+### Persistent Card Viewer
+**Effort:** 1-2 days
+
+- [ ] Create persistent card viewer composable showing last interacted/hovered card
+- [ ] Display enlarged card image in fixed position (e.g., bottom-left corner)
+- [ ] Update on card click, right-click, or mouse hover
+- [ ] Show card details (oracle text, P/T, counters) alongside image
+- [ ] Works on both Desktop (hover) and Android (tap)
 
 ---
 
@@ -212,6 +225,7 @@ These are nice-to-have features that would improve the experience but aren't req
 
 | Version | Highlights |
 |---------|------------|
+| v4.5.1 | Desktop dynamic card sizing, horizontal scroll, Android zoom 5x, View Details at top of context menu |
 | v4.4.0 | Android pinch-to-zoom/pan, full opponent battlefields, turn indicator colors, type-based row fix |
 | v4.4.0-alpha | Android APK in CI, enhanced Android dialogs, library view/search |
 | v4.3.0-alpha | Give control back fix in network mode |

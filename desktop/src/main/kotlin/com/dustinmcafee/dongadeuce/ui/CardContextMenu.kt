@@ -213,6 +213,9 @@ private fun buildMainMenuItems(
 ): List<MenuItemData> {
     val items = mutableListOf<MenuItemData>()
 
+    // View Details always at top for easy access
+    items.add(MenuItemData("View Details") { onAction(CardAction.ViewDetails(cardInstance)) })
+
     when (cardInstance.zone) {
         Zone.BATTLEFIELD -> {
             // Quick actions
@@ -244,9 +247,6 @@ private fun buildMainMenuItems(
             items.add(MenuItemData("Create Copy") {
                 onAction(CardAction.CreateCopy(cardInstance, cardInstance.controllerId))
             })
-
-            // Always add view details option
-            items.add(MenuItemData("View Details") { onAction(CardAction.ViewDetails(cardInstance)) })
         }
 
         Zone.HAND -> {
@@ -258,8 +258,6 @@ private fun buildMainMenuItems(
                 items.add(MenuItemData("Reveal To ►") { onMenuStateChange(MenuState.REVEAL_TO) })
                 items.add(MenuItemData("Give Control ►") { onMenuStateChange(MenuState.GIVE_CONTROL) })
             }
-
-            items.add(MenuItemData("View Details") { onAction(CardAction.ViewDetails(cardInstance)) })
         }
 
         Zone.GRAVEYARD -> {
@@ -270,8 +268,6 @@ private fun buildMainMenuItems(
             if (otherPlayers.isNotEmpty()) {
                 items.add(MenuItemData("Give Control ►") { onMenuStateChange(MenuState.GIVE_CONTROL) })
             }
-
-            items.add(MenuItemData("View Details") { onAction(CardAction.ViewDetails(cardInstance)) })
         }
 
         Zone.EXILE -> {
@@ -282,8 +278,6 @@ private fun buildMainMenuItems(
             if (otherPlayers.isNotEmpty()) {
                 items.add(MenuItemData("Give Control ►") { onMenuStateChange(MenuState.GIVE_CONTROL) })
             }
-
-            items.add(MenuItemData("View Details") { onAction(CardAction.ViewDetails(cardInstance)) })
         }
 
         Zone.LIBRARY -> {
@@ -295,27 +289,22 @@ private fun buildMainMenuItems(
                 items.add(MenuItemData("Reveal To ►") { onMenuStateChange(MenuState.REVEAL_TO) })
                 items.add(MenuItemData("Give Control ►") { onMenuStateChange(MenuState.GIVE_CONTROL) })
             }
-
-            items.add(MenuItemData("View Details") { onAction(CardAction.ViewDetails(cardInstance)) })
         }
 
         Zone.COMMAND_ZONE -> {
             items.add(MenuItemData("Cast to Battlefield") { onAction(CardAction.ToBattlefield(cardInstance)) })
             items.add(MenuItemData("To Hand") { onAction(CardAction.ToHand(cardInstance)) })
-            items.add(MenuItemData("View Details") { onAction(CardAction.ViewDetails(cardInstance)) })
         }
 
         Zone.STACK -> {
             items.add(MenuItemData("To Graveyard") { onAction(CardAction.ToGraveyard(cardInstance)) })
             items.add(MenuItemData("To Exile") { onAction(CardAction.ToExile(cardInstance)) })
-            items.add(MenuItemData("View Details") { onAction(CardAction.ViewDetails(cardInstance)) })
         }
 
         Zone.SIDEBOARD -> {
             items.add(MenuItemData("To Hand") { onAction(CardAction.ToHand(cardInstance)) })
             items.add(MenuItemData("To Battlefield") { onAction(CardAction.ToBattlefield(cardInstance)) })
             items.add(MenuItemData("To Graveyard") { onAction(CardAction.ToGraveyard(cardInstance)) })
-            items.add(MenuItemData("View Details") { onAction(CardAction.ViewDetails(cardInstance)) })
         }
     }
 

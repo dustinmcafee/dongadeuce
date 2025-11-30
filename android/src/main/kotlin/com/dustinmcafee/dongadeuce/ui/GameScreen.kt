@@ -27,6 +27,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
@@ -1066,7 +1067,8 @@ private fun OpponentBattlefieldSection(
             } else {
                 // Empty battlefield placeholder - same size as actual battlefield (3 rows)
                 val cardSize = 70.dp
-                val spacing = 4.dp
+                // Spacing accounts for max stack extension: 2 * 10% * 70dp = ~14dp, plus buffer
+                val spacing = 16.dp
                 val battlefieldHeight = (cardSize + spacing) * UIConstants.BATTLEFIELD_ROWS
 
                 Box(
@@ -1097,7 +1099,8 @@ private fun OpponentBattlefieldGrid(
     onCardClick: (CardInstance) -> Unit
 ) {
     val cardSize = 70.dp
-    val spacing = 4.dp
+    // Spacing accounts for max stack extension: 2 * 10% * 70dp = ~14dp, plus buffer
+    val spacing = 16.dp
     val density = LocalDensity.current
 
     val cardSizePx = with(density) { cardSize.toPx() }
@@ -1142,7 +1145,7 @@ private fun OpponentBattlefieldGrid(
     var panOffset by remember { mutableStateOf(Offset.Zero) }
 
     val transformState = rememberTransformableState { zoomChange, panChange, _ ->
-        val newScale = (scale * zoomChange).coerceIn(0.5f, 2f)
+        val newScale = (scale * zoomChange).coerceIn(0.5f, 5f)
         // Limit pan: can't scroll past origin (left/up), and can only scroll right/down
         // proportional to how much the content extends beyond the viewport when zoomed
         val maxPanDown = -((newScale - 1f) * battlefieldHeightPx).coerceAtLeast(0f)
@@ -1171,8 +1174,12 @@ private fun OpponentBattlefieldGrid(
             val (col, row) = position
             val stackInfo = stackInfoMap[card.instanceId]
 
+            // Invert row for opponent battlefield - their lands (row 2) should appear at top,
+            // their creatures (row 0) should appear at bottom from our perspective
+            val invertedRow = totalRows - 1 - row
+
             var xPos = col * cellSize
-            var yPos = row * cellSize
+            var yPos = invertedRow * cellSize
 
             if (stackInfo != null) {
                 xPos += stackInfo.stackIndex * stackOffsetPx
@@ -1180,7 +1187,7 @@ private fun OpponentBattlefieldGrid(
             }
 
             val finalOffset = IntOffset(xPos.roundToInt(), yPos.roundToInt())
-            val zIndex = (row * 1000 + col * 10 + (stackInfo?.stackIndex ?: 0)).toFloat()
+            val zIndex = (invertedRow * 1000 + col * 10 + (stackInfo?.stackIndex ?: 0)).toFloat()
 
             key(card.instanceId) {
                 Box(
@@ -1233,23 +1240,33 @@ private fun SmallBattlefieldCard(
     cardInstance: CardInstance,
     onClick: () -> Unit
 ) {
+    // Square container to hold rotated card without clipping
     Box(
         modifier = Modifier
-            .size(width = 40.dp, height = 56.dp)
-            .clip(RoundedCornerShape(4.dp))
-            .border(
-                width = 1.dp,
-                color = if (cardInstance.isTapped) Color.Gray else Color.White,
-                shape = RoundedCornerShape(4.dp)
-            )
-            .rotate(if (cardInstance.isTapped) 90f else 0f)
-            .clickable(onClick = onClick)
+            .size(56.dp) // Square container (height of card)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
     ) {
-        CardImage(
-            imageUrl = if (cardInstance.isFaceDown) null else cardInstance.card.imageUri,
-            contentDescription = cardInstance.card.name,
-            modifier = Modifier.fillMaxSize()
-        )
+        Box(
+            modifier = Modifier
+                .size(width = 40.dp, height = 56.dp)
+                .graphicsLayer {
+                    rotationZ = if (cardInstance.isTapped) 90f else 0f
+                    clip = false
+                }
+                .clip(RoundedCornerShape(4.dp))
+                .border(
+                    width = 1.dp,
+                    color = if (cardInstance.isTapped) Color.Gray else Color.White,
+                    shape = RoundedCornerShape(4.dp)
+                )
+        ) {
+            CardImage(
+                imageUrl = if (cardInstance.isFaceDown) null else cardInstance.card.imageUri,
+                contentDescription = cardInstance.card.name,
+                modifier = Modifier.fillMaxSize()
+            )
+        }
     }
 }
 
@@ -1284,6 +1301,7 @@ private fun LocalPlayerSection(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
+                .clipToBounds()
                 .padding(8.dp)
         ) {
             if (battlefieldCards.isEmpty()) {
@@ -1363,7 +1381,8 @@ private fun BattlefieldGrid(
 ) {
     val columns = 5
     val cardSize = 70.dp
-    val spacing = 4.dp
+    // Spacing accounts for max stack extension: 2 * 10% * 70dp = ~14dp, plus buffer
+    val spacing = 16.dp
     val density = LocalDensity.current
 
     // Track which card is being dragged and its offset
@@ -1416,7 +1435,7 @@ private fun BattlefieldGrid(
     var panOffset by remember { mutableStateOf(Offset.Zero) }
 
     val transformState = rememberTransformableState { zoomChange, panChange, _ ->
-        val newScale = (scale * zoomChange).coerceIn(0.5f, 2f)
+        val newScale = (scale * zoomChange).coerceIn(0.5f, 5f)
         // Limit pan: can't scroll past origin (left/up), and can only scroll right/down
         // proportional to how much the content extends beyond the viewport when zoomed
         val maxPanDown = -((newScale - 1f) * battlefieldHeightPx).coerceAtLeast(0f)
@@ -1568,10 +1587,14 @@ private fun BattlefieldCard(
             },
         contentAlignment = Alignment.Center
     ) {
-        // Inner card that rotates
+        // Inner card that rotates - use graphicsLayer to prevent clipping when rotated
         Box(
             modifier = Modifier
                 .size(width = 50.dp, height = 70.dp)
+                .graphicsLayer {
+                    rotationZ = if (cardInstance.isTapped) 90f else 0f
+                    clip = false
+                }
                 .clip(RoundedCornerShape(4.dp))
                 .border(
                     width = if (isSelected) 2.dp else 1.dp,
@@ -1582,7 +1605,6 @@ private fun BattlefieldCard(
                     },
                     shape = RoundedCornerShape(4.dp)
                 )
-                .rotate(if (cardInstance.isTapped) 90f else 0f)
         ) {
             CardImage(
                 imageUrl = if (cardInstance.isFaceDown) null else cardInstance.card.imageUri,
@@ -1718,10 +1740,14 @@ private fun DraggableBattlefieldCard(
             },
         contentAlignment = Alignment.Center
     ) {
-        // Inner card that rotates
+        // Inner card that rotates - use graphicsLayer to prevent clipping when rotated
         Box(
             modifier = Modifier
                 .size(width = 50.dp, height = 70.dp)
+                .graphicsLayer {
+                    rotationZ = if (cardInstance.isTapped) 90f else 0f
+                    clip = false
+                }
                 .clip(RoundedCornerShape(4.dp))
                 .border(
                     width = when {
@@ -1737,7 +1763,6 @@ private fun DraggableBattlefieldCard(
                     },
                     shape = RoundedCornerShape(4.dp)
                 )
-                .rotate(if (cardInstance.isTapped) 90f else 0f)
         ) {
             CardImage(
                 imageUrl = if (cardInstance.isFaceDown) null else cardInstance.card.imageUri,

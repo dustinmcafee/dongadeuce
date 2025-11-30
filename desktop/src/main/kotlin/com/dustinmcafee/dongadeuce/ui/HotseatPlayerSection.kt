@@ -7,6 +7,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.dustinmcafee.dongadeuce.models.*
@@ -62,25 +63,37 @@ fun HotseatPlayerSection(
     var showPlayerCountersDialog by remember { mutableStateOf(false) }
 
     Column(
-        modifier = modifier.background(
-            if (isActivePlayer) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.1f)
-            else Color.Transparent
-        ),
+        modifier = modifier
+            .clipToBounds()
+            .background(
+                if (isActivePlayer) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.1f)
+                else Color.Transparent
+            ),
         verticalArrangement = if (inverted) Arrangement.Bottom else Arrangement.Top
     ) {
         if (!inverted) {
             // Hand at top (normal orientation)
-            CompactHandStrip(
-                player = player,
-                handCards = handCards,
-                handCount = handCount,
-                showCards = isLocalPlayer,
-                onCardAction = onCardAction,
-                viewModel = viewModel,
-                selectionState = if (isLocalPlayer) selectionState else null,
-                allPlayers = allPlayers,
-                modifier = Modifier.fillMaxWidth().height(100.dp)
-            )
+            if (isLocalPlayer) {
+                CompactHandStrip(
+                    player = player,
+                    handCards = handCards,
+                    handCount = handCount,
+                    showCards = true,
+                    onCardAction = onCardAction,
+                    viewModel = viewModel,
+                    selectionState = selectionState,
+                    allPlayers = allPlayers,
+                    modifier = Modifier.fillMaxWidth().height(100.dp)
+                )
+            } else {
+                // Minimal hand count indicator for opponents
+                Text(
+                    "${player.name}'s Hand ($handCount)",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 2.dp)
+                )
+            }
         }
 
         // Battlefield in center - light green for active player, dark green for inactive
@@ -149,7 +162,9 @@ fun HotseatPlayerSection(
                                     else -> viewModel.moveCard(cardId, zone)
                                 }
                             }
-                        } else null
+                        } else null,
+                        // Invert rows for opponents across from us (at top of screen, inverted=false)
+                        invertRows = !inverted
                     )
                 }
             }
@@ -158,17 +173,27 @@ fun HotseatPlayerSection(
 
         if (inverted) {
             // Hand at bottom (inverted orientation)
-            CompactHandStrip(
-                player = player,
-                handCards = handCards,
-                handCount = handCount,
-                showCards = isLocalPlayer,
-                onCardAction = onCardAction,
-                viewModel = viewModel,
-                selectionState = if (isLocalPlayer) selectionState else null,
-                allPlayers = allPlayers,
-                modifier = Modifier.fillMaxWidth().height(100.dp)
-            )
+            if (isLocalPlayer) {
+                CompactHandStrip(
+                    player = player,
+                    handCards = handCards,
+                    handCount = handCount,
+                    showCards = true,
+                    onCardAction = onCardAction,
+                    viewModel = viewModel,
+                    selectionState = selectionState,
+                    allPlayers = allPlayers,
+                    modifier = Modifier.fillMaxWidth().height(100.dp)
+                )
+            } else {
+                // Minimal hand count indicator for opponents
+                Text(
+                    "${player.name}'s Hand ($handCount)",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 2.dp)
+                )
+            }
         }
     }
 

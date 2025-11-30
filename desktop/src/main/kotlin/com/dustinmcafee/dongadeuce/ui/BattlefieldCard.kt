@@ -36,7 +36,8 @@ fun BattlefieldCard(
     selectionState: SelectionState? = null,
     modifier: Modifier = Modifier,
     allPlayers: List<com.dustinmcafee.dongadeuce.models.Player> = emptyList(),
-    ownerName: String = ""
+    ownerName: String = "",
+    cardSize: Float = BATTLEFIELD_CARD_TAPPED_SIZE.value // Dynamic card size in dp
 ) {
     var lastClickTime by remember { mutableStateOf(0L) }
     val isSelected = selectionState?.isSelected(cardInstance.instanceId) == true
@@ -51,12 +52,17 @@ fun BattlefieldCard(
 
     val rotation = if (cardInstance.isTapped) 90f else 0f
 
+    // Dynamic sizing based on cardSize parameter
+    // Card aspect ratio is typically 63:88 (standard MTG card)
+    val cardWidthDp = (cardSize * 0.714f).dp  // width = height * 63/88
+    val cardHeightDp = cardSize.dp
+
     // When tapped, card rotates so width and height swap
     // Reserve enough space to prevent overlap
     val containerSize = if (cardInstance.isTapped) {
-        Modifier.size(width = BATTLEFIELD_CARD_TAPPED_SIZE, height = BATTLEFIELD_CARD_TAPPED_SIZE) // Reserve square space for rotated card
+        Modifier.size(cardSize.dp) // Square space for rotated card
     } else {
-        Modifier.size(width = BATTLEFIELD_CARD_WIDTH, height = BATTLEFIELD_CARD_HEIGHT)
+        Modifier.size(width = cardWidthDp, height = cardHeightDp)
     }
 
     // Check if owner != controller
@@ -73,7 +79,7 @@ fun BattlefieldCard(
         ) {
             Card(
                 modifier = Modifier
-                    .size(width = BATTLEFIELD_CARD_WIDTH, height = BATTLEFIELD_CARD_HEIGHT)
+                    .size(width = cardWidthDp, height = cardHeightDp)
                     .rotate(rotation)
                     .then(
                         if (isLocalPlayer) {

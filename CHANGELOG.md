@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.5.1] - 2025-11-30
+
+### Added
+- **Desktop dynamic card sizing** - Cards automatically scale to fit 3 rows in available battlefield space
+  - Works on any screen size (1080p to 4K)
+  - Card size ranges from 80dp to 168dp based on container height
+- **Desktop horizontal scrolling** - Battlefield scrolls horizontally for large board states
+- **Android increased zoom range** - Pinch-to-zoom now supports 0.5x to 5x (was 0.5x to 2x)
+
+### Changed
+- **"View Details" at top of context menu** - Moved to top for easier access (Android and Desktop)
+- **Desktop opponent hand indicator** - Compact text-only display instead of 100dp strip, saves vertical space
+
+### Fixed
+- **Android battlefield overflow** - Cards no longer overlap hand strip at bottom (added clipToBounds)
+- **Desktop stack overlap** - Increased grid spacing from 12% to 25% of card size for cleaner stacks
+- **CI APK naming** - Added version to gradle.properties so Android APK is properly named (was "dongadeuce-.apk")
+
 ## [4.4.0] - 2025-11-30
 
 ### Added

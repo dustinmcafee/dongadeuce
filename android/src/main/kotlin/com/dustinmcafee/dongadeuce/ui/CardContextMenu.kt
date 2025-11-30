@@ -125,6 +125,9 @@ private fun MainMenu(
     onNavigate: (BottomSheetMenuState) -> Unit
 ) {
     Column {
+        // View Details always at top for easy access
+        MenuItem("View Details") { onAction(CardAction.ViewDetails(cardInstance)) }
+
         when (cardInstance.zone) {
             Zone.BATTLEFIELD -> {
                 if (cardInstance.isTapped) {
@@ -152,8 +155,6 @@ private fun MainMenu(
                 MenuItem("Create Copy") {
                     onAction(CardAction.CreateCopy(cardInstance, cardInstance.controllerId))
                 }
-
-                MenuItem("View Details") { onAction(CardAction.ViewDetails(cardInstance)) }
             }
 
             Zone.HAND -> {
@@ -167,7 +168,6 @@ private fun MainMenu(
                 }
 
                 MenuItem("View Hand") { onAction(CardAction.ViewHand(cardInstance.ownerId)) }
-                MenuItem("View Details") { onAction(CardAction.ViewDetails(cardInstance)) }
             }
 
             Zone.GRAVEYARD -> {
@@ -178,8 +178,6 @@ private fun MainMenu(
                 if (otherPlayers.isNotEmpty()) {
                     SubMenuItem("Give Control") { onNavigate(BottomSheetMenuState.GIVE_CONTROL) }
                 }
-
-                MenuItem("View Details") { onAction(CardAction.ViewDetails(cardInstance)) }
             }
 
             Zone.EXILE -> {
@@ -190,8 +188,6 @@ private fun MainMenu(
                 if (otherPlayers.isNotEmpty()) {
                     SubMenuItem("Give Control") { onNavigate(BottomSheetMenuState.GIVE_CONTROL) }
                 }
-
-                MenuItem("View Details") { onAction(CardAction.ViewDetails(cardInstance)) }
             }
 
             Zone.LIBRARY -> {
@@ -203,27 +199,22 @@ private fun MainMenu(
                     SubMenuItem("Reveal To") { onNavigate(BottomSheetMenuState.REVEAL_TO) }
                     SubMenuItem("Give Control") { onNavigate(BottomSheetMenuState.GIVE_CONTROL) }
                 }
-
-                MenuItem("View Details") { onAction(CardAction.ViewDetails(cardInstance)) }
             }
 
             Zone.COMMAND_ZONE -> {
                 MenuItem("Cast to Battlefield") { onAction(CardAction.ToBattlefield(cardInstance)) }
                 MenuItem("To Hand") { onAction(CardAction.ToHand(cardInstance)) }
-                MenuItem("View Details") { onAction(CardAction.ViewDetails(cardInstance)) }
             }
 
             Zone.STACK -> {
                 MenuItem("To Graveyard") { onAction(CardAction.ToGraveyard(cardInstance)) }
                 MenuItem("To Exile") { onAction(CardAction.ToExile(cardInstance)) }
-                MenuItem("View Details") { onAction(CardAction.ViewDetails(cardInstance)) }
             }
 
             Zone.SIDEBOARD -> {
                 MenuItem("To Hand") { onAction(CardAction.ToHand(cardInstance)) }
                 MenuItem("To Battlefield") { onAction(CardAction.ToBattlefield(cardInstance)) }
                 MenuItem("To Graveyard") { onAction(CardAction.ToGraveyard(cardInstance)) }
-                MenuItem("View Details") { onAction(CardAction.ViewDetails(cardInstance)) }
             }
         }
     }

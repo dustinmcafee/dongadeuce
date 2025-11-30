@@ -29,7 +29,7 @@ object UIConstants {
     val SELECTION_BORDER_WIDTH = 3.dp
     val SELECTED_BORDER_WIDTH = 5.dp
 
-    // Card stacking offsets (10% of card size for subtle stacking)
+    // Card stacking offsets (10% of card size for visible stacking)
     val STACK_OFFSET_RATIO = 0.10f
 
     // Battlefield grid configuration

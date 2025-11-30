@@ -1,7 +1,10 @@
 package com.dustinmcafee.dongadeuce.ui
 
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -45,7 +48,8 @@ fun DraggableBattlefieldGrid(
     selectionState: SelectionState? = null,
     allPlayers: List<com.dustinmcafee.dongadeuce.models.Player> = emptyList(),
     dragDropState: DragDropState? = null,
-    onDropToZone: ((Set<String>, com.dustinmcafee.dongadeuce.models.Zone) -> Unit)? = null
+    onDropToZone: ((Set<String>, com.dustinmcafee.dongadeuce.models.Zone) -> Unit)? = null,
+    invertRows: Boolean = false // True if this battlefield is across from viewer (flip row order)
 ) {
     if (cards.isEmpty()) {
         Box(
@@ -61,13 +65,6 @@ fun DraggableBattlefieldGrid(
         return
     }
 
-    // Calculate grid dimensions based on card size
-    val cardWidth = BATTLEFIELD_CARD_TAPPED_SIZE // Max width for tapped cards
-    val cardHeight = BATTLEFIELD_CARD_TAPPED_SIZE // Max height for tapped cards
-    val gridSpacing = 8.dp
-    val cellWidth = cardWidth.value + gridSpacing.value
-    val cellHeight = cardHeight.value + gridSpacing.value
-
     // Track dragging state locally - ALWAYS use local state for drag calculations
     // to avoid timing issues with shared state updates
     var localDraggedCardIds by remember { mutableStateOf<Set<String>>(emptySet()) }
@@ -82,9 +79,29 @@ fun DraggableBattlefieldGrid(
     val draggedCardIds = if (localDraggedCardIds.isNotEmpty()) localDraggedCardIds else (dragDropState?.draggedCardIds ?: emptySet())
     val dragOffset = localDragOffset
 
-    // Container size and position
+    // Container size and position - track both width and height for dynamic sizing
     var containerWidth by remember { mutableStateOf(0f) }
+    var containerHeight by remember { mutableStateOf(0f) }
     var containerPositionInWindow by remember { mutableStateOf(Offset.Zero) }
+
+    // Dynamic card sizing: fit 3 rows in available height
+    // Card size = (containerHeight - spacing) / 3 rows
+    // With 3-card stacks, top card is offset by 2 * 10% = 20%, so spacing needs to be 25% (20% + buffer)
+    // cellHeight = cardSize + spacing = cardSize * 1.25
+    // totalHeight = 3 * cellHeight = 3.75 * cardSize
+    // cardSize = containerHeight / 3.75
+    val dynamicCardSize = if (containerHeight > 0) {
+        (containerHeight / 3.75f).coerceIn(80f, BATTLEFIELD_CARD_TAPPED_SIZE.value)
+    } else {
+        BATTLEFIELD_CARD_TAPPED_SIZE.value
+    }
+
+    val cardWidth = dynamicCardSize
+    val cardHeight = dynamicCardSize
+    // Spacing must accommodate max stack offset: 2 cards * 10% = 20%, plus 5% buffer = 25%
+    val gridSpacing = dynamicCardSize * 0.25f
+    val cellWidth = cardWidth + gridSpacing
+    val cellHeight = cardHeight + gridSpacing
 
     // Clear drag offset and target positions once all cards have reached their targets
     LaunchedEffect(targetPositions, cards) {
@@ -114,9 +131,9 @@ fun DraggableBattlefieldGrid(
         }
     }
 
-    // Card stacking offsets for visual clarity
-    val stackOffsetX = (cardWidth.value * STACK_OFFSET_RATIO).dp
-    val stackOffsetY = (cardHeight.value * STACK_OFFSET_RATIO).dp
+    // Card stacking offsets for visual clarity (10% of card size)
+    val stackOffsetX = cardWidth * STACK_OFFSET_RATIO
+    val stackOffsetY = cardHeight * STACK_OFFSET_RATIO
 
     data class CardStackInfo(
         val gridPos: Pair<Int, Int>,
@@ -157,31 +174,30 @@ fun DraggableBattlefieldGrid(
     val maxCol = gridPositions.values.maxOfOrNull { it.first } ?: 0
     val totalColumns = (maxCol + 1).coerceAtLeast(BATTLEFIELD_MIN_COLUMNS)
 
-    // Calculate auto-zoom scale: if grid exceeds container, zoom out to fit
+    // Calculate content dimensions for scrolling
     val totalGridWidth = totalColumns * cellWidth
-    val autoZoomScale = remember(containerWidth, totalGridWidth) {
-        if (containerWidth > 0 && totalGridWidth > containerWidth) {
-            (containerWidth / totalGridWidth).coerceIn(0.3f, 1f)
-        } else {
-            1f
-        }
-    }
+    val totalGridHeight = totalRows * cellHeight
+
+    // Scroll state for battlefield (horizontal only)
+    val horizontalScrollState = rememberScrollState()
 
     Box(
         modifier = modifier
             .onGloballyPositioned { coordinates ->
                 containerWidth = coordinates.size.width.toFloat()
+                containerHeight = coordinates.size.height.toFloat()
                 containerPositionInWindow = coordinates.positionInWindow()
             }
-            .fillMaxWidth()
-            .height((totalRows * cellHeight).dp)
-            .graphicsLayer {
-                scaleX = autoZoomScale
-                scaleY = autoZoomScale
-                // Anchor scaling to top-left
-                transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0f, 0f)
-            }
+            .fillMaxSize()
+            .clipToBounds()
+            .horizontalScroll(horizontalScrollState)
     ) {
+        // Inner box with actual content dimensions to enable scrolling
+        Box(
+            modifier = Modifier
+                .width(totalGridWidth.dp)
+                .height(totalGridHeight.dp)
+        ) {
                 cards.forEach { card ->
                     val position = gridPositions[card.instanceId] ?: Pair(0, 0)
                     val (col, row) = position
@@ -191,14 +207,18 @@ fun DraggableBattlefieldGrid(
                     // Allow dragging cards you control (not just own) - important for "give control" feature
                     val canDrag = currentPlayerId != null && card.controllerId == currentPlayerId
 
+                    // Invert row for opponent battlefield across from us - their lands (row 2) should appear at top,
+                    // their creatures (row 0) should appear at bottom from our perspective
+                    val displayRow = if (invertRows) (totalRows - 1 - row) else row
+
                     // Base position
                     var xPos = col * cellWidth
-                    var yPos = row * cellHeight
+                    var yPos = displayRow * cellHeight
 
                     // Apply stacking offset for visual separation
                     if (stackInfo != null) {
-                        xPos += stackInfo.stackIndex * stackOffsetX.value
-                        yPos += stackInfo.stackIndex * stackOffsetY.value
+                        xPos += stackInfo.stackIndex * stackOffsetX
+                        yPos += stackInfo.stackIndex * stackOffsetY
                     }
 
                     // Check if this card has a pending position update (to prevent snap-back)
@@ -230,7 +250,7 @@ fun DraggableBattlefieldGrid(
                     Box(
                         modifier = Modifier
                             .offset { finalOffset }
-                            .zIndex((row * 1000 + col * 10 + (stackInfo?.stackIndex ?: 0)).toFloat())
+                            .zIndex((displayRow * 1000 + col * 10 + (stackInfo?.stackIndex ?: 0)).toFloat())
                             .then(
                                 if (canDrag) {
                                     Modifier.pointerInput(card.instanceId, gridPositions) {
@@ -239,8 +259,8 @@ fun DraggableBattlefieldGrid(
                                                 // Look up current position from map and calculate pixel position
                                                 val currentPos = gridPositions[card.instanceId] ?: Pair(0, 0)
                                                 val currentStack = stackInfoMap[card.instanceId]
-                                                val startX = currentPos.first * cellWidth + (currentStack?.stackIndex ?: 0) * stackOffsetX.value
-                                                val startY = currentPos.second * cellHeight + (currentStack?.stackIndex ?: 0) * stackOffsetY.value
+                                                val startX = currentPos.first * cellWidth + (currentStack?.stackIndex ?: 0) * stackOffsetX
+                                                val startY = currentPos.second * cellHeight + (currentStack?.stackIndex ?: 0) * stackOffsetY
                                                 dragStartPixelPos = Offset(startX, startY)
                                                 dragStartCursorOffset = cursorOffset // Where on the card the cursor was when drag started
 
@@ -362,8 +382,8 @@ fun DraggableBattlefieldGrid(
                                                 val finalCardsToReposition = cardsStillOnBattlefield
 
                                                 // Calculate drop position from captured start + LOCAL drag offset
-                                                val finalX = dragStartPixelPos.x + localDragOffset.x + (cardWidth.value / 2)
-                                                val finalY = dragStartPixelPos.y + localDragOffset.y + (cardHeight.value / 2)
+                                                val finalX = dragStartPixelPos.x + localDragOffset.x + (cardWidth / 2)
+                                                val finalY = dragStartPixelPos.y + localDragOffset.y + (cardHeight / 2)
 
                                                 // Calculate target grid cell from center point
                                                 // Allow dropping beyond visible columns to expand the grid
@@ -464,9 +484,11 @@ fun DraggableBattlefieldGrid(
                             onContextAction = onContextAction,
                             selectionState = selectionState,
                             allPlayers = allPlayers,
-                            ownerName = allPlayers.firstOrNull { it.id == card.ownerId }?.name ?: ""
+                            ownerName = allPlayers.firstOrNull { it.id == card.ownerId }?.name ?: "",
+                            cardSize = dynamicCardSize
                         )
                     }
+            }
         }
     }
 }
