@@ -84,6 +84,9 @@ commander-mtg
 java -jar dongadeuce-windows-X.X.X.jar
 ```
 
+### Android
+Android APK builds are available from GitHub Releases. Full touch support with drag-and-drop battlefield, gesture-based card interactions, and feature parity with the desktop version.
+
 ### First Run
 1. Click "Download Cache" to get card data (~500MB, one-time)
 2. Load a deck file (examples included in repo)
@@ -145,7 +148,7 @@ cd dongadeuce
 ./gradlew desktop:packageDeb
 ```
 
-## Current Status (v4.1.0-alpha)
+## Current Status (v4.2.0-alpha)
 
 **Desktop:** 99% Complete - Fully Playable! ✅
 **Android:** 95% Complete - Fully Playable! ✅

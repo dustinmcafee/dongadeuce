@@ -1,6 +1,6 @@
 # Dong-A-Deuce - Development TODO
 
-**Current Version:** v4.1.0-alpha
+**Current Version:** v4.2.0-alpha
 **Desktop:** 99% complete (fully playable!)
 **Android:** 95% complete (fully playable!)
 **Network Mode:** 96% complete (fully playable!)
@@ -96,14 +96,6 @@ These are nice-to-have features that would improve the experience but aren't req
 
 ---
 
-## Known Issues (Android)
-
-### Battlefield Drag-and-Drop
-- [ ] Dragging cards around battlefield not working on Android
-- Needs investigation - touch gestures may conflict with scroll behavior
-
----
-
 ## Code Quality (Low Priority)
 
 ### Refactor GameScreen.kt
@@ -189,6 +181,7 @@ These are nice-to-have features that would improve the experience but aren't req
 
 | Version | Highlights |
 |---------|------------|
+| v4.2.0-alpha | Android drag-and-drop fix, hand card bug fix, CI consolidation |
 | v4.1.0-alpha | Sideboard support, Android feature parity, scry/peek fix |
 | v4.0.0-alpha | Android support with KMP |
 | v3.5.0 | UI state testing suite (132 tests) |

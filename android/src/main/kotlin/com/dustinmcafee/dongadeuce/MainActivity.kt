@@ -409,7 +409,7 @@ fun MenuScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             Text(
-                text = "v3.6.0",
+                text = "v${BuildConfig.VERSION_NAME}",
                 fontSize = 12.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

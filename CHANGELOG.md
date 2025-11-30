@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.2.0-alpha] - 2025-11-29
+
+### Fixed
+- **Android Hand Card Bug** - Fixed wrong card being played/shown on long-press
+  - Added `key = { it.instanceId }` to hand LazyRow items for proper identity tracking
+  - Changed `pointerInput(Unit)` to `pointerInput(cardInstance.instanceId)` in HandCard
+  - Gesture handlers now properly refresh when card identity changes
+  - Same fix applied to opponent cards and small battlefield cards
+
+- **Android Battlefield Drag-and-Drop** - Fixed card positioning and stale closures
+  - Added `gridX`/`gridY` to `pointerInput` keys so gesture handlers update when position changes
+  - Removed `verticalScroll` modifier that was intercepting touch events
+  - Changed to cell-based movement calculation with proper rounding for accurate drops
+  - Cards now drop at the correct grid position consistently
+
+### Changed
+- **GitHub CI Consolidation** - Merged Windows workflow into build-all-platforms
+  - Removed `build-windows.yml` (was creating duplicate artifacts)
+  - Added `master` branch trigger to `build-all-platforms.yml`
+  - Single workflow now handles all platform builds and releases
+
 ## [4.1.0-alpha] - 2025-11-29
 
 ### Added
