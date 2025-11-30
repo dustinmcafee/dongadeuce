@@ -44,6 +44,25 @@ data class CardInstance(
     fun changeController(newControllerId: String) = copy(controllerId = newControllerId)
 
     /**
+     * Determines the target battlefield row based on card type.
+     * Row 0 (top visually): Creatures, Planeswalkers
+     * Row 1 (middle): Artifacts, Enchantments
+     * Row 2 (bottom visually): Lands
+     * Creature type takes priority (artifact creatures go to top row).
+     * Note: Row 0 is at top of screen (y=0), so higher row numbers are lower on screen.
+     */
+    fun getTargetBattlefieldRow(): Int {
+        val typeLine = card.type?.lowercase() ?: ""
+        return when {
+            // Creature takes priority (artifact creatures go to top row)
+            typeLine.contains("creature") || typeLine.contains("planeswalker") -> 0  // Top row (y=0)
+            typeLine.contains("artifact") || typeLine.contains("enchantment") -> 1  // Middle row
+            typeLine.contains("land") -> 2  // Bottom row (highest y)
+            else -> 1  // Default to middle row for other types
+        }
+    }
+
+    /**
      * Create a clone/copy of this card instance
      * The clone is a new card with a new ID, belonging to the specified player
      * Clone starts untapped, without counters, in the specified zone

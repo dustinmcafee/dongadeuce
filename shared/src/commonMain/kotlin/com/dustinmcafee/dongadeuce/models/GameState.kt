@@ -43,10 +43,13 @@ data class GameState(
     /**
      * Compute grid positions for battlefield cards controlled by a specific player.
      * Cards with explicit gridX/gridY use those positions.
-     * Cards without positions are auto-assigned to the first available slot (max 3 per position).
+     * Cards without positions are auto-assigned based on card type:
+     * - Row 0 (bottom): Lands
+     * - Row 1 (middle): Artifacts, Enchantments
+     * - Row 2 (top): Creatures, Planeswalkers
      * Returns a map of cardInstanceId -> (col, row)
      */
-    fun computeBattlefieldPositions(controllerId: String, columns: Int = 5): Map<String, Pair<Int, Int>> {
+    fun computeBattlefieldPositions(controllerId: String): Map<String, Pair<Int, Int>> {
         val battlefieldCards = cardInstances.filter { it.zone == Zone.BATTLEFIELD && it.controllerId == controllerId }
         val positionMap = mutableMapOf<String, Pair<Int, Int>>()
         val positionCounts = mutableMapOf<Pair<Int, Int>, Int>()
@@ -61,22 +64,29 @@ data class GameState(
         }
 
         // Second pass: auto-assign positions to cards without explicit positions
+        // Use type-based row assignment and find available column
         battlefieldCards.forEach { card ->
             if (card.gridX == null || card.gridY == null) {
-                // Find first available position (less than 3 cards)
+                val targetRow = card.getTargetBattlefieldRow()
+                // Find first available column in the target row (max 3 cards per position)
                 var foundPos: Pair<Int, Int>? = null
-                outer@ for (row in 0 until 10) {
-                    for (col in 0 until columns) {
-                        val pos = Pair(col, row)
-                        val count = positionCounts[pos] ?: 0
-                        if (count < 3) {
-                            foundPos = pos
-                            positionCounts[pos] = count + 1
-                            break@outer
+                var col = 0
+                while (foundPos == null) {
+                    val pos = Pair(col, targetRow)
+                    val count = positionCounts[pos] ?: 0
+                    if (count < 3) {
+                        foundPos = pos
+                        positionCounts[pos] = count + 1
+                    } else {
+                        col++
+                        // Safety limit to prevent infinite loop
+                        if (col > 100) {
+                            foundPos = Pair(0, targetRow)
+                            break
                         }
                     }
                 }
-                positionMap[card.instanceId] = foundPos ?: Pair(0, 0)
+                positionMap[card.instanceId] = foundPos ?: Pair(0, targetRow)
             }
         }
 
@@ -84,11 +94,12 @@ data class GameState(
     }
 
     /**
-     * Find the next available grid position on a player's battlefield (max 3 cards per position).
+     * Find the next available grid position on a player's battlefield for a card.
+     * Uses type-based row assignment (max 3 cards per position).
      * Optionally exclude a card (useful when moving a card).
      */
-    fun findNextGridPosition(controllerId: String, columns: Int = 5, excludeCardId: String? = null): Pair<Int, Int> {
-        val positions = computeBattlefieldPositions(controllerId, columns)
+    fun findNextGridPosition(controllerId: String, card: CardInstance, excludeCardId: String? = null): Pair<Int, Int> {
+        val positions = computeBattlefieldPositions(controllerId)
         val positionCounts = mutableMapOf<Pair<Int, Int>, Int>()
 
         positions.forEach { (cardId, pos) ->
@@ -97,16 +108,48 @@ data class GameState(
             }
         }
 
-        for (row in 0 until 10) {
-            for (col in 0 until columns) {
-                val pos = Pair(col, row)
-                val count = positionCounts[pos] ?: 0
-                if (count < 3) {
-                    return pos
-                }
+        val targetRow = card.getTargetBattlefieldRow()
+        var col = 0
+        while (true) {
+            val pos = Pair(col, targetRow)
+            val count = positionCounts[pos] ?: 0
+            if (count < 3) {
+                return pos
+            }
+            col++
+            // Safety limit
+            if (col > 100) break
+        }
+        return Pair(0, targetRow) // Fallback
+    }
+
+    /**
+     * Legacy findNextGridPosition for cases where card is not available.
+     * @deprecated Use findNextGridPosition(controllerId, card, excludeCardId) instead
+     */
+    fun findNextGridPosition(controllerId: String, excludeCardId: String? = null): Pair<Int, Int> {
+        val positions = computeBattlefieldPositions(controllerId)
+        val positionCounts = mutableMapOf<Pair<Int, Int>, Int>()
+
+        positions.forEach { (cardId, pos) ->
+            if (cardId != excludeCardId) {
+                positionCounts[pos] = (positionCounts[pos] ?: 0) + 1
             }
         }
-        return Pair(0, 0) // Fallback if battlefield is full
+
+        // Default to middle row (row 1) for legacy calls
+        val targetRow = 1
+        var col = 0
+        while (true) {
+            val pos = Pair(col, targetRow)
+            val count = positionCounts[pos] ?: 0
+            if (count < 3) {
+                return pos
+            }
+            col++
+            if (col > 100) break
+        }
+        return Pair(0, targetRow)
     }
 
     /**

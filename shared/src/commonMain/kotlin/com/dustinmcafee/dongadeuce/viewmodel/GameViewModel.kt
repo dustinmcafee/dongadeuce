@@ -690,8 +690,9 @@ class GameViewModel(
                     }
 
                     // Update timestamp and assign grid position when moving to battlefield
+                    // Uses type-based row assignment (creatures top, lands bottom, artifacts/enchantments middle)
                     if (targetZone == Zone.BATTLEFIELD && c.zone != Zone.BATTLEFIELD) {
-                        val (gridX, gridY) = gameState.findNextGridPosition(c.controllerId, excludeCardId = cardInstanceId)
+                        val (gridX, gridY) = gameState.findNextGridPosition(c.controllerId, c, excludeCardId = cardInstanceId)
                         updated = updated.copy(
                             placedTimestamp = System.currentTimeMillis(),
                             gridX = gridX,
@@ -756,8 +757,8 @@ class GameViewModel(
             val fromPlayer = gameState.players.find { it.id == card.controllerId } ?: return@update currentState
             val toPlayer = gameState.players.find { it.id == newControllerId } ?: return@update currentState
 
-            // Get new grid position for the new controller's battlefield
-            val (gridX, gridY) = gameState.findNextGridPosition(newControllerId, excludeCardId = cardInstanceId)
+            // Get new grid position for the new controller's battlefield (type-based row)
+            val (gridX, gridY) = gameState.findNextGridPosition(newControllerId, card, excludeCardId = cardInstanceId)
 
             var updatedGameState = gameState.updateCardInstance(cardInstanceId) {
                 it.changeController(newControllerId).moveToZone(Zone.BATTLEFIELD)
@@ -961,6 +962,21 @@ class GameViewModel(
             val activePlayer = gameState.activePlayer
 
             var updatedGameState = gameState.copy(phase = phase)
+
+            // If setting to UNTAP phase, untap all cards for the active player
+            if (phase == com.dustinmcafee.dongadeuce.models.GamePhase.UNTAP) {
+                val untappedCards = updatedGameState.cardInstances.map { card ->
+                    if (card.controllerId == activePlayer.id &&
+                        card.zone == com.dustinmcafee.dongadeuce.models.Zone.BATTLEFIELD &&
+                        card.isTapped &&
+                        !card.doesntUntap) {
+                        card.copy(isTapped = false)
+                    } else {
+                        card
+                    }
+                }
+                updatedGameState = updatedGameState.copy(cardInstances = untappedCards)
+            }
 
             // Log phase change event
             val event = GameEvent.PhaseChanged(
@@ -1770,7 +1786,7 @@ class GameViewModel(
         _uiState.update { currentState ->
             val gameState = currentState.gameState ?: return@update currentState
             val card = gameState.cardInstances.find { it.instanceId == cardId } ?: return@update currentState
-            val (gridX, gridY) = gameState.findNextGridPosition(card.controllerId, excludeCardId = cardId)
+            val (gridX, gridY) = gameState.findNextGridPosition(card.controllerId, card, excludeCardId = cardId)
 
             val updatedGameState = gameState.updateCardInstance(cardId) { c ->
                 c.copy(
@@ -2441,9 +2457,16 @@ class GameViewModel(
             )
 
             // Create the specified number of token instances with grid positions
+            // Create a temporary token to determine type-based row placement
+            val templateToken = CardInstance(
+                card = tokenCard,
+                ownerId = playerId,
+                zone = Zone.BATTLEFIELD,
+                isToken = true
+            )
             var tempGameState = gameState
             val tokenInstances = List(quantity) {
-                val (gridX, gridY) = tempGameState.findNextGridPosition(playerId)
+                val (gridX, gridY) = tempGameState.findNextGridPosition(playerId, templateToken)
                 val token = CardInstance(
                     card = tokenCard,
                     ownerId = playerId,
@@ -2515,7 +2538,8 @@ class GameViewModel(
             val clones = List(quantity) {
                 var clone = originalCard.createClone(newOwnerId, targetZone)
                 if (targetZone == Zone.BATTLEFIELD) {
-                    val (gridX, gridY) = tempGameState.findNextGridPosition(newOwnerId)
+                    // Use type-based row placement for the clone
+                    val (gridX, gridY) = tempGameState.findNextGridPosition(newOwnerId, clone)
                     clone = clone.copy(gridX = gridX, gridY = gridY)
                     tempGameState = tempGameState.copy(
                         cardInstances = tempGameState.cardInstances + clone

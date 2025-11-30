@@ -675,9 +675,9 @@ class GameServer(
                             )
                         }
 
-                        // Assign grid position when entering battlefield
+                        // Assign grid position when entering battlefield (type-based row assignment)
                         if (action.targetZone == Zone.BATTLEFIELD && oldZone != Zone.BATTLEFIELD) {
-                            val (gridX, gridY) = state.findNextGridPosition(c.controllerId, excludeCardId = action.cardId)
+                            val (gridX, gridY) = state.findNextGridPosition(c.controllerId, updated, excludeCardId = action.cardId)
                             updated = updated.copy(
                                 placedTimestamp = currentTimeMillis(),
                                 gridX = gridX,
@@ -758,12 +758,29 @@ class GameServer(
             }
 
             is NetworkAction.SetPhase -> {
+                var updatedState = state.copy(phase = action.phase)
+
+                // If setting to UNTAP phase, untap all cards for the active player
+                if (action.phase == GamePhase.UNTAP) {
+                    val untappedCards = updatedState.cardInstances.map { card ->
+                        if (card.controllerId == state.activePlayer.id &&
+                            card.zone == Zone.BATTLEFIELD &&
+                            card.isTapped &&
+                            !card.doesntUntap) {
+                            card.copy(isTapped = false)
+                        } else {
+                            card
+                        }
+                    }
+                    updatedState = updatedState.copy(cardInstances = untappedCards)
+                }
+
                 val event = GameEvent.PhaseChanged(
                     playerId = state.activePlayer.id,
                     playerName = state.activePlayer.name,
                     newPhase = action.phase
                 )
-                state.copy(phase = action.phase).addEvent(event)
+                updatedState.addEvent(event)
             }
 
             is NetworkAction.Concede -> {

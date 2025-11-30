@@ -83,10 +83,12 @@ fun HotseatPlayerSection(
             )
         }
 
-        // Battlefield in center
+        // Battlefield in center - light green for active player, dark green for inactive
         Card(
             modifier = Modifier.fillMaxWidth().weight(1f),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF1B5E20))
+            colors = CardDefaults.cardColors(
+                containerColor = if (isActivePlayer) Color(0xFF1B5E20) else Color(0xFF2E4A2E)
+            )
         ) {
             Box(modifier = Modifier.fillMaxSize()) {
             Row(modifier = Modifier.fillMaxSize()) {

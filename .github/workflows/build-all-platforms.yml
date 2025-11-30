@@ -139,17 +139,23 @@ jobs:
         KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
         KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
       run: |
+        # Get version from gradle.properties
+        VERSION=$(grep "^version=" gradle.properties | cut -d'=' -f2)
+
+        # Find the unsigned APK
+        UNSIGNED_APK=$(find android/build/outputs/apk/release -name "*.apk" | head -1)
+
         if [ -z "$KEYSTORE_BASE64" ]; then
-          echo "No signing secrets configured, skipping APK signing"
+          echo "No signing secrets configured, renaming APK as unsigned"
+          # Rename to indicate it's unsigned
+          mv "$UNSIGNED_APK" "android/build/outputs/apk/release/dongadeuce-${VERSION}-unsigned.apk"
           exit 0
         fi
 
         # Decode keystore
         echo "$KEYSTORE_BASE64" | base64 -d > release-keystore.jks
 
-        # Find the unsigned APK
-        UNSIGNED_APK=$(find android/build/outputs/apk/release -name "*.apk" | head -1)
-        SIGNED_APK="${UNSIGNED_APK%.apk}-signed.apk"
+        SIGNED_APK="android/build/outputs/apk/release/dongadeuce-${VERSION}.apk"
 
         # Sign with apksigner
         $ANDROID_HOME/build-tools/34.0.0/apksigner sign \
@@ -160,17 +166,19 @@ jobs:
           --out "$SIGNED_APK" \
           "$UNSIGNED_APK"
 
-        # Replace unsigned with signed
-        mv "$SIGNED_APK" "$UNSIGNED_APK"
+        # Remove unsigned APK
+        rm "$UNSIGNED_APK"
 
         # Clean up keystore
         rm release-keystore.jks
+
+        echo "Signed APK created: $SIGNED_APK"
 
     - name: Upload Android APK
       uses: actions/upload-artifact@v4
       with:
         name: android-apk
-        path: android/build/outputs/apk/release/*.apk
+        path: android/build/outputs/apk/release/dongadeuce-*.apk
 
   create-release:
     needs: [build-windows, build-macos, build-linux, build-android]

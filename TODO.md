@@ -1,10 +1,10 @@
 # Dong-A-Deuce - Development TODO
 
-**Current Version:** v4.2.0-alpha
+**Current Version:** v4.4.0
 **Desktop:** 99% complete (fully playable!)
-**Android:** 95% complete (fully playable!)
+**Android:** 97% complete (fully playable!)
 **Network Mode:** 96% complete (fully playable!)
-**Last Updated:** 2025-11-29
+**Last Updated:** 2025-11-30
 
 ---
 
@@ -41,12 +41,33 @@ These are nice-to-have features that would improve the experience but aren't req
 ### Android UI Improvements
 **Effort:** 1-2 weeks
 
-- [ ] Battlefield rows should be limited to 3
-- [ ] Battlefield columns should auto-expand as cards are dragged to the right
-- [ ] Pinch-to-zoom for Android battlefield
-- [ ] Full battlefield UI for opponents on Android (currently minimal)
-- [ ] Enhance "View N cards" from library dialog (match PC client)
-- [ ] Enhance "View Hand" dialog (match PC client)
+- [x] Battlefield rows limited to 3 (type-based: creatures top, artifacts/enchantments middle, lands bottom)
+- [x] Battlefield columns auto-expand as cards are dragged to the right
+- [x] Pinch-to-zoom for Android battlefield
+- [x] Full battlefield UI for opponents on Android
+- [ ] Fix tapped cards cut-off on left/right sides
+- [x] Enhance "View N cards" from library dialog (match PC client)
+- [x] Enhance "View Hand" dialog (match PC client)
+
+### Desktop UI Improvements
+**Effort:** 1 week
+
+- [ ] Replace battlefield auto-scaling with horizontal scrolling (match Android behavior)
+- [ ] Fix player's hand overlapping bottom row of battlefield
+
+### Drag-and-Drop Enhancements
+**Effort:** 1-2 weeks
+
+- [ ] Drag cards from hand to battlefield (Android)
+- [ ] Drag cards from battlefield to hand (Android)
+- [ ] Drag cards from hand to battlefield (Desktop)
+- [ ] Drag cards from battlefield to hand (Desktop)
+
+### Battlefield Visual Fixes
+**Effort:** 2-3 days
+
+- [ ] Fix overlap when multiple stacks of 3 cards on battlefield (Android)
+- [ ] Fix overlap when multiple stacks of 3 cards on battlefield (Desktop)
 
 ### Animations
 **Effort:** 1-2 weeks
@@ -191,6 +212,9 @@ These are nice-to-have features that would improve the experience but aren't req
 
 | Version | Highlights |
 |---------|------------|
+| v4.4.0 | Android pinch-to-zoom/pan, full opponent battlefields, turn indicator colors, type-based row fix |
+| v4.4.0-alpha | Android APK in CI, enhanced Android dialogs, library view/search |
+| v4.3.0-alpha | Give control back fix in network mode |
 | v4.2.0-alpha | Android drag-and-drop fix, hand card bug fix, CI consolidation |
 | v4.1.0-alpha | Sideboard support, Android feature parity, scry/peek fix |
 | v4.0.0-alpha | Android support with KMP |

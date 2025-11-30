@@ -41,13 +41,13 @@ compose.desktop {
 
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
-            packageName = "Commander MTG"
+            packageName = "Dong-A-Deuce"
             // Use numeric version for native packages (strip -alpha, -beta, etc.)
             val numericVersion = project.version.toString().replace(Regex("-.*"), "")
             packageVersion = numericVersion
 
             windows {
-                menuGroup = "Commander MTG"
+                menuGroup = "Dong-A-Deuce"
                 upgradeUuid = "a1b2c3d4-e5f6-4a5b-8c9d-0e1f2a3b4c5d"
                 msiPackageVersion = numericVersion
             }
@@ -176,7 +176,7 @@ tasks.register<Exec>("createWindowsExe") {
     <versionInfo>
         <fileVersion>${project.version}.0</fileVersion>
         <txtFileVersion>${project.version}</txtFileVersion>
-        <fileDescription>Commander MTG Game</fileDescription>
+        <fileDescription>Dong-A-Deuce Game</fileDescription>
         <copyright>Copyright 2024</copyright>
         <productVersion>${project.version}.0</productVersion>
         <txtProductVersion>${project.version}</txtProductVersion>

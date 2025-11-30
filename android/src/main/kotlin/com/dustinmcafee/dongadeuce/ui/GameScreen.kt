@@ -3,8 +3,18 @@
 package com.dustinmcafee.dongadeuce.ui
 
 import androidx.compose.foundation.*
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.foundation.gestures.drag
+import androidx.compose.foundation.gestures.rememberTransformableState
+import androidx.compose.foundation.gestures.transformable
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.changedToUp
+import androidx.compose.ui.input.pointer.positionChange
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -272,7 +282,7 @@ fun AndroidGameScreen(
                             },
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .weight(0.35f)
+                                .weight(0.5f)  // Equal space for opponents (full battlefield grids)
                         )
                     }
 
@@ -295,7 +305,7 @@ fun AndroidGameScreen(
                             onShowHand = { showHandDialog = true },
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .weight(0.65f)
+                                .weight(0.5f)  // Equal space when opponents present
                         )
                     }
                 }
@@ -882,22 +892,26 @@ private fun OpponentSection(
     onShowOpponentExile: (Player) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    LazyRow(
-        modifier = modifier.background(Color(0xFF2E4A2E)),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        contentPadding = PaddingValues(8.dp)
+    val gameState = gameViewModel.uiState.collectAsState().value.gameState
+
+    // Use Column with verticalScroll for opponents - allows pinch-to-zoom inside each section
+    // Each opponent section has its own background color based on active state
+    Column(
+        modifier = modifier
+            .verticalScroll(rememberScrollState())
+            .padding(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        items(opponents, key = { it.id }) { opponent ->
-            OpponentCard(
+        opponents.forEach { opponent ->
+            OpponentBattlefieldSection(
                 player = opponent,
+                gameState = gameState,
                 gameViewModel = gameViewModel,
                 isActive = opponent.id == activePlayerId,
                 onCardAction = onCardAction,
                 onShowGraveyard = { onShowOpponentGraveyard(opponent) },
                 onShowExile = { onShowOpponentExile(opponent) },
-                modifier = Modifier.fillParentMaxWidth(
-                    if (opponents.size == 1) 1f else 0.5f
-                )
+                modifier = Modifier.fillMaxWidth()
             )
         }
     }
@@ -969,6 +983,219 @@ private fun OpponentCard(
                     SmallBattlefieldCard(
                         cardInstance = card,
                         onClick = { onCardAction(CardAction.ViewDetails(card)) }
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Full-height opponent battlefield section with proper grid layout.
+ * Matches Desktop opponent view with 3-row battlefield grid.
+ */
+@Composable
+private fun OpponentBattlefieldSection(
+    player: Player,
+    gameState: GameState?,
+    gameViewModel: GameViewModel,
+    isActive: Boolean,
+    onCardAction: (CardAction) -> Unit,
+    onShowGraveyard: () -> Unit,
+    onShowExile: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val battlefieldCards = gameViewModel.getCards(player.id, Zone.BATTLEFIELD)
+    val handCount = gameViewModel.getCardCount(player.id, Zone.HAND)
+    val libraryCount = gameViewModel.getCardCount(player.id, Zone.LIBRARY)
+    val graveyardCount = gameViewModel.getCardCount(player.id, Zone.GRAVEYARD)
+    val exileCount = gameViewModel.getCardCount(player.id, Zone.EXILE)
+
+    // Compute grid positions for this opponent's battlefield
+    val gridPositions = remember(gameState, battlefieldCards) {
+        gameState?.computeBattlefieldPositions(player.id) ?: emptyMap()
+    }
+
+    // Light green for active player, dark green for inactive
+    Card(
+        modifier = modifier,
+        colors = CardDefaults.cardColors(
+            containerColor = if (isActive) Color(0xFF1B5E20) else Color(0xFF2E4A2E)
+        )
+    ) {
+        Column(modifier = Modifier.padding(8.dp)) {
+            // Player info header
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    player.name,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal
+                )
+                Text(
+                    "${player.life} life",
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = if (player.life <= 10) Color.Red else Color.Unspecified
+                )
+            }
+
+            // Zone counts row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                ZoneCount("Hand", handCount)
+                ZoneCount("Library", libraryCount)
+                ClickableZoneCount("Graveyard", graveyardCount, onClick = onShowGraveyard)
+                ClickableZoneCount("Exile", exileCount, onClick = onShowExile)
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Full battlefield grid with same size as local player
+            if (battlefieldCards.isNotEmpty()) {
+                OpponentBattlefieldGrid(
+                    cards = battlefieldCards,
+                    gridPositions = gridPositions,
+                    onCardClick = { card -> onCardAction(CardAction.ViewDetails(card)) }
+                )
+            } else {
+                // Empty battlefield placeholder - same size as actual battlefield (3 rows)
+                val cardSize = 70.dp
+                val spacing = 4.dp
+                val battlefieldHeight = (cardSize + spacing) * UIConstants.BATTLEFIELD_ROWS
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(battlefieldHeight),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        "No cards on battlefield",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.White.copy(alpha = 0.5f)
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Opponent battlefield grid with pinch-to-zoom and pan support.
+ * Cards are view-only (tap to view details).
+ */
+@Composable
+private fun OpponentBattlefieldGrid(
+    cards: List<CardInstance>,
+    gridPositions: Map<String, Pair<Int, Int>>,
+    onCardClick: (CardInstance) -> Unit
+) {
+    val cardSize = 70.dp
+    val spacing = 4.dp
+    val density = LocalDensity.current
+
+    val cardSizePx = with(density) { cardSize.toPx() }
+    val spacingPx = with(density) { spacing.toPx() }
+    val cellSize = cardSizePx + spacingPx
+
+    // Stack offset (10% of card size for visual separation)
+    val stackOffsetPx = cardSizePx * UIConstants.STACK_OFFSET_RATIO
+
+    // Calculate stack indices for visual stacking
+    val stackInfoMap = remember(gridPositions, cards) {
+        val stackInfo = mutableMapOf<String, CardStackInfo>()
+
+        // Group cards by position
+        val positionToCards = mutableMapOf<Pair<Int, Int>, MutableList<String>>()
+        gridPositions.forEach { (cardId, pos) ->
+            positionToCards.getOrPut(pos) { mutableListOf() }.add(cardId)
+        }
+
+        positionToCards.forEach { (gridPos, cardIds) ->
+            val sortedCardIds = cardIds.sortedBy { cardId ->
+                cards.find { it.instanceId == cardId }?.placedTimestamp ?: 0L
+            }
+
+            sortedCardIds.forEachIndexed { index, cardId ->
+                stackInfo[cardId] = CardStackInfo(
+                    gridPos = gridPos,
+                    stackIndex = index.coerceAtMost(2)
+                )
+            }
+        }
+
+        stackInfo
+    }
+
+    // Fixed 3 rows
+    val totalRows = UIConstants.BATTLEFIELD_ROWS
+    val battlefieldHeightPx = totalRows * cellSize
+
+    // Pinch-to-zoom and pan state using transformable
+    var scale by remember { mutableStateOf(1f) }
+    var panOffset by remember { mutableStateOf(Offset.Zero) }
+
+    val transformState = rememberTransformableState { zoomChange, panChange, _ ->
+        val newScale = (scale * zoomChange).coerceIn(0.5f, 2f)
+        // Limit pan: can't scroll past origin (left/up), and can only scroll right/down
+        // proportional to how much the content extends beyond the viewport when zoomed
+        val maxPanDown = -((newScale - 1f) * battlefieldHeightPx).coerceAtLeast(0f)
+        scale = newScale
+        panOffset = Offset(
+            x = (panOffset.x + panChange.x).coerceAtMost(0f),
+            y = (panOffset.y + panChange.y).coerceIn(maxPanDown, 0f)
+        )
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(((totalRows * cellSize) / density.density).dp)
+            .transformable(state = transformState, lockRotationOnZoomPan = true)
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+                translationX = panOffset.x
+                translationY = panOffset.y
+                transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0f, 0f)
+            }
+    ) {
+        cards.forEach { card ->
+            val position = gridPositions[card.instanceId] ?: Pair(0, 0)
+            val (col, row) = position
+            val stackInfo = stackInfoMap[card.instanceId]
+
+            var xPos = col * cellSize
+            var yPos = row * cellSize
+
+            if (stackInfo != null) {
+                xPos += stackInfo.stackIndex * stackOffsetPx
+                yPos += stackInfo.stackIndex * stackOffsetPx
+            }
+
+            val finalOffset = IntOffset(xPos.roundToInt(), yPos.roundToInt())
+            val zIndex = (row * 1000 + col * 10 + (stackInfo?.stackIndex ?: 0)).toFloat()
+
+            key(card.instanceId) {
+                Box(
+                    modifier = Modifier
+                        .offset { finalOffset }
+                        .size(cardSize)
+                        .zIndex(zIndex)
+                        .clickable { onCardClick(card) }
+                ) {
+                    BattlefieldCard(
+                        cardInstance = card,
+                        isSelected = false,
+                        onClick = { onCardClick(card) },
+                        onLongClick = { onCardClick(card) },
+                        onDoubleClick = { onCardClick(card) }
                     )
                 }
             }
@@ -1050,7 +1277,8 @@ private fun LocalPlayerSection(
         gameState?.computeBattlefieldPositions(player.id) ?: emptyMap()
     }
 
-    Column(modifier = modifier.background(Color(0xFF1B5E20))) {
+    // Light green for active player, dark green for inactive
+    Column(modifier = modifier.background(if (isActivePlayer) Color(0xFF1B5E20) else Color(0xFF2E4A2E))) {
         // Battlefield
         Box(
             modifier = Modifier
@@ -1179,14 +1407,40 @@ private fun BattlefieldGrid(
         stackInfo
     }
 
-    // Calculate total rows needed
-    val totalRows = ((gridPositions.values.maxOfOrNull { it.second } ?: 0) + 1).coerceAtLeast(1)
+    // Fixed 3 rows: lands (bottom), artifacts/enchantments (middle), creatures (top)
+    val totalRows = UIConstants.BATTLEFIELD_ROWS
+    val battlefieldHeightPx = totalRows * cellSize
 
-    // Use Box with absolute positioning instead of Row/Column to avoid scroll conflicts
+    // Pinch-to-zoom and pan state using transformable (handles multi-touch better)
+    var scale by remember { mutableStateOf(1f) }
+    var panOffset by remember { mutableStateOf(Offset.Zero) }
+
+    val transformState = rememberTransformableState { zoomChange, panChange, _ ->
+        val newScale = (scale * zoomChange).coerceIn(0.5f, 2f)
+        // Limit pan: can't scroll past origin (left/up), and can only scroll right/down
+        // proportional to how much the content extends beyond the viewport when zoomed
+        val maxPanDown = -((newScale - 1f) * battlefieldHeightPx).coerceAtLeast(0f)
+        scale = newScale
+        panOffset = Offset(
+            x = (panOffset.x + panChange.x).coerceAtMost(0f),
+            y = (panOffset.y + panChange.y).coerceIn(maxPanDown, 0f)
+        )
+    }
+
+    // Use Box with absolute positioning and zoom/pan support
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .height(((totalRows * cellSize) / density.density).dp)
+            .transformable(state = transformState, lockRotationOnZoomPan = true)
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+                translationX = panOffset.x
+                translationY = panOffset.y
+                // Anchor scaling to top-left
+                transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0f, 0f)
+            }
     ) {
         cards.forEach { card ->
             // Use card's actual gridX/gridY if set, otherwise use computed position
@@ -1259,8 +1513,8 @@ private fun BattlefieldGrid(
                                 if (it >= 0) (it + 0.5f).toInt() else (it - 0.5f).toInt()
                             }
 
-                            val targetCol = (dragStartCol + cellsMoveX).coerceIn(0, columns - 1)
-                            val targetRow = (dragStartRow + cellsMoveY).coerceAtLeast(0).coerceAtMost(9)
+                            val targetCol = (dragStartCol + cellsMoveX).coerceAtLeast(0)
+                            val targetRow = (dragStartRow + cellsMoveY).coerceAtLeast(0).coerceAtMost(UIConstants.BATTLEFIELD_ROWS - 1)
 
                             draggingCard?.let { dragCard ->
                                 // Report user intent to ViewModel - it will enforce the 3-card stack limit
@@ -1395,24 +1649,51 @@ private fun DraggableBattlefieldCard(
         modifier = Modifier
             .size(70.dp)
             .pointerInput(cardInstance.instanceId, cardInstance.gridX, cardInstance.gridY) {
-                detectDragGestures(
-                    onDragStart = {
-                        isDragInProgress = true
-                        onDragStart()
-                    },
-                    onDrag = { change, dragAmount ->
-                        change.consume()
-                        onDrag(dragAmount)
-                    },
-                    onDragEnd = {
-                        isDragInProgress = false
-                        onDragEnd()
-                    },
-                    onDragCancel = {
-                        isDragInProgress = false
-                        onDragCancel()
+                // Custom drag gesture that cancels when multi-touch is detected
+                // This allows pinch-to-zoom to work without card drag interfering
+                awaitEachGesture {
+                    val down = awaitFirstDown(requireUnconsumed = false)
+                    var dragStarted = false
+
+                    try {
+                        drag(down.id) { change ->
+                            // Check if there are multiple pointers - if so, cancel drag for pinch-to-zoom
+                            val currentEvent = currentEvent
+                            if (currentEvent.changes.size > 1) {
+                                // Multi-touch detected - cancel drag and let parent handle pinch
+                                if (dragStarted) {
+                                    isDragInProgress = false
+                                    onDragCancel()
+                                }
+                                throw kotlin.coroutines.cancellation.CancellationException("Multi-touch detected")
+                            }
+
+                            if (!dragStarted) {
+                                dragStarted = true
+                                isDragInProgress = true
+                                onDragStart()
+                            }
+
+                            val dragAmount = change.positionChange()
+                            if (dragAmount != Offset.Zero) {
+                                change.consume()
+                                onDrag(dragAmount)
+                            }
+                        }
+
+                        // Drag completed successfully
+                        if (dragStarted) {
+                            isDragInProgress = false
+                            onDragEnd()
+                        }
+                    } catch (e: kotlin.coroutines.cancellation.CancellationException) {
+                        // Drag was cancelled (multi-touch or other reason)
+                        if (dragStarted) {
+                            isDragInProgress = false
+                            onDragCancel()
+                        }
                     }
-                )
+                }
             }
             .pointerInput(cardInstance.instanceId, cardInstance.gridX, cardInstance.gridY) {
                 detectTapGestures(

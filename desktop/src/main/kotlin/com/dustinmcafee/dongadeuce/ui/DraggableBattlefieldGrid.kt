@@ -2,8 +2,6 @@ package com.dustinmcafee.dongadeuce.ui
 
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -15,13 +13,17 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInWindow
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import kotlin.math.min
 import com.dustinmcafee.dongadeuce.models.CardAction
 import com.dustinmcafee.dongadeuce.models.CardInstance
 import com.dustinmcafee.dongadeuce.models.Zone
 import com.dustinmcafee.dongadeuce.ui.UIConstants.BATTLEFIELD_CARD_TAPPED_SIZE
+import com.dustinmcafee.dongadeuce.ui.UIConstants.BATTLEFIELD_ROWS
+import com.dustinmcafee.dongadeuce.ui.UIConstants.BATTLEFIELD_MIN_COLUMNS
 import com.dustinmcafee.dongadeuce.ui.UIConstants.STACK_OFFSET_RATIO
 import kotlin.math.roundToInt
 
@@ -148,11 +150,22 @@ fun DraggableBattlefieldGrid(
         stackInfo
     }
 
-    // Calculate total rows needed
-    val totalRows = ((gridPositions.values.maxOfOrNull { it.second } ?: 0) + 1).coerceAtMost(10)
+    // Calculate total rows needed (fixed at 3 rows: lands, artifacts/enchantments, creatures)
+    val totalRows = BATTLEFIELD_ROWS
 
-    // Scroll state for vertical scrolling
-    val scrollState = rememberScrollState()
+    // Calculate total columns needed based on card positions
+    val maxCol = gridPositions.values.maxOfOrNull { it.first } ?: 0
+    val totalColumns = (maxCol + 1).coerceAtLeast(BATTLEFIELD_MIN_COLUMNS)
+
+    // Calculate auto-zoom scale: if grid exceeds container, zoom out to fit
+    val totalGridWidth = totalColumns * cellWidth
+    val autoZoomScale = remember(containerWidth, totalGridWidth) {
+        if (containerWidth > 0 && totalGridWidth > containerWidth) {
+            (containerWidth / totalGridWidth).coerceIn(0.3f, 1f)
+        } else {
+            1f
+        }
+    }
 
     Box(
         modifier = modifier
@@ -161,8 +174,13 @@ fun DraggableBattlefieldGrid(
                 containerPositionInWindow = coordinates.positionInWindow()
             }
             .fillMaxWidth()
-            .verticalScroll(scrollState)
             .height((totalRows * cellHeight).dp)
+            .graphicsLayer {
+                scaleX = autoZoomScale
+                scaleY = autoZoomScale
+                // Anchor scaling to top-left
+                transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0f, 0f)
+            }
     ) {
                 cards.forEach { card ->
                     val position = gridPositions[card.instanceId] ?: Pair(0, 0)
@@ -348,13 +366,14 @@ fun DraggableBattlefieldGrid(
                                                 val finalY = dragStartPixelPos.y + localDragOffset.y + (cardHeight.value / 2)
 
                                                 // Calculate target grid cell from center point
+                                                // Allow dropping beyond visible columns to expand the grid
                                                 var targetCol = (finalX / cellWidth)
                                                     .toInt()
-                                                    .coerceIn(0, columns - 1)
+                                                    .coerceAtLeast(0)
                                                 var targetRow = (finalY / cellHeight)
                                                     .toInt()
                                                     .coerceAtLeast(0)
-                                                    .coerceAtMost(9)
+                                                    .coerceAtMost(BATTLEFIELD_ROWS - 1)
 
                                                 // Count existing cards at target position (excluding cards being dragged)
                                                 val cardsAtTarget = cards.filter { c ->
@@ -376,14 +395,14 @@ fun DraggableBattlefieldGrid(
                                                         var searchRow = targetRow
                                                         var found = false
 
-                                                        while (!found && searchRow < 10) {
+                                                        while (!found && searchRow < BATTLEFIELD_ROWS) {
                                                             searchCol++
                                                             if (searchCol >= columns) {
                                                                 searchCol = 0
                                                                 searchRow++
                                                             }
 
-                                                            if (searchRow >= 10) break
+                                                            if (searchRow >= BATTLEFIELD_ROWS) break
 
                                                             // Count cards at this search position (including already-placed dragged cards)
                                                             val cardsAtSearch = cards.filter { c ->

@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.4.0] - 2025-11-30
+
+### Added
+- **Android pinch-to-zoom and pan** - Battlefield grids support pinch-to-zoom (0.5x-2x) and two-finger pan
+- **Full-height opponent battlefields** - Android opponents now have proper 3-row battlefield grids matching local player
+- **Turn indicator colors** - Light green background for active player, dark green for inactive (Android and Desktop)
+- **Pan limits** - Prevents scrolling past content bounds (can't pan left/up past origin)
+
+### Fixed
+- **Type-based row assignment** - Fixed inverted rows (now: creatures top, artifacts/enchantments middle, lands bottom)
+- **Card drag multi-touch interference** - Card drag now cancels when second finger detected, allowing pinch-to-zoom
+- **UNTAP phase chip** - Clicking UNTAP in phase menu now actually untaps cards (both local and network)
+- **Drag to far-right columns** - Removed column constraint that prevented dragging cards beyond visible columns (Android and Desktop)
+
+### Changed
+- Opponent section background now matches active/inactive state instead of fixed color
+
 ## [4.4.0-alpha] - 2025-11-30
 
 ### Added
