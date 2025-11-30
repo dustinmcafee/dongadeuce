@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.5.7] - 2025-11-30
+
+### Fixed
+- **Android APK version in CI** - Fixed CI workflow to read version from build.gradle.kts instead of gradle.properties
+  - APK filename now correctly includes the current version number
+
 ## [4.5.6] - 2025-11-30
 
 ### Fixed

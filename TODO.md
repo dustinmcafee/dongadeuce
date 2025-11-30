@@ -1,6 +1,6 @@
 # Dong-A-Deuce - Development TODO
 
-**Current Version:** v4.5.6
+**Current Version:** v4.5.7
 **Desktop:** 99% complete (fully playable!)
 **Android:** 99% complete (fully playable!)
 **Network Mode:** 100% complete (fully playable!)
@@ -226,6 +226,7 @@ These are nice-to-have features that would improve the experience but aren't req
 
 | Version | Highlights |
 |---------|------------|
+| v4.5.7 | CI fix for Android APK version filename |
 | v4.5.6 | Windows DPI scaling fix for card/battlefield sizing |
 | v4.5.5 | Native distribution icons, lint fixes |
 | v4.5.4 | Android card viewer (swipe drawer), UI fixes marked complete |

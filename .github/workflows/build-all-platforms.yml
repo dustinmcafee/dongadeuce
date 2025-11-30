@@ -139,8 +139,8 @@ jobs:
         KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
         KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
       run: |
-        # Get version from gradle.properties
-        VERSION=$(grep "^version=" gradle.properties | cut -d'=' -f2)
+        # Get version from build.gradle.kts
+        VERSION=$(grep 'version = "' build.gradle.kts | head -1 | sed 's/.*version = "\([^"]*\)".*/\1/')
 
         # Find the unsigned APK
         UNSIGNED_APK=$(find android/build/outputs/apk/release -name "*.apk" | head -1)
