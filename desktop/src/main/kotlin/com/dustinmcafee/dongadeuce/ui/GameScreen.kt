@@ -32,6 +32,7 @@ fun GameScreen(
     val dragDropState = rememberDragDropState()
     val selectionState = rememberSelectionState()
     val focusedCardState = rememberFocusedCardState()
+    val resizableState = rememberResizableSidebarState()
 
     val uiState by viewModel.uiState.collectAsState()
     val revealedCardsState by viewModel.revealedCardsState.collectAsState()
@@ -477,8 +478,13 @@ fun GameScreen(
             // Right sidebar with Turn indicator and Game Log
             val sidebarGameState = uiState.gameState
             if (sidebarGameState != null) {
+                // Vertical resize handle on left edge of sidebar
+                VerticalResizeHandle(
+                    onDrag = { delta -> resizableState.updateWidth(delta) }
+                )
+
                 Column(
-                    modifier = Modifier.width(280.dp).fillMaxHeight(),
+                    modifier = Modifier.width(resizableState.sidebarWidth).fillMaxHeight(),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     // Turn indicator at top
@@ -493,13 +499,19 @@ fun GameScreen(
                         modifier = Modifier.fillMaxWidth()
                     )
 
-                    // Persistent card viewer in sidebar
-                    PersistentCardViewer(
-                        cardInstance = focusedCardState.focusedCard,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .heightIn(max = 350.dp)
-                    )
+                    // Persistent card viewer with resizable height
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        PersistentCardViewer(
+                            cardInstance = focusedCardState.focusedCard,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(resizableState.viewerHeight)
+                        )
+                        // Horizontal resize handle at bottom of card viewer
+                        HorizontalResizeHandle(
+                            onDrag = { delta -> resizableState.updateViewerHeight(delta) }
+                        )
+                    }
 
                     // Game log panel fills remaining space
                     GameLogPanel(

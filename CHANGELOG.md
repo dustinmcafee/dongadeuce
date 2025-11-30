@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.5.3] - 2025-11-30
+
+### Added
+- **Resizable card viewer (Desktop)** - Drag bottom edge to adjust card viewer height
+- **Resizable sidebar (Desktop)** - Drag left edge to adjust sidebar width
+  - Affects battlefield area horizontally and game log vertically
+  - Width range: 200-500dp, viewer height range: 150-600dp
+  - Visual drag handles with resize cursors
+
 ## [4.5.2] - 2025-11-30
 
 ### Added

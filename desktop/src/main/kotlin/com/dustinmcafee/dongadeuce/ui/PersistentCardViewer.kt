@@ -1,5 +1,7 @@
 package com.dustinmcafee.dongadeuce.ui
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -10,10 +12,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.pointerHoverIcon
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.dustinmcafee.dongadeuce.models.CardInstance
+import java.awt.Cursor
 
 /**
  * State holder for the focused card in the persistent viewer
@@ -36,6 +43,102 @@ fun rememberFocusedCardState(): FocusedCardState {
     return remember { FocusedCardState() }
 }
 
+/**
+ * State holder for resizable sidebar dimensions
+ */
+class ResizableSidebarState(
+    initialWidth: Dp = 280.dp,
+    initialViewerHeight: Dp = 300.dp
+) {
+    var sidebarWidth by mutableStateOf(initialWidth)
+        private set
+    var viewerHeight by mutableStateOf(initialViewerHeight)
+        private set
+
+    fun updateWidth(delta: Float) {
+        // Negative delta = dragging left = increase width
+        val newWidth = sidebarWidth - delta.dp
+        sidebarWidth = newWidth.coerceIn(200.dp, 500.dp)
+    }
+
+    fun updateViewerHeight(delta: Float) {
+        val newHeight = viewerHeight + delta.dp
+        viewerHeight = newHeight.coerceIn(150.dp, 600.dp)
+    }
+}
+
+@Composable
+fun rememberResizableSidebarState(
+    initialWidth: Dp = 280.dp,
+    initialViewerHeight: Dp = 300.dp
+): ResizableSidebarState {
+    return remember { ResizableSidebarState(initialWidth, initialViewerHeight) }
+}
+
+/**
+ * Vertical resize handle (for left edge of sidebar)
+ */
+@Composable
+fun VerticalResizeHandle(
+    onDrag: (Float) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .width(6.dp)
+            .fillMaxHeight()
+            .pointerHoverIcon(PointerIcon(Cursor(Cursor.E_RESIZE_CURSOR)))
+            .pointerInput(Unit) {
+                detectDragGestures { change, dragAmount ->
+                    change.consume()
+                    onDrag(dragAmount.x)
+                }
+            }
+            .background(Color.Transparent)
+    ) {
+        // Visual indicator on hover - subtle line
+        Box(
+            modifier = Modifier
+                .width(2.dp)
+                .fillMaxHeight()
+                .align(Alignment.Center)
+                .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+        )
+    }
+}
+
+/**
+ * Horizontal resize handle (for bottom edge of card viewer)
+ */
+@Composable
+fun HorizontalResizeHandle(
+    onDrag: (Float) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .height(6.dp)
+            .fillMaxWidth()
+            .pointerHoverIcon(PointerIcon(Cursor(Cursor.S_RESIZE_CURSOR)))
+            .pointerInput(Unit) {
+                detectDragGestures { change, dragAmount ->
+                    change.consume()
+                    onDrag(dragAmount.y)
+                }
+            }
+            .background(Color.Transparent)
+    ) {
+        // Visual indicator - subtle line
+        Box(
+            modifier = Modifier
+                .height(2.dp)
+                .fillMaxWidth()
+                .align(Alignment.Center)
+                .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+        )
+    }
+}
+
 private enum class ViewerTab { IMAGE, TEXT }
 
 /**
@@ -51,9 +154,7 @@ fun PersistentCardViewer(
     var selectedTab by remember { mutableStateOf(ViewerTab.IMAGE) }
 
     Card(
-        modifier = modifier
-            .width(220.dp)
-            .fillMaxHeight(),
+        modifier = modifier,
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.95f)
         ),

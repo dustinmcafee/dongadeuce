@@ -1,6 +1,6 @@
 # Dong-A-Deuce - Development TODO
 
-**Current Version:** v4.5.2
+**Current Version:** v4.5.3
 **Desktop:** 99% complete (fully playable!)
 **Android:** 97% complete (fully playable!)
 **Network Mode:** 96% complete (fully playable!)
@@ -226,6 +226,8 @@ These are nice-to-have features that would improve the experience but aren't req
 
 | Version | Highlights |
 |---------|------------|
+| v4.5.3 | Resizable card viewer and sidebar (Desktop) |
+| v4.5.2 | Persistent card viewer (Desktop), layout fix |
 | v4.5.1 | Desktop dynamic card sizing, horizontal scroll, Android zoom 5x, View Details at top of context menu |
 | v4.4.0 | Android pinch-to-zoom/pan, full opponent battlefields, turn indicator colors, type-based row fix |
 | v4.4.0-alpha | Android APK in CI, enhanced Android dialogs, library view/search |
