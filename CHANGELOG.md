@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.5.6] - 2025-11-30
+
+### Fixed
+- **Windows DPI scaling** - Fixed card and battlefield sizing on Windows with display scaling (125%, 150%, etc.)
+  - Properly convert container dimensions from pixels to dp using LocalDensity
+  - Cards now size correctly on high-DPI displays
+
 ## [4.5.5] - 2025-11-30
 
 ### Fixed

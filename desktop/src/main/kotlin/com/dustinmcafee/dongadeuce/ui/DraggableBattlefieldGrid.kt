@@ -29,6 +29,7 @@ import com.dustinmcafee.dongadeuce.ui.UIConstants.BATTLEFIELD_ROWS
 import com.dustinmcafee.dongadeuce.ui.UIConstants.BATTLEFIELD_MIN_COLUMNS
 import com.dustinmcafee.dongadeuce.ui.UIConstants.STACK_OFFSET_RATIO
 import kotlin.math.roundToInt
+import androidx.compose.ui.platform.LocalDensity
 
 /**
  * A draggable grid layout for battlefield cards.
@@ -81,9 +82,16 @@ fun DraggableBattlefieldGrid(
     val dragOffset = localDragOffset
 
     // Container size and position - track both width and height for dynamic sizing
-    var containerWidth by remember { mutableStateOf(0f) }
-    var containerHeight by remember { mutableStateOf(0f) }
+    var containerWidthPx by remember { mutableStateOf(0f) }
+    var containerHeightPx by remember { mutableStateOf(0f) }
     var containerPositionInWindow by remember { mutableStateOf(Offset.Zero) }
+
+    // Get density for proper px to dp conversion (important for Windows DPI scaling)
+    val density = LocalDensity.current
+
+    // Convert container size from pixels to dp for proper cross-platform sizing
+    val containerHeightDp = with(density) { containerHeightPx.toDp().value }
+    val containerWidthDp = with(density) { containerWidthPx.toDp().value }
 
     // Dynamic card sizing: fit 3 rows in available height
     // Card size = (containerHeight - spacing) / 3 rows
@@ -91,8 +99,8 @@ fun DraggableBattlefieldGrid(
     // cellHeight = cardSize + spacing = cardSize * 1.25
     // totalHeight = 3 * cellHeight = 3.75 * cardSize
     // cardSize = containerHeight / 3.75
-    val dynamicCardSize = if (containerHeight > 0) {
-        (containerHeight / 3.75f).coerceIn(80f, BATTLEFIELD_CARD_TAPPED_SIZE.value)
+    val dynamicCardSize = if (containerHeightDp > 0) {
+        (containerHeightDp / 3.75f).coerceIn(80f, BATTLEFIELD_CARD_TAPPED_SIZE.value)
     } else {
         BATTLEFIELD_CARD_TAPPED_SIZE.value
     }
@@ -123,10 +131,10 @@ fun DraggableBattlefieldGrid(
         }
     }
 
-    // Calculate grid columns based on container width
-    val columns = remember(containerWidth) {
-        if (containerWidth > 0) {
-            ((containerWidth / cellWidth).toInt()).coerceAtLeast(1)
+    // Calculate grid columns based on container width (in dp)
+    val columns = remember(containerWidthDp, cellWidth) {
+        if (containerWidthDp > 0) {
+            ((containerWidthDp / cellWidth).toInt()).coerceAtLeast(1)
         } else {
             4 // Default
         }
@@ -185,8 +193,8 @@ fun DraggableBattlefieldGrid(
     Box(
         modifier = modifier
             .onGloballyPositioned { coordinates ->
-                containerWidth = coordinates.size.width.toFloat()
-                containerHeight = coordinates.size.height.toFloat()
+                containerWidthPx = coordinates.size.width.toFloat()
+                containerHeightPx = coordinates.size.height.toFloat()
                 containerPositionInWindow = coordinates.positionInWindow()
             }
             .fillMaxSize()
