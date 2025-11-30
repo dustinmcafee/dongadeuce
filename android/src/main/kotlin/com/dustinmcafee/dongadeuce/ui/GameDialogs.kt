@@ -5,6 +5,7 @@ package com.dustinmcafee.dongadeuce.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -980,13 +981,23 @@ fun LibraryActionsDialog(
     onLookAtTop: () -> Unit,
     onViewTopCard: (CardInstance) -> Unit,
     onSendTopTo: (Int, Zone) -> Unit = { _, _ -> },
-    onSendBottomTo: (Int, Zone) -> Unit = { _, _ -> }
+    onSendBottomTo: (Int, Zone) -> Unit = { _, _ -> },
+    onViewTopN: (Int) -> Unit = { _ -> },
+    onViewBottomN: (Int) -> Unit = { _ -> },
+    onRevealTopN: (Int) -> Unit = { _ -> },
+    onRevealBottomN: (Int) -> Unit = { _ -> },
+    onShuffleTopN: (Int) -> Unit = { _ -> },
+    onShuffleBottomN: (Int) -> Unit = { _ -> },
+    onViewLibrary: () -> Unit = {}
 ) {
     var drawCount by remember { mutableStateOf("7") }
     var millCount by remember { mutableStateOf("1") }
     var scryCount by remember { mutableStateOf("1") }
     var sendTopCount by remember { mutableStateOf("1") }
     var sendBottomCount by remember { mutableStateOf("1") }
+    var viewCount by remember { mutableStateOf("5") }
+    var revealCount by remember { mutableStateOf("1") }
+    var shufflePartialCount by remember { mutableStateOf("5") }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -1081,6 +1092,117 @@ fun LibraryActionsDialog(
                     }
                     OutlinedButton(onClick = { onRevealTop(); onDismiss() }, modifier = Modifier.weight(1f)) {
                         Text("Reveal Top")
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // View Top/Bottom N (private peek)
+                Text("View Cards (Private)", style = MaterialTheme.typography.labelMedium, color = Color.Gray)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    OutlinedTextField(
+                        value = viewCount,
+                        onValueChange = { viewCount = it.filter { c -> c.isDigit() } },
+                        modifier = Modifier.width(60.dp),
+                        singleLine = true,
+                        label = { Text("N") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                    )
+                    OutlinedButton(
+                        onClick = {
+                            viewCount.toIntOrNull()?.let { onViewTopN(it) }
+                            onDismiss()
+                        },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("View Top N")
+                    }
+                    OutlinedButton(
+                        onClick = {
+                            viewCount.toIntOrNull()?.let { onViewBottomN(it) }
+                            onDismiss()
+                        },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("View Bottom N")
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Reveal Top/Bottom N (public)
+                Text("Reveal Cards (All See)", style = MaterialTheme.typography.labelMedium, color = Color.Gray)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    OutlinedTextField(
+                        value = revealCount,
+                        onValueChange = { revealCount = it.filter { c -> c.isDigit() } },
+                        modifier = Modifier.width(60.dp),
+                        singleLine = true,
+                        label = { Text("N") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                    )
+                    OutlinedButton(
+                        onClick = {
+                            revealCount.toIntOrNull()?.let { onRevealTopN(it) }
+                            onDismiss()
+                        },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("Reveal Top N")
+                    }
+                    OutlinedButton(
+                        onClick = {
+                            revealCount.toIntOrNull()?.let { onRevealBottomN(it) }
+                            onDismiss()
+                        },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("Reveal Bottom N")
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Shuffle Top/Bottom N
+                Text("Shuffle Partial", style = MaterialTheme.typography.labelMedium, color = Color.Gray)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    OutlinedTextField(
+                        value = shufflePartialCount,
+                        onValueChange = { shufflePartialCount = it.filter { c -> c.isDigit() } },
+                        modifier = Modifier.width(60.dp),
+                        singleLine = true,
+                        label = { Text("N") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                    )
+                    OutlinedButton(
+                        onClick = {
+                            shufflePartialCount.toIntOrNull()?.let { onShuffleTopN(it) }
+                            onDismiss()
+                        },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("Shuffle Top N")
+                    }
+                    OutlinedButton(
+                        onClick = {
+                            shufflePartialCount.toIntOrNull()?.let { onShuffleBottomN(it) }
+                            onDismiss()
+                        },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("Shuffle Bottom N")
                     }
                 }
 
@@ -1279,6 +1401,15 @@ fun LibraryActionsDialog(
                         Text("Shuffle")
                     }
                 }
+
+                // View Library button
+                Button(
+                    onClick = { onViewLibrary(); onDismiss() },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = librarySize > 0
+                ) {
+                    Text("View Library")
+                }
             }
         },
         confirmButton = {
@@ -1405,7 +1536,35 @@ fun LibrarySearchDialog(
 }
 
 /**
- * Dialog for viewing and interacting with hand cards (useful when many cards)
+ * Card type categories for column-based display in Hand dialog (matches Desktop)
+ */
+private enum class HandCardTypeCategory(val displayName: String) {
+    CREATURE("Creatures"),
+    PLANESWALKER("Planeswalkers"),
+    INSTANT("Instants"),
+    SORCERY("Sorceries"),
+    ENCHANTMENT("Enchantments"),
+    ARTIFACT("Artifacts"),
+    LAND("Lands"),
+    OTHER("Other")
+}
+
+private fun getHandCardCategory(typeLine: String?): HandCardTypeCategory {
+    val type = typeLine?.lowercase() ?: ""
+    return when {
+        type.contains("creature") -> HandCardTypeCategory.CREATURE
+        type.contains("planeswalker") -> HandCardTypeCategory.PLANESWALKER
+        type.contains("instant") -> HandCardTypeCategory.INSTANT
+        type.contains("sorcery") -> HandCardTypeCategory.SORCERY
+        type.contains("enchantment") -> HandCardTypeCategory.ENCHANTMENT
+        type.contains("artifact") -> HandCardTypeCategory.ARTIFACT
+        type.contains("land") -> HandCardTypeCategory.LAND
+        else -> HandCardTypeCategory.OTHER
+    }
+}
+
+/**
+ * Enhanced Hand View Dialog with column-based layout by card type (matches Desktop/Cockatrice style)
  */
 @Composable
 fun HandViewDialog(
@@ -1418,44 +1577,107 @@ fun HandViewDialog(
 ) {
     var selectedCard by remember { mutableStateOf<CardInstance?>(null) }
 
+    // Group cards by type category and sort alphabetically within each group
+    val cardsByCategory = remember(cards) {
+        cards
+            .groupBy { getHandCardCategory(it.card.type) }
+            .mapValues { (_, cardList) -> cardList.sortedBy { it.card.name.lowercase() } }
+    }
+
+    // Get non-empty categories in display order
+    val activeCategories = remember(cardsByCategory) {
+        HandCardTypeCategory.entries.filter { cardsByCategory[it]?.isNotEmpty() == true }
+    }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Hand - $playerName (${cards.size} cards)") },
         text = {
-            Column(modifier = Modifier.heightIn(max = 450.dp)) {
+            Column(modifier = Modifier.heightIn(max = 500.dp)) {
                 if (cards.isEmpty()) {
                     Text("No cards in hand", style = MaterialTheme.typography.bodyMedium)
                 } else {
-                    LazyColumn(modifier = Modifier.weight(1f)) {
-                        items(cards) { card ->
+                    // Horizontal scrollable row of columns (one per card type)
+                    val horizontalScrollState = rememberScrollState()
+
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier
+                            .weight(1f)
+                            .horizontalScroll(horizontalScrollState)
+                    ) {
+                        activeCategories.forEach { category ->
+                            val categoryCards = cardsByCategory[category] ?: emptyList()
+
+                            // Column for this card type - fillMaxHeight to use available space
                             Card(
                                 modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 2.dp)
-                                    .clickable { selectedCard = card },
+                                    .width(160.dp)
+                                    .fillMaxHeight(),
                                 colors = CardDefaults.cardColors(
-                                    containerColor = if (selectedCard == card)
-                                        MaterialTheme.colorScheme.primaryContainer
-                                    else
-                                        MaterialTheme.colorScheme.surfaceVariant
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant
                                 )
                             ) {
-                                Row(
-                                    modifier = Modifier.padding(8.dp),
-                                    verticalAlignment = Alignment.CenterVertically
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .padding(8.dp),
+                                    verticalArrangement = Arrangement.spacedBy(4.dp)
                                 ) {
-                                    CardImageThumbnail(
-                                        imageUrl = card.card.imageUri,
-                                        contentDescription = card.card.name
+                                    // Column header
+                                    Text(
+                                        "${category.displayName} (${categoryCards.size})",
+                                        style = MaterialTheme.typography.titleSmall,
+                                        color = MaterialTheme.colorScheme.primary
                                     )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(card.card.name, style = MaterialTheme.typography.bodyMedium)
-                                        card.card.type?.let {
-                                            Text(it, style = MaterialTheme.typography.bodySmall)
-                                        }
-                                        card.card.manaCost?.let {
-                                            Text(it, style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                                    Divider(modifier = Modifier.padding(vertical = 2.dp))
+
+                                    // Vertically scrollable list of cards
+                                    Column(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .verticalScroll(rememberScrollState()),
+                                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                                    ) {
+                                        categoryCards.forEach { cardInstance ->
+                                            val isSelected = selectedCard?.instanceId == cardInstance.instanceId
+                                            Card(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .clickable { selectedCard = if (isSelected) null else cardInstance },
+                                                colors = CardDefaults.cardColors(
+                                                    containerColor = if (isSelected)
+                                                        MaterialTheme.colorScheme.primaryContainer
+                                                    else
+                                                        MaterialTheme.colorScheme.secondaryContainer
+                                                )
+                                            ) {
+                                                Row(
+                                                    modifier = Modifier.padding(4.dp),
+                                                    verticalAlignment = Alignment.CenterVertically
+                                                ) {
+                                                    CardImage(
+                                                        imageUrl = cardInstance.card.imageUri,
+                                                        contentDescription = cardInstance.card.name,
+                                                        modifier = Modifier.size(width = 30.dp, height = 42.dp)
+                                                    )
+                                                    Spacer(modifier = Modifier.width(4.dp))
+                                                    Column(modifier = Modifier.weight(1f)) {
+                                                        Text(
+                                                            text = cardInstance.card.name,
+                                                            style = MaterialTheme.typography.labelSmall,
+                                                            maxLines = 2
+                                                        )
+                                                        cardInstance.card.manaCost?.let {
+                                                            Text(
+                                                                text = it,
+                                                                style = MaterialTheme.typography.labelSmall,
+                                                                color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
+                                                            )
+                                                        }
+                                                    }
+                                                }
+                                            }
                                         }
                                     }
                                 }
@@ -1466,26 +1688,34 @@ fun HandViewDialog(
                     // Action buttons for selected card
                     selectedCard?.let { card ->
                         Spacer(modifier = Modifier.height(8.dp))
+                        Text("Selected: ${card.card.name}", style = MaterialTheme.typography.labelMedium)
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceEvenly
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
-                            OutlinedButton(onClick = {
-                                onPlayCard(card)
-                                selectedCard = null
-                            }) {
-                                Text("Play")
+                            OutlinedButton(
+                                onClick = {
+                                    onPlayCard(card)
+                                    selectedCard = null
+                                },
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text("Play", style = MaterialTheme.typography.labelSmall)
                             }
-                            OutlinedButton(onClick = {
-                                onDiscardCard(card)
-                                selectedCard = null
-                            }) {
-                                Text("Discard")
+                            OutlinedButton(
+                                onClick = {
+                                    onDiscardCard(card)
+                                    selectedCard = null
+                                },
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text("Discard", style = MaterialTheme.typography.labelSmall)
                             }
-                            OutlinedButton(onClick = {
-                                onCardDetails(card)
-                            }) {
-                                Text("Details")
+                            OutlinedButton(
+                                onClick = { onCardDetails(card) },
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text("Details", style = MaterialTheme.typography.labelSmall)
                             }
                         }
                     }
@@ -2025,7 +2255,35 @@ fun CommandZoneDialog(
 }
 
 /**
- * Library Peek dialog - view top or bottom N cards
+ * Card type categories for column-based display (matches Desktop)
+ */
+private enum class PeekCardTypeCategory(val displayName: String) {
+    CREATURE("Creatures"),
+    PLANESWALKER("Planeswalkers"),
+    INSTANT("Instants"),
+    SORCERY("Sorceries"),
+    ENCHANTMENT("Enchantments"),
+    ARTIFACT("Artifacts"),
+    LAND("Lands"),
+    OTHER("Other")
+}
+
+private fun getPeekCardCategory(typeLine: String?): PeekCardTypeCategory {
+    val type = typeLine?.lowercase() ?: ""
+    return when {
+        type.contains("creature") -> PeekCardTypeCategory.CREATURE
+        type.contains("planeswalker") -> PeekCardTypeCategory.PLANESWALKER
+        type.contains("instant") -> PeekCardTypeCategory.INSTANT
+        type.contains("sorcery") -> PeekCardTypeCategory.SORCERY
+        type.contains("enchantment") -> PeekCardTypeCategory.ENCHANTMENT
+        type.contains("artifact") -> PeekCardTypeCategory.ARTIFACT
+        type.contains("land") -> PeekCardTypeCategory.LAND
+        else -> PeekCardTypeCategory.OTHER
+    }
+}
+
+/**
+ * Enhanced Library Peek Dialog with column-based layout by card type (matches Desktop/Cockatrice style)
  */
 @Composable
 fun LibraryPeekDialog(
@@ -2043,6 +2301,32 @@ fun LibraryPeekDialog(
     val initialCards = remember { cards }
     var displayedCards by remember { mutableStateOf(initialCards) }
     var selectedCard by remember { mutableStateOf<CardInstance?>(null) }
+    var searchQuery by remember { mutableStateOf("") }
+
+    // Filter cards based on search query
+    val filteredCards = remember(displayedCards, searchQuery) {
+        if (searchQuery.isBlank()) {
+            displayedCards
+        } else {
+            val query = searchQuery.lowercase()
+            displayedCards.filter { card ->
+                card.card.name.lowercase().contains(query) ||
+                card.card.type?.lowercase()?.contains(query) == true
+            }
+        }
+    }
+
+    // Group cards by type category and sort alphabetically within each group
+    val cardsByCategory = remember(filteredCards) {
+        filteredCards
+            .groupBy { getPeekCardCategory(it.card.type) }
+            .mapValues { (_, cardList) -> cardList.sortedBy { it.card.name.lowercase() } }
+    }
+
+    // Get non-empty categories in display order
+    val activeCategories = remember(cardsByCategory) {
+        PeekCardTypeCategory.entries.filter { cardsByCategory[it]?.isNotEmpty() == true }
+    }
 
     // Helper to remove card from display and call action
     fun removeAndAction(card: CardInstance, action: (CardInstance) -> Unit) {
@@ -2056,40 +2340,115 @@ fun LibraryPeekDialog(
         title = { Text(title) },
         text = {
             Column(modifier = Modifier.heightIn(max = 500.dp)) {
-                if (displayedCards.isEmpty()) {
-                    Text("No cards", style = MaterialTheme.typography.bodyMedium)
-                } else {
-                    Text("${displayedCards.size} cards", style = MaterialTheme.typography.bodySmall)
-                    Spacer(modifier = Modifier.height(8.dp))
+                // Search bar
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    label = { Text("Search by name or type") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
 
-                    LazyColumn(modifier = Modifier.weight(1f)) {
-                        items(displayedCards, key = { it.instanceId }) { card ->
-                            val isSelected = selectedCard?.instanceId == card.instanceId
+                if (searchQuery.isNotBlank()) {
+                    Text(
+                        "Showing ${filteredCards.size} of ${displayedCards.size} cards",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                if (filteredCards.isEmpty()) {
+                    Text(
+                        if (displayedCards.isEmpty()) "No cards" else "No matching cards",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                } else {
+                    Text("${filteredCards.size} cards", style = MaterialTheme.typography.bodySmall)
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    // Horizontal scrollable row of columns (one per card type)
+                    val horizontalScrollState = rememberScrollState()
+
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier
+                            .weight(1f)
+                            .horizontalScroll(horizontalScrollState)
+                    ) {
+                        activeCategories.forEach { category ->
+                            val categoryCards = cardsByCategory[category] ?: emptyList()
+
+                            // Column for this card type - fillMaxHeight to use available space
                             Card(
                                 modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 2.dp)
-                                    .clickable { selectedCard = if (isSelected) null else card },
+                                    .width(160.dp)
+                                    .fillMaxHeight(),
                                 colors = CardDefaults.cardColors(
-                                    containerColor = if (isSelected)
-                                        MaterialTheme.colorScheme.primaryContainer
-                                    else
-                                        MaterialTheme.colorScheme.surfaceVariant
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant
                                 )
                             ) {
-                                Row(
-                                    modifier = Modifier.padding(8.dp),
-                                    verticalAlignment = Alignment.CenterVertically
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .padding(8.dp),
+                                    verticalArrangement = Arrangement.spacedBy(4.dp)
                                 ) {
-                                    CardImageThumbnail(
-                                        imageUrl = card.card.imageUri,
-                                        contentDescription = card.card.name
+                                    // Column header
+                                    Text(
+                                        "${category.displayName} (${categoryCards.size})",
+                                        style = MaterialTheme.typography.titleSmall,
+                                        color = MaterialTheme.colorScheme.primary
                                     )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(card.card.name, style = MaterialTheme.typography.bodyMedium)
-                                        card.card.type?.let {
-                                            Text(it, style = MaterialTheme.typography.bodySmall)
+                                    Divider(modifier = Modifier.padding(vertical = 2.dp))
+
+                                    // Vertically scrollable list of cards
+                                    Column(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .verticalScroll(rememberScrollState()),
+                                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                                    ) {
+                                        categoryCards.forEach { cardInstance ->
+                                            val isSelected = selectedCard?.instanceId == cardInstance.instanceId
+                                            Card(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .clickable { selectedCard = if (isSelected) null else cardInstance },
+                                                colors = CardDefaults.cardColors(
+                                                    containerColor = if (isSelected)
+                                                        MaterialTheme.colorScheme.primaryContainer
+                                                    else
+                                                        MaterialTheme.colorScheme.secondaryContainer
+                                                )
+                                            ) {
+                                                Row(
+                                                    modifier = Modifier.padding(4.dp),
+                                                    verticalAlignment = Alignment.CenterVertically
+                                                ) {
+                                                    CardImage(
+                                                        imageUrl = cardInstance.card.imageUri,
+                                                        contentDescription = cardInstance.card.name,
+                                                        modifier = Modifier.size(width = 30.dp, height = 42.dp)
+                                                    )
+                                                    Spacer(modifier = Modifier.width(4.dp))
+                                                    Column(modifier = Modifier.weight(1f)) {
+                                                        Text(
+                                                            text = cardInstance.card.name,
+                                                            style = MaterialTheme.typography.labelSmall,
+                                                            maxLines = 2
+                                                        )
+                                                        cardInstance.card.manaCost?.let {
+                                                            Text(
+                                                                text = it,
+                                                                style = MaterialTheme.typography.labelSmall,
+                                                                color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
+                                                            )
+                                                        }
+                                                    }
+                                                }
+                                            }
                                         }
                                     }
                                 }
@@ -2101,7 +2460,6 @@ fun LibraryPeekDialog(
                     selectedCard?.let { card ->
                         Spacer(modifier = Modifier.height(8.dp))
                         Text("Selected: ${card.card.name}", style = MaterialTheme.typography.labelMedium)
-
                         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),

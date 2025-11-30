@@ -57,9 +57,25 @@ fun LibraryPeekDialog(
     onShuffleCards: () -> Unit,
     onViewDetails: (CardInstance) -> Unit = {}
 ) {
+    // Search state
+    var searchQuery by remember { mutableStateOf("") }
+
+    // Filter cards based on search query
+    val filteredCards = remember(cards, searchQuery) {
+        if (searchQuery.isBlank()) {
+            cards
+        } else {
+            val query = searchQuery.lowercase()
+            cards.filter { card ->
+                card.card.name.lowercase().contains(query) ||
+                card.card.type?.lowercase()?.contains(query) == true
+            }
+        }
+    }
+
     // Group cards by type category and sort alphabetically within each group
-    val cardsByCategory = remember(cards) {
-        cards
+    val cardsByCategory = remember(filteredCards) {
+        filteredCards
             .groupBy { getPeekCardCategory(it.card.type) }
             .mapValues { (_, cardList) -> cardList.sortedBy { it.card.name.lowercase() } }
     }
@@ -90,9 +106,27 @@ fun LibraryPeekDialog(
                     when (peekLocation) {
                         PeekLocation.TOP -> "$playerName's Library - Top ${cards.size} card(s)"
                         PeekLocation.BOTTOM -> "$playerName's Library - Bottom ${cards.size} card(s)"
+                        PeekLocation.ALL -> "$playerName's Library - All ${cards.size} card(s)"
                     },
                     style = MaterialTheme.typography.headlineSmall
                 )
+
+                // Search bar
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    label = { Text("Search by name or type") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+
+                if (searchQuery.isNotBlank()) {
+                    Text(
+                        "Showing ${filteredCards.size} of ${cards.size} cards",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
 
                 if (cards.isEmpty()) {
                     Box(
@@ -378,5 +412,6 @@ private fun PeekCardItem(
 
 enum class PeekLocation {
     TOP,
-    BOTTOM
+    BOTTOM,
+    ALL
 }

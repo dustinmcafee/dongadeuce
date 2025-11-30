@@ -9,5 +9,5 @@ plugins {
 
 allprojects {
     group = "com.dustinmcafee.dongadeuce"
-    version = "4.3.0-alpha"
+    version = "4.4.0-alpha"
 }

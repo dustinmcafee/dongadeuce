@@ -508,6 +508,40 @@ fun AndroidGameScreen(
                 cards.take(count.coerceAtMost(cards.size)).forEach { card ->
                     gameViewModel.moveCard(card.instanceId, zone)
                 }
+            },
+            onViewTopN = { count ->
+                peekCount = count
+                showLibraryActionsDialog = false
+                showLibraryPeekTopDialog = true
+            },
+            onViewBottomN = { count ->
+                peekCount = count
+                showLibraryActionsDialog = false
+                showLibraryPeekBottomDialog = true
+            },
+            onRevealTopN = { count ->
+                val topCards = gameViewModel.getTopCards(localPlayer.id, count)
+                gameViewModel.revealCards(localPlayer.id, topCards.map { it.instanceId }, emptyList())
+                showLibraryActionsDialog = false
+            },
+            onRevealBottomN = { count ->
+                val bottomCards = gameViewModel.getBottomCards(localPlayer.id, count)
+                gameViewModel.revealCards(localPlayer.id, bottomCards.map { it.instanceId }, emptyList())
+                showLibraryActionsDialog = false
+            },
+            onShuffleTopN = { count ->
+                gameViewModel.shuffleTopCards(localPlayer.id, count)
+                showLibraryActionsDialog = false
+            },
+            onShuffleBottomN = { count ->
+                gameViewModel.shuffleBottomCards(localPlayer.id, count)
+                showLibraryActionsDialog = false
+            },
+            onViewLibrary = {
+                val allCards = gameViewModel.getCards(localPlayer.id, Zone.LIBRARY)
+                peekCount = allCards.size
+                showLibraryActionsDialog = false
+                showLibraryPeekTopDialog = true
             }
         )
     }

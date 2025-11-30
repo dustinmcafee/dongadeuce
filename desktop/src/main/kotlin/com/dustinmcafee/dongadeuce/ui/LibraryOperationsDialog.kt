@@ -28,7 +28,7 @@ fun LibraryOperationsDialog(
     onRevealTopCard: () -> Unit,
     onRevealTopNCards: (Int, List<String>) -> Unit = { _, _ -> }, // count, targetPlayerIds (empty = all)
     onRevealBottomNCards: (Int, List<String>) -> Unit = { _, _ -> },
-    onFullSearch: () -> Unit
+    onViewLibrary: () -> Unit = {}
 ) {
     var cardCount by remember { mutableStateOf("1") }
     var selectedZone by remember { mutableStateOf(Zone.HAND) }
@@ -51,13 +51,13 @@ fun LibraryOperationsDialog(
                     color = MaterialTheme.colorScheme.primary
                 )
 
-                // Full search button
+                // View Library button
                 Button(
-                    onClick = onFullSearch,
+                    onClick = onViewLibrary,
                     modifier = Modifier.fillMaxWidth(),
                     enabled = librarySize > 0
                 ) {
-                    Text("Full Library Search")
+                    Text("View Library")
                 }
 
                 Divider()

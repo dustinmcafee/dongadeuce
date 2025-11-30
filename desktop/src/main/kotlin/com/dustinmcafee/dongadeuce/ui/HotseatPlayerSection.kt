@@ -196,10 +196,6 @@ fun HotseatPlayerSection(
                 showLibraryPeekDialog = true
                 showLibraryOperationsDialog = false
             },
-            onShowLibrarySearch = {
-                showLibraryOperationsDialog = false
-                showLibrarySearchDialog = true
-            },
             showTokenCreationDialog = showTokenCreationDialog,
             onDismissTokenCreation = { showTokenCreationDialog = false },
             showSetLifeDialog = showSetLifeDialog,
@@ -416,7 +412,6 @@ private fun HotseatPlayerDialogs(
     libraryPeekLocation: PeekLocation,
     onLibraryPeekCardsChange: (List<CardInstance>) -> Unit,
     onShowLibraryPeek: (List<CardInstance>, PeekLocation) -> Unit,
-    onShowLibrarySearch: () -> Unit,
     showTokenCreationDialog: Boolean,
     onDismissTokenCreation: () -> Unit,
     showSetLifeDialog: Boolean,
@@ -514,7 +509,10 @@ private fun HotseatPlayerDialogs(
                     viewModel.revealCards(player.id, bottomCards.map { it.instanceId }, targetPlayerIds)
                 }
             },
-            onFullSearch = onShowLibrarySearch
+            onViewLibrary = {
+                val allCards = viewModel.getCards(player.id, Zone.LIBRARY)
+                onShowLibraryPeek(allCards, PeekLocation.ALL)
+            }
         )
     }
 
@@ -543,6 +541,7 @@ private fun HotseatPlayerDialogs(
                 when (libraryPeekLocation) {
                     PeekLocation.TOP -> viewModel.shuffleTopCards(player.id, libraryPeekCards.size)
                     PeekLocation.BOTTOM -> viewModel.shuffleBottomCards(player.id, libraryPeekCards.size)
+                    PeekLocation.ALL -> viewModel.shuffleLibrary(player.id)
                 }
                 onDismissLibraryPeek()
                 onLibraryPeekCardsChange(emptyList())

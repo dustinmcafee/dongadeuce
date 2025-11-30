@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.4.0-alpha] - 2025-11-30
+
+### Added
+- **Android APK in CI releases** - CI now builds and signs Android APK for releases
+- **Enhanced Android dialogs** - "View N cards" and "View Hand" dialogs now use column-based layout by card type (matches Desktop)
+- **View Library button** - New button in library operations dialog to view all cards in library (Android and Desktop)
+- **Library search** - Search bar in library view dialog to filter cards by name or type (Android and Desktop)
+- **Android library operations** - Added View Top/Bottom N, Reveal Top/Bottom N, and Shuffle Top/Bottom N options
+
+### Fixed
+- **Android orientation change** - Rotating device no longer resets game state (added `configChanges` to manifest)
+
+### Changed
+- CI workflow now only triggers on version tags (not on every push to master)
+- Removed "Full Library Search" button on Desktop (replaced by improved "View Library" feature)
+
 ## [4.3.0-alpha] - 2025-11-30
 
 ### Fixed
