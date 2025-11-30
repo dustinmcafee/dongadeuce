@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.5.5] - 2025-11-30
+
+### Fixed
+- **Native distribution icons** - Added icon configuration for Windows (.ico), macOS (.png), and Linux (.png) native packages
+- **Lint warnings** - Removed unused variables in Android code
+
 ## [4.5.4] - 2025-11-30
 
 ### Added

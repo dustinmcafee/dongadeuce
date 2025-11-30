@@ -1403,7 +1403,6 @@ private fun BattlefieldGrid(
     onCardAction: (CardAction) -> Unit,
     onCardPositionChanged: ((String, Int, Int) -> Unit)? = null
 ) {
-    val columns = 5
     val cardSize = 70.dp
     // Spacing accounts for max stack extension: 2 * 10% * 70dp = ~14dp, plus buffer
     val spacing = 16.dp
