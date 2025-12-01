@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.5.10] - 2025-11-30
+
+### Added
+- **UI Scale setting** - Adjustable display scaling slider in Settings (50%-200%)
+  - Helps fix UI overflow issues on high-DPI Windows displays
+  - Persisted to settings file, applied on startup
+  - Requires app restart to take effect
+
+### Fixed
+- **Sidebar guaranteed fit** - ALL sidebar elements now use weight-based layout
+  - Header (name, hand count, life): weight 1
+  - Counters: weight 0.8
+  - Command Zone: weight 2
+  - Library: weight 2
+  - Graveyard: weight 1.5
+  - Exile: weight 1.5
+  - Token button: weight 0.7
+  - Elements shrink/grow proportionally to always fit available space
+- **Battlefield card sizing** - Lowered minimum card size from 80dp to 40dp
+  - Cards will shrink further on constrained displays to fit 3 rows
+
 ## [4.5.9] - 2025-11-30
 
 ### Added

@@ -268,156 +268,174 @@ private fun PlayerInfoSidebar(
     onShowTokenCreationDialog: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    // Determine the image to show for library: revealed card, looked-at card, or card back
+    val libraryImageUrl = when {
+        player.revealTopCard && topCard != null -> topCard.card.imageUri
+        player.lookAtTopCard && isLocalPlayer && topCard != null -> topCard.card.imageUri
+        else -> "https://cards.scryfall.io/back.png"  // Standard card back
+    }
+
+    // ALL elements use weights to guarantee they fit regardless of container size
     Column(
         modifier = modifier,
-        verticalArrangement = Arrangement.spacedBy(2.dp)
+        verticalArrangement = Arrangement.spacedBy(1.dp)
     ) {
-        // Fixed header section
-        Text(
-            player.name,
-            style = MaterialTheme.typography.labelSmall,
-            color = Color.White
-        )
-
-        // Show hand count for opponents (local player can see their own hand)
-        if (!isLocalPlayer) {
-            Text(
-                "Hand: $handCount",
-                style = MaterialTheme.typography.labelSmall,
-                color = Color.White.copy(alpha = 0.8f)
-            )
-        }
-
-        // Life with increment/decrement buttons
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(2.dp)
-        ) {
-            IconButton(
-                onClick = { viewModel.updateLife(player.id, player.life - 1) },
-                modifier = Modifier.size(20.dp)
-            ) {
-                Text("-", style = MaterialTheme.typography.labelSmall, color = Color.White)
-            }
-            Text(
-                "Life: ${player.life}",
-                style = MaterialTheme.typography.bodySmall,
-                color = Color.White,
-                modifier = Modifier.clickable { onShowSetLifeDialog() }
-            )
-            IconButton(
-                onClick = { viewModel.updateLife(player.id, player.life + 1) },
-                modifier = Modifier.size(20.dp)
-            ) {
-                Text("+", style = MaterialTheme.typography.labelSmall, color = Color.White)
-            }
-        }
-
-        // Player counters display (clickable to open dialog)
-        PlayerCountersDisplay(
-            player = player,
-            onClick = if (isLocalPlayer) onShowPlayerCountersDialog else null
-        )
-
-        Spacer(modifier = Modifier.height(4.dp))
-
-        // Command Zone - shows actual commander card(s)
-        CommandZoneDisplay(
-            commanderCards = commandZoneCards,
-            isActivePlayer = isLocalPlayer,
-            onCardAction = onCardAction,
-            allPlayers = allPlayers,
-            dragDropState = dragDropState,
-            onDropCards = if (isLocalPlayer) {
-                { cardIds ->
-                    dragDropState?.markHandledByZone()
-                    cardIds.forEach { cardId ->
-                        viewModel.moveCard(cardId, Zone.COMMAND_ZONE)
-                    }
-                    dragDropState?.endDrag()
-                }
-            } else null,
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        Spacer(modifier = Modifier.height(4.dp))
-
-        // Clickable zone cards - Library with card back image
-        // Determine the image to show: revealed card, looked-at card, or card back
-        val libraryImageUrl = when {
-            player.revealTopCard && topCard != null -> topCard.card.imageUri
-            player.lookAtTopCard && isLocalPlayer && topCard != null -> topCard.card.imageUri
-            else -> "https://cards.scryfall.io/back.png"  // Standard card back
-        }
-
-        // Zone cards section - fills remaining space with weights
+        // Header: Name + Hand count (for opponents) + Life - weight 1
         Column(
             modifier = Modifier.fillMaxWidth().weight(1f),
-            verticalArrangement = Arrangement.spacedBy(2.dp)
+            verticalArrangement = Arrangement.Center
         ) {
-            ZoneCard(
-                "Library",
-                Zone.LIBRARY,
-                libraryCount,
-                Modifier.fillMaxWidth().weight(1.5f),  // Flexible - takes 1.5x space
-                onClick = null, // No single-click action
-                onDoubleClick = if (isLocalPlayer) ({ viewModel.drawCard(player.id) }) else null,
-                onRightClick = if (isLocalPlayer) onShowLibraryOperationsDialog else null,
-                dragDropState = if (isLocalPlayer) dragDropState else null,
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    player.name,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color.White
+                )
+                if (!isLocalPlayer) {
+                    Text(
+                        "($handCount)",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color.White.copy(alpha = 0.7f)
+                    )
+                }
+            }
+            // Life row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    "-",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = Color.White,
+                    modifier = Modifier.clickable { viewModel.updateLife(player.id, player.life - 1) }
+                        .padding(horizontal = 8.dp)
+                )
+                Text(
+                    "${player.life}",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = Color.White,
+                    modifier = Modifier.clickable { onShowSetLifeDialog() }
+                )
+                Text(
+                    "+",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = Color.White,
+                    modifier = Modifier.clickable { viewModel.updateLife(player.id, player.life + 1) }
+                        .padding(horizontal = 8.dp)
+                )
+            }
+        }
+
+        // Counters - weight 0.8
+        Box(
+            modifier = Modifier.fillMaxWidth().weight(0.8f),
+            contentAlignment = Alignment.Center
+        ) {
+            PlayerCountersDisplay(
+                player = player,
+                onClick = if (isLocalPlayer) onShowPlayerCountersDialog else null
+            )
+        }
+
+        // Command Zone - weight 2
+        Box(modifier = Modifier.fillMaxWidth().weight(2f)) {
+            CommandZoneDisplay(
+                commanderCards = commandZoneCards,
+                isActivePlayer = isLocalPlayer,
+                onCardAction = onCardAction,
+                allPlayers = allPlayers,
+                dragDropState = dragDropState,
                 onDropCards = if (isLocalPlayer) {
                     { cardIds ->
                         dragDropState?.markHandledByZone()
                         cardIds.forEach { cardId ->
-                            viewModel.moveCardToTopOfLibrary(cardId)
+                            viewModel.moveCard(cardId, Zone.COMMAND_ZONE)
                         }
                         dragDropState?.endDrag()
                     }
                 } else null,
-                imageUrl = libraryImageUrl
-            )
-            ZoneCard(
-                "Graveyard",
-                Zone.GRAVEYARD,
-                graveyardCount,
-                Modifier.fillMaxWidth().weight(1f),  // Flexible
-                onClick = onShowGraveyardDialog, // Always clickable - shows read-only dialog for non-local players
-                dragDropState = if (isLocalPlayer) dragDropState else null,
-                onDropCards = if (isLocalPlayer) {
-                    { cardIds ->
-                        dragDropState?.markHandledByZone()
-                        cardIds.forEach { cardId ->
-                            viewModel.moveCard(cardId, Zone.GRAVEYARD)
-                        }
-                        dragDropState?.endDrag()
-                    }
-                } else null
-            )
-            ZoneCard(
-                "Exile",
-                Zone.EXILE,
-                exileCount,
-                Modifier.fillMaxWidth().weight(1f),  // Flexible
-                onClick = onShowExileDialog, // Always clickable - shows read-only dialog for non-local players
-                dragDropState = if (isLocalPlayer) dragDropState else null,
-                onDropCards = if (isLocalPlayer) {
-                    { cardIds ->
-                        dragDropState?.markHandledByZone()
-                        cardIds.forEach { cardId ->
-                            viewModel.moveCard(cardId, Zone.EXILE)
-                        }
-                        dragDropState?.endDrag()
-                    }
-                } else null
+                modifier = Modifier.fillMaxSize()
             )
         }
 
-        // Token creation button (only for local player) - fixed at bottom
+        // Library - weight 2
+        ZoneCard(
+            "Library",
+            Zone.LIBRARY,
+            libraryCount,
+            Modifier.fillMaxWidth().weight(2f),
+            onClick = null,
+            onDoubleClick = if (isLocalPlayer) ({ viewModel.drawCard(player.id) }) else null,
+            onRightClick = if (isLocalPlayer) onShowLibraryOperationsDialog else null,
+            dragDropState = if (isLocalPlayer) dragDropState else null,
+            onDropCards = if (isLocalPlayer) {
+                { cardIds ->
+                    dragDropState?.markHandledByZone()
+                    cardIds.forEach { cardId ->
+                        viewModel.moveCardToTopOfLibrary(cardId)
+                    }
+                    dragDropState?.endDrag()
+                }
+            } else null,
+            imageUrl = libraryImageUrl
+        )
+
+        // Graveyard - weight 1.5
+        ZoneCard(
+            "Graveyard",
+            Zone.GRAVEYARD,
+            graveyardCount,
+            Modifier.fillMaxWidth().weight(1.5f),
+            onClick = onShowGraveyardDialog,
+            dragDropState = if (isLocalPlayer) dragDropState else null,
+            onDropCards = if (isLocalPlayer) {
+                { cardIds ->
+                    dragDropState?.markHandledByZone()
+                    cardIds.forEach { cardId ->
+                        viewModel.moveCard(cardId, Zone.GRAVEYARD)
+                    }
+                    dragDropState?.endDrag()
+                }
+            } else null
+        )
+
+        // Exile - weight 1.5
+        ZoneCard(
+            "Exile",
+            Zone.EXILE,
+            exileCount,
+            Modifier.fillMaxWidth().weight(1.5f),
+            onClick = onShowExileDialog,
+            dragDropState = if (isLocalPlayer) dragDropState else null,
+            onDropCards = if (isLocalPlayer) {
+                { cardIds ->
+                    dragDropState?.markHandledByZone()
+                    cardIds.forEach { cardId ->
+                        viewModel.moveCard(cardId, Zone.EXILE)
+                    }
+                    dragDropState?.endDrag()
+                }
+            } else null
+        )
+
+        // Token button (local player only) - weight 0.7
         if (isLocalPlayer) {
-            OutlinedButton(
-                onClick = onShowTokenCreationDialog,
-                modifier = Modifier.fillMaxWidth().height(36.dp)
+            Box(
+                modifier = Modifier.fillMaxWidth().weight(0.7f),
+                contentAlignment = Alignment.Center
             ) {
-                Text("Create Token", style = MaterialTheme.typography.labelSmall)
+                OutlinedButton(
+                    onClick = onShowTokenCreationDialog,
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    Text("Token", style = MaterialTheme.typography.labelSmall)
+                }
             }
         }
     }

@@ -28,6 +28,7 @@ fun SettingsDialog(
     var serverAddress by remember { mutableStateOf(currentServerAddress) }
     var serverPort by remember { mutableStateOf(currentServerPort.toString()) }
     var defaultDeckDir by remember { mutableStateOf(userSettings.getLastDeckDirectory() ?: "") }
+    var uiScale by remember { mutableStateOf(userSettings.getUiScale()) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -129,6 +130,42 @@ fun SettingsDialog(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
+
+                Divider()
+
+                // Display Settings Section
+                Text(
+                    "Display",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
+
+                Text(
+                    "UI Scale: ${(uiScale * 100).toInt()}%",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+
+                Slider(
+                    value = uiScale,
+                    onValueChange = { uiScale = it },
+                    valueRange = 0.5f..2.0f,
+                    steps = 5,  // 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text("50%", style = MaterialTheme.typography.labelSmall)
+                    Text("200%", style = MaterialTheme.typography.labelSmall)
+                }
+
+                Text(
+                    "Adjust if UI elements are too large or small on your display. Requires restart.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         },
         confirmButton = {
@@ -140,6 +177,7 @@ fun SettingsDialog(
                     val port = serverPort.toIntOrNull()?.coerceIn(1024, 65535) ?: 8080
                     onServerPortChange(port)
                     userSettings.setLastDeckDirectory(defaultDeckDir.ifBlank { null })
+                    userSettings.setUiScale(uiScale)
                     onDismiss()
                 }
             ) {

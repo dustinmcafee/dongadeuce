@@ -99,8 +99,9 @@ fun DraggableBattlefieldGrid(
     // cellHeight = cardSize + spacing = cardSize * 1.25
     // totalHeight = 3 * cellHeight = 3.75 * cardSize
     // cardSize = containerHeight / 3.75
+    // Min 40dp to remain clickable, max is standard card size
     val dynamicCardSize = if (containerHeightDp > 0) {
-        (containerHeightDp / 3.75f).coerceIn(80f, BATTLEFIELD_CARD_TAPPED_SIZE.value)
+        (containerHeightDp / 3.75f).coerceIn(40f, BATTLEFIELD_CARD_TAPPED_SIZE.value)
     } else {
         BATTLEFIELD_CARD_TAPPED_SIZE.value
     }
