@@ -7,6 +7,8 @@ import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
@@ -16,13 +18,16 @@ import com.dustinmcafee.dongadeuce.ui.MainScreen
 // Global key event handler that can be set by GameScreen
 var globalKeyEventHandler: ((KeyEvent) -> Boolean)? = null
 
+// Global UI scale state that can be updated from SettingsDialog
+object UiScaleState {
+    var scale by mutableStateOf(1.0f)
+}
+
 fun main() {
-    // Load UI scale from settings and apply before starting the UI
+    // Load UI scale from settings
     val userSettings = UserSettings()
-    val uiScale = userSettings.getUiScale()
-    if (uiScale != 1.0f) {
-        System.setProperty("sun.java2d.uiScale", uiScale.toString())
-    }
+    val initialScale = userSettings.getUiScale()
+    UiScaleState.scale = initialScale
 
     application {
         Window(
@@ -34,8 +39,16 @@ fun main() {
                 globalKeyEventHandler?.invoke(keyEvent) ?: false
             }
         ) {
-            MaterialTheme(colorScheme = darkColorScheme()) {
-                MainScreen()
+            val baseDensity = LocalDensity.current
+            val scaledDensity = Density(
+                density = baseDensity.density * UiScaleState.scale,
+                fontScale = baseDensity.fontScale * UiScaleState.scale
+            )
+
+            CompositionLocalProvider(LocalDensity provides scaledDensity) {
+                MaterialTheme(colorScheme = darkColorScheme()) {
+                    MainScreen()
+                }
             }
         }
     }

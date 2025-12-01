@@ -6,8 +6,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.dustinmcafee.dongadeuce.UiScaleState
 import com.dustinmcafee.dongadeuce.settings.UserSettings
 import javax.swing.JFileChooser
+import kotlin.math.roundToInt
 
 /**
  * Settings dialog for configuring application preferences.
@@ -140,16 +142,30 @@ fun SettingsDialog(
                     color = MaterialTheme.colorScheme.primary
                 )
 
-                Text(
-                    "UI Scale: ${(uiScale * 100).toInt()}%",
-                    style = MaterialTheme.typography.bodyMedium
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        "UI Scale: ${(uiScale * 100).toInt()}%",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+
+                    OutlinedButton(
+                        onClick = {
+                            // Apply scale immediately without saving
+                            UiScaleState.scale = uiScale
+                        }
+                    ) {
+                        Text("Apply")
+                    }
+                }
 
                 Slider(
                     value = uiScale,
-                    onValueChange = { uiScale = it },
+                    onValueChange = { uiScale = (it * 20).roundToInt() / 20f },  // Round to nearest 5%
                     valueRange = 0.5f..2.0f,
-                    steps = 5,  // 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0
                     modifier = Modifier.fillMaxWidth()
                 )
 
@@ -158,11 +174,13 @@ fun SettingsDialog(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text("50%", style = MaterialTheme.typography.labelSmall)
+                    Text("100%", style = MaterialTheme.typography.labelSmall)
+                    Text("150%", style = MaterialTheme.typography.labelSmall)
                     Text("200%", style = MaterialTheme.typography.labelSmall)
                 }
 
                 Text(
-                    "Adjust if UI elements are too large or small on your display. Requires restart.",
+                    "Adjust if UI elements are too large or small. Click Apply to preview changes.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -178,6 +196,8 @@ fun SettingsDialog(
                     onServerPortChange(port)
                     userSettings.setLastDeckDirectory(defaultDeckDir.ifBlank { null })
                     userSettings.setUiScale(uiScale)
+                    // Apply UI scale immediately
+                    UiScaleState.scale = uiScale
                     onDismiss()
                 }
             ) {

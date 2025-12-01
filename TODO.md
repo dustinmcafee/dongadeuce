@@ -1,6 +1,6 @@
 # Dong-A-Deuce - Development TODO
 
-**Current Version:** v4.5.11
+**Current Version:** v4.5.12
 **Desktop:** 99% complete (fully playable!)
 **Android:** 99% complete (fully playable!)
 **Network Mode:** 100% complete (fully playable!)
@@ -226,6 +226,10 @@ These are nice-to-have features that would improve the experience but aren't req
 
 | Version | Highlights |
 |---------|------------|
+| v4.5.12 | Live UI scale + in-game settings, disabled auto game-end |
+| v4.5.11 | Weight-based sidebar layout, battlefield min card size 40dp |
+| v4.5.10 | UI Scale setting slider (50%-200%) |
+| v4.5.9 | Opponent hand count display, sidebar overflow fixes |
 | v4.5.8 | Windows UI overflow fix for zone buttons |
 | v4.5.7 | CI fix for Android APK version filename |
 | v4.5.6 | Windows DPI scaling fix for card/battlefield sizing |

@@ -76,7 +76,8 @@ fun BattlefieldCard(
                 awaitPointerEventScope {
                     while (true) {
                         val event = awaitPointerEvent(PointerEventPass.Initial)
-                        if (event.type == PointerEventType.Enter) {
+                        // Trigger on Enter or Move to ensure hover works on all platforms
+                        if (event.type == PointerEventType.Enter || event.type == PointerEventType.Move) {
                             onCardFocus?.invoke(cardInstance)
                         }
                     }
@@ -107,15 +108,19 @@ fun BattlefieldCard(
                                             val isRightClick = !isPrimaryClick && event.button != null
 
                                             if (isRightClick) {
-                                                // Right-click detected - consume the release event and skip selection logic
-                                                awaitPointerEvent()
+                                                // Right-click detected - skip selection logic
                                                 continue
                                             }
 
                                             val isShiftPressed = event.keyboardModifiers.isShiftPressed
+                                            val isCtrlPressed = event.keyboardModifiers.isCtrlPressed
 
-                                            // Wait for release
-                                            val releaseEvent = awaitPointerEvent()
+                                            // Wait for release (skip any intervening move events)
+                                            var releaseEvent: PointerEvent
+                                            do {
+                                                releaseEvent = awaitPointerEvent()
+                                            } while (releaseEvent.type != PointerEventType.Release &&
+                                                     releaseEvent.type != PointerEventType.Exit)
 
                                             if (releaseEvent.type == PointerEventType.Release) {
                                                 // Check for double-click
@@ -126,8 +131,8 @@ fun BattlefieldCard(
                                                 if (timeSinceLastClick < DOUBLE_CLICK_DELAY_MS) {
                                                     // Double-click - tap/untap
                                                     onCardClick(cardInstance)
-                                                } else if (isShiftPressed && selectionState != null) {
-                                                    // Shift+click - toggle selection
+                                                } else if ((isShiftPressed || isCtrlPressed) && selectionState != null) {
+                                                    // Shift+click or Ctrl+click - toggle selection (add/remove from selection)
                                                     selectionState.toggleSelection(cardInstance.instanceId)
                                                 } else if (selectionState != null) {
                                                     // Regular click - always clear and select only this card

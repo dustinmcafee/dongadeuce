@@ -4,6 +4,8 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -14,6 +16,7 @@ import androidx.compose.ui.unit.dp
 import com.dustinmcafee.dongadeuce.globalKeyEventHandler
 import com.dustinmcafee.dongadeuce.models.CardAction
 import com.dustinmcafee.dongadeuce.models.Zone
+import com.dustinmcafee.dongadeuce.settings.UserSettings
 import com.dustinmcafee.dongadeuce.viewmodel.GameViewModel
 
 @Composable
@@ -67,6 +70,9 @@ fun GameScreen(
     var showStackUntilFoundDialog by remember { mutableStateOf(false) }
     var stackUntilFoundResults by remember { mutableStateOf<List<com.dustinmcafee.dongadeuce.models.CardInstance>>(emptyList()) }
     var stackUntilFoundMatch by remember { mutableStateOf<com.dustinmcafee.dongadeuce.models.CardInstance?>(null) }
+    // Settings dialog state
+    var showSettingsDialog by remember { mutableStateOf(false) }
+    val userSettings = remember { UserSettings() }
 
     // Keyboard shortcut handler
     val keyboardState = rememberKeyboardShortcutState(viewModel, selectionState)
@@ -98,7 +104,8 @@ fun GameScreen(
             showPeekTopDialog ||
             showPeekBottomDialog ||
             showNumberInputDialog ||
-            showStackUntilFoundDialog
+            showStackUntilFoundDialog ||
+            showSettingsDialog
 
     // Update keyboard state with dialog status
     LaunchedEffect(isAnyDialogOpen) {
@@ -487,7 +494,24 @@ fun GameScreen(
                     modifier = Modifier.width(resizableState.sidebarWidth).fillMaxHeight(),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    // Turn indicator at top
+                    // Settings button at top-right
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End
+                    ) {
+                        IconButton(
+                            onClick = { showSettingsDialog = true },
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Settings,
+                                contentDescription = "Settings",
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+
+                    // Turn indicator
                     TurnIndicator(
                         activePlayer = sidebarGameState.activePlayer,
                         currentPhase = sidebarGameState.phase,
@@ -531,6 +555,20 @@ fun GameScreen(
         CardDetailsDialog(
             cardInstance = cardInstance,
             onDismiss = { cardDetailsToShow = null }
+        )
+    }
+
+    // Settings dialog for in-game UI adjustments
+    if (showSettingsDialog) {
+        SettingsDialog(
+            userSettings = userSettings,
+            currentPlayerName = userSettings.getPlayerName(),
+            currentServerAddress = userSettings.getServerAddress(),
+            currentServerPort = userSettings.getServerPort(),
+            onPlayerNameChange = { userSettings.setPlayerName(it) },
+            onServerAddressChange = { userSettings.setServerAddress(it) },
+            onServerPortChange = { userSettings.setServerPort(it) },
+            onDismiss = { showSettingsDialog = false }
         )
     }
 

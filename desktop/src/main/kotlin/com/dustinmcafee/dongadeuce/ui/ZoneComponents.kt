@@ -1139,7 +1139,8 @@ fun HandCardDisplay(
                 awaitPointerEventScope {
                     while (true) {
                         val event = awaitPointerEvent(PointerEventPass.Initial)
-                        if (event.type == PointerEventType.Enter) {
+                        // Trigger on Enter or Move to ensure hover works on all platforms
+                        if (event.type == PointerEventType.Enter || event.type == PointerEventType.Move) {
                             onCardFocus?.invoke(cardInstance)
                         }
                     }

@@ -2,6 +2,7 @@ package com.dustinmcafee.dongadeuce.ui
 
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.ui.draw.clipToBounds
@@ -188,8 +189,9 @@ fun DraggableBattlefieldGrid(
     val totalGridWidth = totalColumns * cellWidth
     val totalGridHeight = totalRows * cellHeight
 
-    // Scroll state for battlefield (horizontal only)
+    // Scroll states for battlefield (both directions)
     val horizontalScrollState = rememberScrollState()
+    val verticalScrollState = rememberScrollState()
 
     Box(
         modifier = modifier
@@ -200,6 +202,7 @@ fun DraggableBattlefieldGrid(
             }
             .fillMaxSize()
             .clipToBounds()
+            .verticalScroll(verticalScrollState)
             .horizontalScroll(horizontalScrollState)
     ) {
         // Inner box with actual content dimensions to enable scrolling

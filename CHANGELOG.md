@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.5.12] - 2025-11-30
+
+### Added
+- **Live UI Scale** - UI scale changes now apply instantly without app restart
+  - Click "Apply" in settings to preview scale changes
+  - Save button also applies changes immediately
+- **In-game settings button** - Settings gear icon in sidebar during active games
+  - Adjust UI scale and other settings without leaving the game
+
+### Changed
+- **Disabled automatic game end** - Game no longer force-stops when a player "loses"
+  - Life <= 0, commander damage >= 21, poison >= 10, empty library still log messages
+  - Players can continue playing after loss conditions
+  - Matches casual Commander house rules where players often keep playing
+
+### Fixed
+- **Android version tracking** - Fixed versionName not updating (was stuck at 4.5.8)
+- **UI Scale slider smoothing** - Now continuous with 5% increments
+- **Multi-card selection** - Fixed Shift+click and Ctrl+click selection
+  - Properly waits for mouse release (handles move events during click)
+  - Both Shift+click and Ctrl+click now toggle selection
+- **Persistent card viewer** - Fixed hover detection not working on Linux/Windows
+  - Now triggers on both Enter and Move events for reliable detection
+- **Battlefield scrolling** - Added vertical scrolling to battlefield grid
+
 ## [4.5.11] - 2025-11-30
 
 ### Fixed

@@ -561,19 +561,12 @@ class GameViewModel(
 
     /**
      * Check if game should end (less than 2 active players remaining)
+     * NOTE: Disabled automatic game end - players can continue playing after "losing"
+     * The hasLost flag and log messages remain for tracking, but game continues
      */
     private fun checkGameEnd() {
-        val currentState = _uiState.value
-        val gameState = currentState.gameState ?: return
-
-        val activePlayers = gameState.players.count { !it.hasLost }
-
-        if (activePlayers < 2) {
-            // Game ends when less than 2 active players
-            _uiState.update {
-                it.copy(gameEnded = true)
-            }
-        }
+        // Intentionally do nothing - let players continue playing
+        // Loss conditions still set hasLost and add log messages, but game doesn't auto-end
     }
 
     /**
