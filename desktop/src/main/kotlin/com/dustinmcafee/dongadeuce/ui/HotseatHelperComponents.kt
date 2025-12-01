@@ -185,7 +185,7 @@ fun CommandZoneDisplay(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(80.dp)
+                        .height(40.dp)
                         .border(1.dp, Color.White.copy(alpha = 0.3f), RoundedCornerShape(4.dp)),
                     contentAlignment = Alignment.Center
                 ) {
@@ -232,7 +232,7 @@ private fun CommanderCardDisplay(
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(100.dp)
+                .height(60.dp)
                 .then(
                     if (isActivePlayer) {
                         Modifier.clickable {

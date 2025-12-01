@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.5.10] - 2025-11-30
+
+### Added
+- **UI Scale setting** - Adjustable display scaling in Settings (75%, 100%, 125%, 150%)
+  - Helps fix UI overflow issues on high-DPI Windows displays
+  - Persisted to settings file, applied on startup
+  - Requires app restart to take effect
+
+### Fixed
+- **Sidebar overflow on high-DPI** - Reduced fixed element heights to leave more room for zone cards
+  - Command Zone empty placeholder: 80dp → 40dp
+  - Commander card display: 100dp → 60dp
+  - Token button: 36dp → 28dp
+
 ## [4.5.9] - 2025-11-30
 
 ### Added

@@ -415,9 +415,9 @@ private fun PlayerInfoSidebar(
         if (isLocalPlayer) {
             OutlinedButton(
                 onClick = onShowTokenCreationDialog,
-                modifier = Modifier.fillMaxWidth().height(36.dp)
+                modifier = Modifier.fillMaxWidth().height(28.dp)
             ) {
-                Text("Create Token", style = MaterialTheme.typography.labelSmall)
+                Text("Token", style = MaterialTheme.typography.labelSmall)
             }
         }
     }

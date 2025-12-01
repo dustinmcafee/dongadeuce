@@ -28,6 +28,9 @@ fun SettingsDialog(
     var serverAddress by remember { mutableStateOf(currentServerAddress) }
     var serverPort by remember { mutableStateOf(currentServerPort.toString()) }
     var defaultDeckDir by remember { mutableStateOf(userSettings.getLastDeckDirectory() ?: "") }
+    var uiScale by remember { mutableStateOf(userSettings.getUiScale()) }
+
+    val scaleOptions = listOf(0.75f to "75%", 1.0f to "100%", 1.25f to "125%", 1.5f to "150%")
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -129,6 +132,49 @@ fun SettingsDialog(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
+
+                Divider()
+
+                // Display Settings Section
+                Text(
+                    "Display",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
+
+                Text(
+                    "UI Scale: ${scaleOptions.find { it.first == uiScale }?.second ?: "${(uiScale * 100).toInt()}%"}",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    scaleOptions.forEach { (scale, label) ->
+                        if (uiScale == scale) {
+                            Button(
+                                onClick = { },
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text(label)
+                            }
+                        } else {
+                            OutlinedButton(
+                                onClick = { uiScale = scale },
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text(label)
+                            }
+                        }
+                    }
+                }
+
+                Text(
+                    "Adjust if UI elements are too large or small on your display. Requires restart.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         },
         confirmButton = {
@@ -140,6 +186,7 @@ fun SettingsDialog(
                     val port = serverPort.toIntOrNull()?.coerceIn(1024, 65535) ?: 8080
                     onServerPortChange(port)
                     userSettings.setLastDeckDirectory(defaultDeckDir.ifBlank { null })
+                    userSettings.setUiScale(uiScale)
                     onDismiss()
                 }
             ) {
