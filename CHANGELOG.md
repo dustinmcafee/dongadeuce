@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.5.13] - 2025-11-30
+
+### Fixed
+- **Dark theme** - Complete dark theme implementation
+  - Custom dark color scheme with high-contrast white text on dark backgrounds
+  - Added explicit dark background to MainScreen and GameScreen
+  - All text now properly visible against dark surfaces
+
 ## [4.5.12] - 2025-11-30
 
 ### Added
