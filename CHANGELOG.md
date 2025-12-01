@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.5.9] - 2025-11-30
+
+### Added
+- **Opponent hand count in sidebar** - Shows "Hand: N" below opponent's name for easy tracking
+
+### Fixed
+- **Windows UI overflow fix improvement** - Restructured sidebar layout for guaranteed zone visibility
+  - Header section (name, life, counters, command zone) takes minimum needed space
+  - Zone cards section fills ALL remaining space with proper weight distribution
+  - Token button fixed at bottom (36dp)
+  - Zones now mathematically guaranteed to fit regardless of DPI scaling
+
 ## [4.5.8] - 2025-11-30
 
 ### Fixed
