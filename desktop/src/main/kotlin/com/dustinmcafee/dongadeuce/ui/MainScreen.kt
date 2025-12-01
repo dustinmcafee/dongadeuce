@@ -15,6 +15,8 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.dustinmcafee.dongadeuce.viewmodel.MenuViewModel
 import com.dustinmcafee.dongadeuce.viewmodel.Screen
+import java.awt.Toolkit
+import java.awt.datatransfer.DataFlavor
 import java.io.File
 import javax.swing.JFileChooser
 import javax.swing.filechooser.FileNameExtensionFilter
@@ -93,6 +95,19 @@ fun MenuScreen(
             onServerAddressChange = { viewModel.setServerAddress(it) },
             onServerPortChange = { viewModel.setServerPort(it) },
             onDismiss = { showSettingsDialog = false }
+        )
+    }
+
+    // Commander Selection Dialog (shown when loading deck without explicit commander)
+    if (uiState.pendingDeckData != null && uiState.commanderCandidates.isNotEmpty()) {
+        CommanderSelectionDialog(
+            deckData = uiState.pendingDeckData!!,
+            candidates = uiState.commanderCandidates,
+            playerIndex = uiState.pendingDeckPlayerIndex,
+            onCommanderSelected = { commanderName ->
+                viewModel.selectCommander(commanderName)
+            },
+            onDismiss = { viewModel.cancelCommanderSelection() }
         )
     }
 
@@ -367,29 +382,50 @@ fun MenuScreen(
                     Text("Join Game")
                 }
 
-                OutlinedButton(
-                    onClick = {
-                        // Open file chooser with default directory if set
-                        val defaultDir = viewModel.userSettings.getLastDeckDirectory()
-                        val fileChooser = JFileChooser().apply {
-                            fileFilter = FileNameExtensionFilter("Text files", "txt")
-                            if (!defaultDir.isNullOrBlank()) {
-                                currentDirectory = File(defaultDir)
-                            }
-                        }
-                        val result = fileChooser.showOpenDialog(null)
-                        if (result == JFileChooser.APPROVE_OPTION) {
-                            // Save the directory for next time
-                            viewModel.userSettings.setLastDeckDirectory(
-                                fileChooser.selectedFile.parentFile.absolutePath
-                            )
-                            viewModel.loadDeck(fileChooser.selectedFile.absolutePath)
-                        }
-                    },
-                    modifier = Modifier.width(200.dp),
-                    enabled = !uiState.isLoading
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Text("Load Deck")
+                    OutlinedButton(
+                        onClick = {
+                            // Open file chooser with default directory if set
+                            val defaultDir = viewModel.userSettings.getLastDeckDirectory()
+                            val fileChooser = JFileChooser().apply {
+                                fileFilter = FileNameExtensionFilter("Deck files (*.txt, *.dec, *.dek, *.cod, *.mwDeck)", "txt", "dec", "dek", "cod", "mwDeck")
+                                if (!defaultDir.isNullOrBlank()) {
+                                    currentDirectory = File(defaultDir)
+                                }
+                            }
+                            val result = fileChooser.showOpenDialog(null)
+                            if (result == JFileChooser.APPROVE_OPTION) {
+                                // Save the directory for next time
+                                viewModel.userSettings.setLastDeckDirectory(
+                                    fileChooser.selectedFile.parentFile.absolutePath
+                                )
+                                viewModel.loadDeck(fileChooser.selectedFile.absolutePath)
+                            }
+                        },
+                        enabled = !uiState.isLoading
+                    ) {
+                        Text("Load Deck")
+                    }
+
+                    OutlinedButton(
+                        onClick = {
+                            // Get clipboard content
+                            try {
+                                val clipboard = Toolkit.getDefaultToolkit().systemClipboard
+                                val clipboardData = clipboard.getData(DataFlavor.stringFlavor) as? String
+                                if (clipboardData != null && clipboardData.isNotBlank()) {
+                                    viewModel.loadDeckFromContent(clipboardData)
+                                }
+                            } catch (e: Exception) {
+                                // Clipboard may be empty or unavailable
+                            }
+                        },
+                        enabled = !uiState.isLoading
+                    ) {
+                        Text("Paste Deck")
+                    }
                 }
             }
         }
@@ -445,31 +481,53 @@ fun HotseatDeckLoader(
                         }
                     }
 
-                    OutlinedButton(
-                        onClick = {
-                            // Open file chooser with default directory if set
-                            val defaultDir = viewModel.userSettings.getLastDeckDirectory()
-                            val fileChooser = JFileChooser().apply {
-                                fileFilter = FileNameExtensionFilter("Text files", "txt")
-                                if (!defaultDir.isNullOrBlank()) {
-                                    currentDirectory = File(defaultDir)
+                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        OutlinedButton(
+                            onClick = {
+                                // Open file chooser with default directory if set
+                                val defaultDir = viewModel.userSettings.getLastDeckDirectory()
+                                val fileChooser = JFileChooser().apply {
+                                    fileFilter = FileNameExtensionFilter("Deck files (*.txt, *.dec, *.dek, *.cod, *.mwDeck)", "txt", "dec", "dek", "cod", "mwDeck")
+                                    if (!defaultDir.isNullOrBlank()) {
+                                        currentDirectory = File(defaultDir)
+                                    }
                                 }
-                            }
-                            val result = fileChooser.showOpenDialog(null)
-                            if (result == JFileChooser.APPROVE_OPTION) {
-                                // Save the directory for next time
-                                viewModel.userSettings.setLastDeckDirectory(
-                                    fileChooser.selectedFile.parentFile.absolutePath
-                                )
-                                viewModel.loadHotseatDeck(
-                                    playerIndex,
-                                    fileChooser.selectedFile.absolutePath
-                                )
-                            }
-                        },
-                        enabled = !uiState.isLoading
-                    ) {
-                        Text(if (deckLoaded) "Change" else "Load")
+                                val result = fileChooser.showOpenDialog(null)
+                                if (result == JFileChooser.APPROVE_OPTION) {
+                                    // Save the directory for next time
+                                    viewModel.userSettings.setLastDeckDirectory(
+                                        fileChooser.selectedFile.parentFile.absolutePath
+                                    )
+                                    viewModel.loadHotseatDeck(
+                                        playerIndex,
+                                        fileChooser.selectedFile.absolutePath
+                                    )
+                                }
+                            },
+                            enabled = !uiState.isLoading,
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
+                        ) {
+                            Text(if (deckLoaded) "Change" else "Load")
+                        }
+
+                        OutlinedButton(
+                            onClick = {
+                                // Get clipboard content
+                                try {
+                                    val clipboard = Toolkit.getDefaultToolkit().systemClipboard
+                                    val clipboardData = clipboard.getData(DataFlavor.stringFlavor) as? String
+                                    if (clipboardData != null && clipboardData.isNotBlank()) {
+                                        viewModel.loadHotseatDeckFromContent(playerIndex, clipboardData)
+                                    }
+                                } catch (e: Exception) {
+                                    // Clipboard may be empty or unavailable
+                                }
+                            },
+                            enabled = !uiState.isLoading,
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
+                        ) {
+                            Text("Paste")
+                        }
                     }
                 }
             }

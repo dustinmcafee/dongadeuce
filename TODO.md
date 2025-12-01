@@ -1,6 +1,6 @@
 # Dong-A-Deuce - Development TODO
 
-**Current Version:** v4.5.14
+**Current Version:** v4.6.0
 **Desktop:** 99% complete (fully playable!)
 **Android:** 99% complete (fully playable!)
 **Network Mode:** 100% complete (fully playable!)
@@ -226,6 +226,7 @@ These are nice-to-have features that would improve the experience but aren't req
 
 | Version | Highlights |
 |---------|------------|
+| v4.6.0 | Multi-format deck import (Cockatrice .cod, .dec, .dek, .txt, .mwDeck), clipboard paste, commander selection dialog with legendary filter |
 | v4.5.14 | Dark theme text color fixes (title, settings icon, card viewer) |
 | v4.5.13 | Dark theme background fix for desktop |
 | v4.5.12 | Live UI scale + in-game settings, disabled auto game-end |

@@ -60,6 +60,16 @@ class AndroidMenuViewModel : ViewModel() {
     fun loadHotseatDeck(playerIndex: Int, filePath: String) = delegate.loadHotseatDeck(playerIndex, filePath)
 
     /**
+     * Select a commander for the pending deck
+     */
+    fun selectCommander(commanderName: String) = delegate.selectCommander(commanderName)
+
+    /**
+     * Cancel commander selection
+     */
+    fun cancelCommanderSelection() = delegate.cancelCommanderSelection()
+
+    /**
      * Start hosting a game
      */
     fun startHosting() {

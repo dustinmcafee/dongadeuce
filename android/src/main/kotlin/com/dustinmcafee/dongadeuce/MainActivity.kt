@@ -1,5 +1,7 @@
 package com.dustinmcafee.dongadeuce
 
+import android.content.ClipboardManager
+import android.content.Context
 import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -132,6 +134,19 @@ fun MenuScreen(
             onServerAddressChange = { viewModel.setServerAddress(it) },
             onServerPortChange = { viewModel.setServerPort(it) },
             onDismiss = { showSettingsDialog = false }
+        )
+    }
+
+    // Commander Selection Dialog (shown when loading deck without explicit commander)
+    if (uiState.pendingDeckData != null && uiState.commanderCandidates.isNotEmpty()) {
+        com.dustinmcafee.dongadeuce.ui.CommanderSelectionDialog(
+            deckData = uiState.pendingDeckData!!,
+            candidates = uiState.commanderCandidates,
+            playerIndex = uiState.pendingDeckPlayerIndex,
+            onCommanderSelected = { commanderName ->
+                viewModel.selectCommander(commanderName)
+            },
+            onDismiss = { viewModel.cancelCommanderSelection() }
         )
     }
 
@@ -346,14 +361,35 @@ fun MenuScreen(
                                 )
                             }
 
-                            OutlinedButton(
-                                onClick = {
-                                    currentHotseatPlayer = playerIndex
-                                    hotseatDeckPicker.launch("text/*")
-                                },
-                                enabled = !uiState.isLoading
-                            ) {
-                                Text(if (deckLoaded) "Change" else "Load")
+                            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                OutlinedButton(
+                                    onClick = {
+                                        currentHotseatPlayer = playerIndex
+                                        hotseatDeckPicker.launch("*/*")
+                                    },
+                                    enabled = !uiState.isLoading,
+                                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
+                                ) {
+                                    Text(if (deckLoaded) "Change" else "Load")
+                                }
+
+                                OutlinedButton(
+                                    onClick = {
+                                        // Get clipboard content
+                                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                        val clipData = clipboard.primaryClip
+                                        if (clipData != null && clipData.itemCount > 0) {
+                                            val text = clipData.getItemAt(0).text?.toString()
+                                            if (text != null && text.isNotBlank()) {
+                                                viewModel.loadHotseatDeckFromContent(playerIndex, text)
+                                            }
+                                        }
+                                    },
+                                    enabled = !uiState.isLoading,
+                                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
+                                ) {
+                                    Text("Paste")
+                                }
                             }
                         }
                     }
@@ -397,12 +433,35 @@ fun MenuScreen(
                     Text("Join Game")
                 }
 
-                OutlinedButton(
-                    onClick = { deckFilePicker.launch("text/*") },
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = !uiState.isLoading
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Load Deck")
+                    OutlinedButton(
+                        onClick = { deckFilePicker.launch("*/*") },
+                        modifier = Modifier.weight(1f),
+                        enabled = !uiState.isLoading
+                    ) {
+                        Text("Load Deck")
+                    }
+
+                    OutlinedButton(
+                        onClick = {
+                            // Get clipboard content
+                            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                            val clipData = clipboard.primaryClip
+                            if (clipData != null && clipData.itemCount > 0) {
+                                val text = clipData.getItemAt(0).text?.toString()
+                                if (text != null && text.isNotBlank()) {
+                                    viewModel.loadDeckFromContent(text)
+                                }
+                            }
+                        },
+                        modifier = Modifier.weight(1f),
+                        enabled = !uiState.isLoading
+                    ) {
+                        Text("Paste Deck")
+                    }
                 }
             }
 

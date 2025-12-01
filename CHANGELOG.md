@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.6.0] - 2025-11-30
+
+### Added
+- **Multi-format deck import** - Support for Cockatrice and other deck formats
+  - Cockatrice XML format (.cod)
+  - Plain text formats (.dec, .dek, .txt, .mwDeck)
+  - Flexible parsing: `4x Card`, `SB: Card`, blank line sideboard detection
+  - Set codes and collector numbers: `4 Card Name (SET) 123`
+  - Card name normalization (Ae ligature, smart quotes)
+- **Commander selection dialog** - Interactive UI when loading decks without explicit commander
+  - Grid view with card images
+  - Shows legendary creatures and planeswalkers by default
+  - "Legendaries only" filter checkbox (disable for house rules)
+  - Supports commanders in sideboard zone (common in Cockatrice)
+  - Supports both single deck and hotseat deck loading
+- **Clipboard deck import** - Paste deck lists from clipboard on both platforms
+  - "Paste Deck" button alongside "Load Deck" on desktop and Android
+  - Auto-detects format (plain text or XML)
+- **69 new unit tests** for multi-format deck parsing
+
 ## [4.5.14] - 2025-11-30
 
 ### Fixed

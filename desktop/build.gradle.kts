@@ -61,6 +61,7 @@ compose.desktop {
             }
 
             linux {
+                debPackageVersion = numericVersion
                 iconFile.set(project.file("../resources/dongadeuce_icon.png"))
             }
         }

@@ -2,7 +2,10 @@ package com.dustinmcafee.dongadeuce.viewmodel
 
 import com.dustinmcafee.dongadeuce.api.ScryfallApi
 import com.dustinmcafee.dongadeuce.api.CardCache
+import com.dustinmcafee.dongadeuce.game.DeckFormat
 import com.dustinmcafee.dongadeuce.game.DeckParser
+import com.dustinmcafee.dongadeuce.game.DeckParseResult
+import com.dustinmcafee.dongadeuce.game.ParsedDeckData
 import com.dustinmcafee.dongadeuce.models.Card
 import com.dustinmcafee.dongadeuce.models.Deck
 import com.dustinmcafee.dongadeuce.models.GameState
@@ -45,7 +48,11 @@ data class MenuUiState(
     val isNetworkGameStarted: Boolean = false,
     val isPaused: Boolean = false,
     val pauseReason: String? = null,
-    val serverUrl: String? = null // WebSocket URL for clients to connect
+    val serverUrl: String? = null, // WebSocket URL for clients to connect
+    // Commander selection state
+    val pendingDeckData: ParsedDeckData? = null, // Deck waiting for commander selection
+    val pendingDeckPlayerIndex: Int? = null, // Player index for hotseat (null for single deck)
+    val commanderCandidates: List<Card> = emptyList() // Cards that can be selected as commander
 )
 
 sealed class Screen {
@@ -177,75 +184,54 @@ class MenuViewModel {
 
     /**
      * Load a deck from file and fetch card data from Scryfall
+     * Supports multiple formats: .cod (Cockatrice), .dec, .dek, .txt, .mwDeck
      */
     fun loadDeck(filePath: String) {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, loadingProgress = "Parsing deck file...", error = null) }
 
             try {
-                // Parse the deck file (validation is now in DeckParser)
-                val parsedDeck = try {
-                    DeckParser.parseTextFile(filePath)
-                } catch (e: IllegalArgumentException) {
-                    _uiState.update {
-                        it.copy(
-                            isLoading = false,
-                            loadingProgress = "",
-                            error = "Invalid deck file: ${e.message}"
-                        )
+                // Parse the deck file with automatic format detection
+                when (val parseResult = DeckParser.parseFile(filePath)) {
+                    is DeckParseResult.Complete -> {
+                        // Deck has commander - load card data
+                        finishLoadingDeck(parseResult.deck, null)
                     }
-                    return@launch
-                } catch (e: Exception) {
-                    _uiState.update {
-                        it.copy(
-                            isLoading = false,
-                            loadingProgress = "",
-                            error = "Failed to read deck file: ${e.message}"
-                        )
+                    is DeckParseResult.NeedsCommanderSelection -> {
+                        // Need to select commander - load card data first
+                        _uiState.update { it.copy(loadingProgress = "Loading card data...") }
+                        val candidates = loadCommanderCandidates(parseResult.data)
+
+                        if (candidates.isEmpty()) {
+                            _uiState.update {
+                                it.copy(
+                                    isLoading = false,
+                                    loadingProgress = "",
+                                    error = "No cards found in deck. Cannot select commander."
+                                )
+                            }
+                            return@launch
+                        }
+
+                        _uiState.update {
+                            it.copy(
+                                isLoading = false,
+                                loadingProgress = "",
+                                pendingDeckData = parseResult.data,
+                                pendingDeckPlayerIndex = null,
+                                commanderCandidates = candidates
+                            )
+                        }
                     }
-                    return@launch
-                }
-
-                _uiState.update { it.copy(loadingProgress = "Loading card data from cache...") }
-
-                // Load from cache if available, otherwise fall back to API
-                val commanderWithData = if (cardCache.isCacheAvailable()) {
-                    cardCache.getCardByName(parsedDeck.commander.name) ?: parsedDeck.commander
-                } else {
-                    scryfallApi.getCardByName(parsedDeck.commander.name) ?: parsedDeck.commander
-                }
-
-                // Load card data
-                val cardsWithData = if (cardCache.isCacheAvailable()) {
-                    // Fast batch load from cache
-                    _uiState.update { it.copy(loadingProgress = "Loading ${parsedDeck.cards.size} cards from cache...") }
-                    cardCache.getCardsByNames(parsedDeck.cards.map { it.name })
-                } else {
-                    // Slow per-card API calls
-                    val cards = mutableListOf<Card>()
-                    parsedDeck.cards.forEachIndexed { index, card ->
-                        val progress = "Fetching from Scryfall... (${index + 1}/${parsedDeck.cards.size})"
-                        _uiState.update { it.copy(loadingProgress = progress) }
-                        val cardWithData = scryfallApi.getCardByName(card.name) ?: card
-                        cards.add(cardWithData)
+                    is DeckParseResult.Error -> {
+                        _uiState.update {
+                            it.copy(
+                                isLoading = false,
+                                loadingProgress = "",
+                                error = parseResult.message
+                            )
+                        }
                     }
-                    cards
-                }
-
-                // Create deck with fetched data
-                val deckWithData = Deck(
-                    name = parsedDeck.name,
-                    commander = commanderWithData,
-                    cards = cardsWithData
-                )
-
-                _uiState.update {
-                    it.copy(
-                        loadedDeck = deckWithData,
-                        isLoading = false,
-                        loadingProgress = "",
-                        error = null
-                    )
                 }
             } catch (e: Exception) {
                 _uiState.update {
@@ -260,63 +246,247 @@ class MenuViewModel {
     }
 
     /**
-     * Load a deck from text content (useful for Android where we read content from URI)
+     * Load commander candidates from parsed deck data
+     * Checks both mainboard and sideboard (commander is often in sideboard in Cockatrice)
+     * Returns ALL cards with their data - UI can filter for legendaries
      */
-    fun loadDeckFromContent(content: String) {
+    private suspend fun loadCommanderCandidates(data: ParsedDeckData): List<Card> {
+        // Check both mainboard and sideboard for commander candidates
+        val cardNames = data.allCardNamesIncludingSideboard
+        val sideboardNames = data.sideboardCardNames.toSet()
+
+        // Load card data for all cards using batch method
+        val candidates = if (cardCache.isCacheAvailable()) {
+            cardCache.getCardsByNames(cardNames)
+        } else {
+            scryfallApi.getCardsByNames(cardNames)
+        }
+
+        // Sort with sideboard cards first (as they're more likely to be the commander in Cockatrice)
+        // Then legendary creatures, then planeswalkers, then others alphabetically
+        return candidates.sortedWith(
+            compareByDescending<Card> { it.name in sideboardNames }
+                .thenByDescending { it.isLegendary && it.canBeCommander }
+                .thenBy { it.name }
+        )
+    }
+
+    /**
+     * Select a commander for the pending deck
+     * Reuses card data already loaded for commander candidates
+     */
+    fun selectCommander(commanderName: String) {
+        val pendingData = _uiState.value.pendingDeckData ?: return
+        val playerIndex = _uiState.value.pendingDeckPlayerIndex
+        val loadedCards = _uiState.value.commanderCandidates
+
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, loadingProgress = "Building deck with commander...") }
+
+            try {
+                val parsedDeck = pendingData.toDeck(commanderName)
+
+                // Reuse already-loaded card data from commander candidates
+                val cardDataMap = loadedCards.associateBy { it.name.lowercase() }
+
+                val commanderWithData = cardDataMap[commanderName.lowercase()] ?: parsedDeck.commander
+                val cardsWithData = parsedDeck.cards.map { card ->
+                    cardDataMap[card.name.lowercase()] ?: card
+                }
+                val sideboardWithData = parsedDeck.sideboard.map { card ->
+                    cardDataMap[card.name.lowercase()] ?: card
+                }
+
+                val deckWithData = Deck(
+                    name = parsedDeck.name,
+                    commander = commanderWithData,
+                    cards = cardsWithData,
+                    sideboard = sideboardWithData
+                )
+
+                if (playerIndex != null) {
+                    // Hotseat mode - add to hotseat decks
+                    _uiState.update {
+                        it.copy(
+                            hotseatDecks = it.hotseatDecks + (playerIndex to deckWithData),
+                            isLoading = false,
+                            loadingProgress = "",
+                            pendingDeckData = null,
+                            pendingDeckPlayerIndex = null,
+                            commanderCandidates = emptyList(),
+                            error = null
+                        )
+                    }
+                } else {
+                    // Single deck mode
+                    _uiState.update {
+                        it.copy(
+                            loadedDeck = deckWithData,
+                            isLoading = false,
+                            loadingProgress = "",
+                            pendingDeckData = null,
+                            pendingDeckPlayerIndex = null,
+                            commanderCandidates = emptyList(),
+                            error = null
+                        )
+                    }
+                }
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        loadingProgress = "",
+                        error = "Failed to create deck: ${e.message}"
+                    )
+                }
+            }
+        }
+    }
+
+    /**
+     * Cancel commander selection
+     */
+    fun cancelCommanderSelection() {
+        _uiState.update {
+            it.copy(
+                pendingDeckData = null,
+                pendingDeckPlayerIndex = null,
+                commanderCandidates = emptyList()
+            )
+        }
+    }
+
+    /**
+     * Finish loading a deck with card data
+     */
+    private suspend fun finishLoadingDeck(parsedDeck: Deck, playerIndex: Int?) {
+        _uiState.update { it.copy(loadingProgress = "Loading card data from cache...") }
+
+        // Collect all unique card names for a single batch load
+        val allCardNames = (listOf(parsedDeck.commander.name) +
+                parsedDeck.cards.map { it.name } +
+                parsedDeck.sideboard.map { it.name }).distinct()
+
+        // Load all card data in one batch
+        val cardDataMap = if (cardCache.isCacheAvailable()) {
+            _uiState.update { it.copy(loadingProgress = "Loading ${allCardNames.size} cards from cache...") }
+            cardCache.getCardsByNames(allCardNames).associateBy { it.name.lowercase() }
+        } else {
+            // Slow per-card API calls (only when no cache)
+            val cards = mutableMapOf<String, Card>()
+            allCardNames.forEachIndexed { index, name ->
+                val progress = "Fetching from Scryfall... (${index + 1}/${allCardNames.size})"
+                _uiState.update { it.copy(loadingProgress = progress) }
+                val cardWithData = scryfallApi.getCardByName(name)
+                if (cardWithData != null) {
+                    cards[name.lowercase()] = cardWithData
+                }
+            }
+            cards
+        }
+
+        // Map loaded data back to deck structure
+        val commanderWithData = cardDataMap[parsedDeck.commander.name.lowercase()] ?: parsedDeck.commander
+        val cardsWithData = parsedDeck.cards.map { card ->
+            cardDataMap[card.name.lowercase()] ?: card
+        }
+        val sideboardWithData = parsedDeck.sideboard.map { card ->
+            cardDataMap[card.name.lowercase()] ?: card
+        }
+
+        // Create deck with fetched data
+        val deckWithData = Deck(
+            name = parsedDeck.name,
+            commander = commanderWithData,
+            cards = cardsWithData,
+            sideboard = sideboardWithData
+        )
+
+        if (playerIndex != null) {
+            // Hotseat mode
+            _uiState.update {
+                it.copy(
+                    hotseatDecks = it.hotseatDecks + (playerIndex to deckWithData),
+                    isLoading = false,
+                    loadingProgress = "",
+                    pendingDeckData = null,
+                    pendingDeckPlayerIndex = null,
+                    commanderCandidates = emptyList(),
+                    error = null
+                )
+            }
+        } else {
+            // Single deck mode
+            _uiState.update {
+                it.copy(
+                    loadedDeck = deckWithData,
+                    isLoading = false,
+                    loadingProgress = "",
+                    pendingDeckData = null,
+                    pendingDeckPlayerIndex = null,
+                    commanderCandidates = emptyList(),
+                    error = null
+                )
+            }
+        }
+    }
+
+    /**
+     * Load a deck from text content (useful for clipboard paste or Android content URI)
+     * Supports plain text and Cockatrice XML formats with commander selection
+     */
+    fun loadDeckFromContent(content: String, deckName: String = "Pasted Deck") {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, loadingProgress = "Parsing deck...", error = null) }
 
             try {
-                val parsedDeck = try {
-                    DeckParser.parseTextFormat(content)
-                } catch (e: IllegalArgumentException) {
-                    _uiState.update {
-                        it.copy(
-                            isLoading = false,
-                            loadingProgress = "",
-                            error = "Invalid deck format: ${e.message}"
-                        )
-                    }
-                    return@launch
-                }
-
-                _uiState.update { it.copy(loadingProgress = "Loading card data from cache...") }
-
-                // Load from cache if available, otherwise fall back to API
-                val commanderWithData = if (cardCache.isCacheAvailable()) {
-                    cardCache.getCardByName(parsedDeck.commander.name) ?: parsedDeck.commander
+                // Detect format based on content (XML starts with < or <?xml)
+                val format = if (content.trimStart().startsWith("<")) {
+                    DeckFormat.COCKATRICE_XML
                 } else {
-                    scryfallApi.getCardByName(parsedDeck.commander.name) ?: parsedDeck.commander
+                    DeckFormat.PLAIN_TEXT
                 }
 
-                // Load card data
-                val cardsWithData = if (cardCache.isCacheAvailable()) {
-                    _uiState.update { it.copy(loadingProgress = "Loading ${parsedDeck.cards.size} cards from cache...") }
-                    cardCache.getCardsByNames(parsedDeck.cards.map { it.name })
-                } else {
-                    val cards = mutableListOf<Card>()
-                    parsedDeck.cards.forEachIndexed { index, card ->
-                        val progress = "Fetching from Scryfall... (${index + 1}/${parsedDeck.cards.size})"
-                        _uiState.update { it.copy(loadingProgress = progress) }
-                        val cardWithData = scryfallApi.getCardByName(card.name) ?: card
-                        cards.add(cardWithData)
+                when (val parseResult = DeckParser.parseContent(content, format, deckName)) {
+                    is DeckParseResult.Complete -> {
+                        // Deck has commander - load card data
+                        finishLoadingDeck(parseResult.deck, null)
                     }
-                    cards
-                }
+                    is DeckParseResult.NeedsCommanderSelection -> {
+                        // Need to select commander - load card data first
+                        _uiState.update { it.copy(loadingProgress = "Loading card data...") }
+                        val candidates = loadCommanderCandidates(parseResult.data)
 
-                val deckWithData = Deck(
-                    name = parsedDeck.name,
-                    commander = commanderWithData,
-                    cards = cardsWithData
-                )
+                        if (candidates.isEmpty()) {
+                            _uiState.update {
+                                it.copy(
+                                    isLoading = false,
+                                    loadingProgress = "",
+                                    error = "No cards found in deck. Cannot select commander."
+                                )
+                            }
+                            return@launch
+                        }
 
-                _uiState.update {
-                    it.copy(
-                        loadedDeck = deckWithData,
-                        isLoading = false,
-                        loadingProgress = "",
-                        error = null
-                    )
+                        _uiState.update {
+                            it.copy(
+                                isLoading = false,
+                                loadingProgress = "",
+                                pendingDeckData = parseResult.data,
+                                pendingDeckPlayerIndex = null,
+                                commanderCandidates = candidates
+                            )
+                        }
+                    }
+                    is DeckParseResult.Error -> {
+                        _uiState.update {
+                            it.copy(
+                                isLoading = false,
+                                loadingProgress = "",
+                                error = parseResult.message
+                            )
+                        }
+                    }
                 }
             } catch (e: Exception) {
                 _uiState.update {
@@ -331,61 +501,61 @@ class MenuViewModel {
     }
 
     /**
-     * Load a hotseat deck from text content
+     * Load a hotseat deck from text content (useful for clipboard paste)
+     * Supports plain text and Cockatrice XML formats with commander selection
      */
-    fun loadHotseatDeckFromContent(playerIndex: Int, content: String) {
+    fun loadHotseatDeckFromContent(playerIndex: Int, content: String, deckName: String = "Player ${playerIndex + 1} Deck") {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, loadingProgress = "Parsing deck for Player ${playerIndex + 1}...", error = null) }
 
             try {
-                val parsedDeck = try {
-                    DeckParser.parseTextFormat(content)
-                } catch (e: IllegalArgumentException) {
-                    _uiState.update {
-                        it.copy(
-                            isLoading = false,
-                            loadingProgress = "",
-                            error = "Invalid deck format for Player ${playerIndex + 1}: ${e.message}"
-                        )
-                    }
-                    return@launch
-                }
-
-                _uiState.update { it.copy(loadingProgress = "Loading card data from cache...") }
-
-                val commanderWithData = if (cardCache.isCacheAvailable()) {
-                    cardCache.getCardByName(parsedDeck.commander.name) ?: parsedDeck.commander
+                // Detect format based on content (XML starts with < or <?xml)
+                val format = if (content.trimStart().startsWith("<")) {
+                    DeckFormat.COCKATRICE_XML
                 } else {
-                    scryfallApi.getCardByName(parsedDeck.commander.name) ?: parsedDeck.commander
+                    DeckFormat.PLAIN_TEXT
                 }
 
-                val cardsWithData = if (cardCache.isCacheAvailable()) {
-                    _uiState.update { it.copy(loadingProgress = "Loading Player ${playerIndex + 1} cards from cache...") }
-                    cardCache.getCardsByNames(parsedDeck.cards.map { it.name })
-                } else {
-                    val cards = mutableListOf<Card>()
-                    parsedDeck.cards.forEachIndexed { index, card ->
-                        val progress = "Fetching Player ${playerIndex + 1} from Scryfall... (${index + 1}/${parsedDeck.cards.size})"
-                        _uiState.update { it.copy(loadingProgress = progress) }
-                        val cardWithData = scryfallApi.getCardByName(card.name) ?: card
-                        cards.add(cardWithData)
+                when (val parseResult = DeckParser.parseContent(content, format, deckName)) {
+                    is DeckParseResult.Complete -> {
+                        // Deck has commander - load card data
+                        finishLoadingDeck(parseResult.deck, playerIndex)
                     }
-                    cards
-                }
+                    is DeckParseResult.NeedsCommanderSelection -> {
+                        // Need to select commander - load card data first
+                        _uiState.update { it.copy(loadingProgress = "Loading card data...") }
+                        val candidates = loadCommanderCandidates(parseResult.data)
 
-                val deckWithData = Deck(
-                    name = "Player ${playerIndex + 1} Deck",
-                    commander = commanderWithData,
-                    cards = cardsWithData
-                )
+                        if (candidates.isEmpty()) {
+                            _uiState.update {
+                                it.copy(
+                                    isLoading = false,
+                                    loadingProgress = "",
+                                    error = "No cards found in deck for Player ${playerIndex + 1}."
+                                )
+                            }
+                            return@launch
+                        }
 
-                _uiState.update {
-                    it.copy(
-                        hotseatDecks = it.hotseatDecks + (playerIndex to deckWithData),
-                        isLoading = false,
-                        loadingProgress = "",
-                        error = null
-                    )
+                        _uiState.update {
+                            it.copy(
+                                isLoading = false,
+                                loadingProgress = "",
+                                pendingDeckData = parseResult.data,
+                                pendingDeckPlayerIndex = playerIndex,
+                                commanderCandidates = candidates
+                            )
+                        }
+                    }
+                    is DeckParseResult.Error -> {
+                        _uiState.update {
+                            it.copy(
+                                isLoading = false,
+                                loadingProgress = "",
+                                error = "Failed to load deck for Player ${playerIndex + 1}: ${parseResult.message}"
+                            )
+                        }
+                    }
                 }
             } catch (e: Exception) {
                 _uiState.update {
@@ -401,75 +571,54 @@ class MenuViewModel {
 
     /**
      * Load a deck for a specific player in hotseat mode
+     * Supports multiple formats: .cod (Cockatrice), .dec, .dek, .txt, .mwDeck
      */
     fun loadHotseatDeck(playerIndex: Int, filePath: String) {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, loadingProgress = "Parsing deck for Player ${playerIndex + 1}...", error = null) }
 
             try {
-                // Parse the deck file
-                val parsedDeck = try {
-                    DeckParser.parseTextFile(filePath)
-                } catch (e: IllegalArgumentException) {
-                    _uiState.update {
-                        it.copy(
-                            isLoading = false,
-                            loadingProgress = "",
-                            error = "Invalid deck file for Player ${playerIndex + 1}: ${e.message}"
-                        )
+                // Parse the deck file with automatic format detection
+                when (val parseResult = DeckParser.parseFile(filePath)) {
+                    is DeckParseResult.Complete -> {
+                        // Deck has commander - load card data
+                        finishLoadingDeck(parseResult.deck, playerIndex)
                     }
-                    return@launch
-                } catch (e: Exception) {
-                    _uiState.update {
-                        it.copy(
-                            isLoading = false,
-                            loadingProgress = "",
-                            error = "Failed to read deck file for Player ${playerIndex + 1}: ${e.message}"
-                        )
+                    is DeckParseResult.NeedsCommanderSelection -> {
+                        // Need to select commander - load card data first
+                        _uiState.update { it.copy(loadingProgress = "Loading card data...") }
+                        val candidates = loadCommanderCandidates(parseResult.data)
+
+                        if (candidates.isEmpty()) {
+                            _uiState.update {
+                                it.copy(
+                                    isLoading = false,
+                                    loadingProgress = "",
+                                    error = "No cards found in deck for Player ${playerIndex + 1}."
+                                )
+                            }
+                            return@launch
+                        }
+
+                        _uiState.update {
+                            it.copy(
+                                isLoading = false,
+                                loadingProgress = "",
+                                pendingDeckData = parseResult.data,
+                                pendingDeckPlayerIndex = playerIndex,
+                                commanderCandidates = candidates
+                            )
+                        }
                     }
-                    return@launch
-                }
-
-                _uiState.update { it.copy(loadingProgress = "Loading card data from cache...") }
-
-                // Load from cache if available, otherwise fall back to API
-                val commanderWithData = if (cardCache.isCacheAvailable()) {
-                    cardCache.getCardByName(parsedDeck.commander.name) ?: parsedDeck.commander
-                } else {
-                    scryfallApi.getCardByName(parsedDeck.commander.name) ?: parsedDeck.commander
-                }
-
-                // Load card data
-                val cardsWithData = if (cardCache.isCacheAvailable()) {
-                    // Fast batch load from cache
-                    _uiState.update { it.copy(loadingProgress = "Loading Player ${playerIndex + 1} cards from cache...") }
-                    cardCache.getCardsByNames(parsedDeck.cards.map { it.name })
-                } else {
-                    // Slow per-card API calls
-                    val cards = mutableListOf<Card>()
-                    parsedDeck.cards.forEachIndexed { index, card ->
-                        val progress = "Fetching Player ${playerIndex + 1} from Scryfall... (${index + 1}/${parsedDeck.cards.size})"
-                        _uiState.update { it.copy(loadingProgress = progress) }
-                        val cardWithData = scryfallApi.getCardByName(card.name) ?: card
-                        cards.add(cardWithData)
+                    is DeckParseResult.Error -> {
+                        _uiState.update {
+                            it.copy(
+                                isLoading = false,
+                                loadingProgress = "",
+                                error = "Failed to load deck for Player ${playerIndex + 1}: ${parseResult.message}"
+                            )
+                        }
                     }
-                    cards
-                }
-
-                // Create deck with fetched data
-                val deckWithData = Deck(
-                    name = "Player ${playerIndex + 1} Deck",
-                    commander = commanderWithData,
-                    cards = cardsWithData
-                )
-
-                _uiState.update {
-                    it.copy(
-                        hotseatDecks = it.hotseatDecks + (playerIndex to deckWithData),
-                        isLoading = false,
-                        loadingProgress = "",
-                        error = null
-                    )
                 }
             } catch (e: Exception) {
                 _uiState.update {

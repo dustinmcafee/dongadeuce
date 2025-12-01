@@ -469,4 +469,546 @@ class DeckParserTest {
         assertEquals(1, deck.cards.count { it.name == "Partner Commander" })
         assertEquals(99, deck.cards.size)
     }
+
+    // ==================== Multi-Format Tests ====================
+
+    @Test
+    fun `detectFormat returns COCKATRICE_XML for cod files`() {
+        assertEquals(DeckFormat.COCKATRICE_XML, DeckParser.detectFormat("/path/to/deck.cod"))
+        assertEquals(DeckFormat.COCKATRICE_XML, DeckParser.detectFormat("deck.COD"))
+    }
+
+    @Test
+    fun `detectFormat returns PLAIN_TEXT for dec files`() {
+        assertEquals(DeckFormat.PLAIN_TEXT, DeckParser.detectFormat("/path/to/deck.dec"))
+        assertEquals(DeckFormat.PLAIN_TEXT, DeckParser.detectFormat("deck.DEC"))
+    }
+
+    @Test
+    fun `detectFormat returns PLAIN_TEXT for dek files`() {
+        assertEquals(DeckFormat.PLAIN_TEXT, DeckParser.detectFormat("/path/to/deck.dek"))
+    }
+
+    @Test
+    fun `detectFormat returns PLAIN_TEXT for txt files`() {
+        assertEquals(DeckFormat.PLAIN_TEXT, DeckParser.detectFormat("/path/to/deck.txt"))
+    }
+
+    @Test
+    fun `detectFormat returns PLAIN_TEXT for mwDeck files`() {
+        assertEquals(DeckFormat.PLAIN_TEXT, DeckParser.detectFormat("/path/to/deck.mwDeck"))
+    }
+
+    @Test
+    fun `detectFormat returns NATIVE for unknown extensions`() {
+        assertEquals(DeckFormat.NATIVE, DeckParser.detectFormat("/path/to/deck.unknown"))
+        assertEquals(DeckFormat.NATIVE, DeckParser.detectFormat("/path/to/deck"))
+    }
+
+    // ==================== Plain Text Format Tests ====================
+
+    @Test
+    fun `parseContent plain text with Nx format`() {
+        val content = """
+            // My Deck
+            4x Sol Ring
+            4X Llanowar Elves
+            91 Plains
+        """.trimIndent()
+
+        val result = DeckParser.parseContent(content, DeckFormat.PLAIN_TEXT, "Test Deck")
+
+        assertTrue(result is DeckParseResult.NeedsCommanderSelection)
+        val data = (result as DeckParseResult.NeedsCommanderSelection).data
+        assertEquals(99, data.mainboardSize)
+        assertEquals(4, data.mainboard.find { it.name == "Sol Ring" }?.quantity)
+        assertEquals(4, data.mainboard.find { it.name == "Llanowar Elves" }?.quantity)
+    }
+
+    @Test
+    fun `parseContent plain text with SB prefix`() {
+        val content = """
+            4 Sol Ring
+            95 Plains
+            SB: 2 Counterspell
+            sb: 3 Force of Will
+        """.trimIndent()
+
+        val result = DeckParser.parseContent(content, DeckFormat.PLAIN_TEXT, "Test Deck")
+
+        assertTrue(result is DeckParseResult.NeedsCommanderSelection)
+        val data = (result as DeckParseResult.NeedsCommanderSelection).data
+        assertEquals(99, data.mainboardSize)
+        assertEquals(5, data.sideboardSize)
+        assertEquals(2, data.sideboard.find { it.name == "Counterspell" }?.quantity)
+        assertEquals(3, data.sideboard.find { it.name == "Force of Will" }?.quantity)
+    }
+
+    @Test
+    fun `parseContent plain text with blank line sideboard detection`() {
+        val content = """
+            4 Sol Ring
+            95 Plains
+
+            2 Counterspell
+            3 Force of Will
+        """.trimIndent()
+
+        val result = DeckParser.parseContent(content, DeckFormat.PLAIN_TEXT, "Test Deck")
+
+        assertTrue(result is DeckParseResult.NeedsCommanderSelection)
+        val data = (result as DeckParseResult.NeedsCommanderSelection).data
+        assertEquals(99, data.mainboardSize)
+        assertEquals(5, data.sideboardSize)
+    }
+
+    @Test
+    fun `parseContent plain text with sideboard section header`() {
+        val content = """
+            // Mainboard
+            4 Sol Ring
+            95 Plains
+            // Sideboard
+            2 Counterspell
+            3 Force of Will
+        """.trimIndent()
+
+        val result = DeckParser.parseContent(content, DeckFormat.PLAIN_TEXT, "Test Deck")
+
+        assertTrue(result is DeckParseResult.NeedsCommanderSelection)
+        val data = (result as DeckParseResult.NeedsCommanderSelection).data
+        assertEquals(99, data.mainboardSize)
+        assertEquals(5, data.sideboardSize)
+    }
+
+    @Test
+    fun `parseContent plain text with set code and collector number`() {
+        val content = """
+            4 Sol Ring (CMD) 123
+            4 Mana Crypt (2XM) 270a
+            91 Plains
+        """.trimIndent()
+
+        val result = DeckParser.parseContent(content, DeckFormat.PLAIN_TEXT, "Test Deck")
+
+        assertTrue(result is DeckParseResult.NeedsCommanderSelection)
+        val data = (result as DeckParseResult.NeedsCommanderSelection).data
+        val solRing = data.mainboard.find { it.name == "Sol Ring" }
+        assertNotNull(solRing)
+        assertEquals("CMD", solRing.setCode)
+        assertEquals("123", solRing.collectorNumber)
+    }
+
+    @Test
+    fun `parseContent plain text extracts deck name from first comment`() {
+        val content = """
+            // My Awesome Deck
+            // This is a comment
+            99 Plains
+        """.trimIndent()
+
+        val result = DeckParser.parseContent(content, DeckFormat.PLAIN_TEXT, "Default Name")
+
+        assertTrue(result is DeckParseResult.NeedsCommanderSelection)
+        val data = (result as DeckParseResult.NeedsCommanderSelection).data
+        assertEquals("My Awesome Deck", data.name)
+    }
+
+    @Test
+    fun `parseContent plain text handles card names without quantity`() {
+        val content = """
+            Sol Ring
+            Plains
+            Island
+        """.trimIndent()
+
+        val result = DeckParser.parseContent(content, DeckFormat.PLAIN_TEXT, "Test Deck")
+
+        assertTrue(result is DeckParseResult.NeedsCommanderSelection)
+        val data = (result as DeckParseResult.NeedsCommanderSelection).data
+        assertEquals(3, data.mainboardSize)
+        assertEquals(1, data.mainboard.find { it.name == "Sol Ring" }?.quantity)
+    }
+
+    @Test
+    fun `parseContent plain text normalizes card names`() {
+        val content = """
+            4 Æther Adept
+            95 Plains
+        """.trimIndent()
+
+        val result = DeckParser.parseContent(content, DeckFormat.PLAIN_TEXT, "Test Deck")
+
+        assertTrue(result is DeckParseResult.NeedsCommanderSelection)
+        val data = (result as DeckParseResult.NeedsCommanderSelection).data
+        assertEquals("Aether Adept", data.mainboard.find { it.name.contains("Adept") }?.name)
+    }
+
+    // ==================== Cockatrice XML Format Tests ====================
+
+    @Test
+    fun `parseContent cockatrice XML basic format`() {
+        val content = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <cockatrice_deck version="1">
+                <deckname>My Commander Deck</deckname>
+                <comments>Test deck</comments>
+                <zone name="main">
+                    <card name="Sol Ring" number="4"/>
+                    <card name="Plains" number="95"/>
+                </zone>
+                <zone name="side">
+                    <card name="Counterspell" number="2"/>
+                </zone>
+            </cockatrice_deck>
+        """.trimIndent()
+
+        val result = DeckParser.parseContent(content, DeckFormat.COCKATRICE_XML, "Default Name")
+
+        assertTrue(result is DeckParseResult.NeedsCommanderSelection)
+        val data = (result as DeckParseResult.NeedsCommanderSelection).data
+        assertEquals("My Commander Deck", data.name)
+        assertEquals(99, data.mainboardSize)
+        assertEquals(2, data.sideboardSize)
+        assertEquals(4, data.mainboard.find { it.name == "Sol Ring" }?.quantity)
+    }
+
+    @Test
+    fun `parseContent cockatrice XML with set info`() {
+        val content = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <cockatrice_deck version="1">
+                <zone name="main">
+                    <card name="Sol Ring" number="4" setShortName="CMD" collectorNumber="123"/>
+                    <card name="Plains" number="95"/>
+                </zone>
+            </cockatrice_deck>
+        """.trimIndent()
+
+        val result = DeckParser.parseContent(content, DeckFormat.COCKATRICE_XML, "Test Deck")
+
+        assertTrue(result is DeckParseResult.NeedsCommanderSelection)
+        val data = (result as DeckParseResult.NeedsCommanderSelection).data
+        val solRing = data.mainboard.find { it.name == "Sol Ring" }
+        assertNotNull(solRing)
+        assertEquals("CMD", solRing.setCode)
+        assertEquals("123", solRing.collectorNumber)
+    }
+
+    @Test
+    fun `parseContent cockatrice XML with banner card stores commander in parsed data`() {
+        val content = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <cockatrice_deck version="1">
+                <deckname>Commander Deck</deckname>
+                <bannerCard>Edgar Markov</bannerCard>
+                <zone name="main">
+                    <card name="Edgar Markov" number="1"/>
+                    <card name="Sol Ring" number="4"/>
+                    <card name="Plains" number="94"/>
+                </zone>
+            </cockatrice_deck>
+        """.trimIndent()
+
+        val result = DeckParser.parseContent(content, DeckFormat.COCKATRICE_XML, "Test Deck")
+
+        // With 99 cards (not 100), it needs commander selection
+        // The banner card is stored in the parsed data for reference
+        assertTrue(result is DeckParseResult.NeedsCommanderSelection)
+        val data = (result as DeckParseResult.NeedsCommanderSelection).data
+        assertNotNull(data.commander)
+        assertEquals("Edgar Markov", data.commander?.name)
+    }
+
+    @Test
+    fun `parseContent cockatrice XML ignores tokens zone`() {
+        val content = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <cockatrice_deck version="1">
+                <zone name="main">
+                    <card name="Plains" number="99"/>
+                </zone>
+                <zone name="tokens">
+                    <card name="Soldier Token" number="5"/>
+                </zone>
+            </cockatrice_deck>
+        """.trimIndent()
+
+        val result = DeckParser.parseContent(content, DeckFormat.COCKATRICE_XML, "Test Deck")
+
+        assertTrue(result is DeckParseResult.NeedsCommanderSelection)
+        val data = (result as DeckParseResult.NeedsCommanderSelection).data
+        assertEquals(99, data.mainboardSize)
+        assertEquals(0, data.sideboardSize)
+    }
+
+    @Test
+    fun `parseContent cockatrice XML decodes XML entities`() {
+        val content = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <cockatrice_deck version="1">
+                <deckname>Deck &amp; More</deckname>
+                <zone name="main">
+                    <card name="Sol Ring" number="99"/>
+                </zone>
+            </cockatrice_deck>
+        """.trimIndent()
+
+        val result = DeckParser.parseContent(content, DeckFormat.COCKATRICE_XML, "Test Deck")
+
+        assertTrue(result is DeckParseResult.NeedsCommanderSelection)
+        val data = (result as DeckParseResult.NeedsCommanderSelection).data
+        assertEquals("Deck & More", data.name)
+    }
+
+    @Test
+    fun `parseContent cockatrice XML falls back to plain text if not valid XML`() {
+        val content = """
+            4 Sol Ring
+            95 Plains
+        """.trimIndent()
+
+        // Even though we say it's COCKATRICE_XML format, it should fall back to plain text
+        val result = DeckParser.parseContent(content, DeckFormat.COCKATRICE_XML, "Test Deck")
+
+        assertTrue(result is DeckParseResult.NeedsCommanderSelection)
+        val data = (result as DeckParseResult.NeedsCommanderSelection).data
+        assertEquals(99, data.mainboardSize)
+    }
+
+    // ==================== ParsedDeckData Tests ====================
+
+    @Test
+    fun `ParsedDeckData calculates mainboard size correctly`() {
+        val data = ParsedDeckData(
+            name = "Test",
+            mainboard = listOf(
+                ParsedDeckData.CardEntry("Sol Ring", 4),
+                ParsedDeckData.CardEntry("Plains", 95)
+            ),
+            sideboard = emptyList()
+        )
+
+        assertEquals(99, data.mainboardSize)
+    }
+
+    @Test
+    fun `ParsedDeckData calculates sideboard size correctly`() {
+        val data = ParsedDeckData(
+            name = "Test",
+            mainboard = listOf(ParsedDeckData.CardEntry("Plains", 99)),
+            sideboard = listOf(
+                ParsedDeckData.CardEntry("Counterspell", 2),
+                ParsedDeckData.CardEntry("Force of Will", 3)
+            )
+        )
+
+        assertEquals(5, data.sideboardSize)
+    }
+
+    @Test
+    fun `ParsedDeckData isCommanderDeck returns true for 99-100 cards`() {
+        val data99 = ParsedDeckData(
+            name = "Test",
+            mainboard = listOf(ParsedDeckData.CardEntry("Plains", 99)),
+            sideboard = emptyList()
+        )
+        val data100 = ParsedDeckData(
+            name = "Test",
+            mainboard = listOf(ParsedDeckData.CardEntry("Plains", 100)),
+            sideboard = emptyList()
+        )
+        val data60 = ParsedDeckData(
+            name = "Test",
+            mainboard = listOf(ParsedDeckData.CardEntry("Plains", 60)),
+            sideboard = emptyList()
+        )
+
+        assertTrue(data99.isCommanderDeck)
+        assertTrue(data100.isCommanderDeck)
+        assertFalse(data60.isCommanderDeck)
+    }
+
+    @Test
+    fun `ParsedDeckData toDeck creates valid deck`() {
+        val data = ParsedDeckData(
+            name = "Test Deck",
+            mainboard = listOf(
+                ParsedDeckData.CardEntry("Edgar Markov", 1),
+                ParsedDeckData.CardEntry("Sol Ring", 4),
+                ParsedDeckData.CardEntry("Plains", 95)
+            ),
+            sideboard = listOf(ParsedDeckData.CardEntry("Counterspell", 2))
+        )
+
+        val deck = data.toDeck("Edgar Markov")
+
+        assertEquals("Test Deck", deck.name)
+        assertEquals("Edgar Markov", deck.commander.name)
+        assertEquals(99, deck.cards.size)
+        assertEquals(2, deck.sideboard.size)
+        // Verify commander was removed from main deck
+        assertEquals(0, deck.cards.count { it.name == "Edgar Markov" })
+    }
+
+    @Test
+    fun `ParsedDeckData toDeck throws on missing commander`() {
+        val data = ParsedDeckData(
+            name = "Test Deck",
+            mainboard = listOf(ParsedDeckData.CardEntry("Plains", 100)),
+            sideboard = emptyList()
+        )
+
+        assertFailsWith<IllegalArgumentException> {
+            data.toDeck("Nonexistent Commander")
+        }
+    }
+
+    @Test
+    fun `ParsedDeckData allCardNames returns unique names`() {
+        val data = ParsedDeckData(
+            name = "Test",
+            mainboard = listOf(
+                ParsedDeckData.CardEntry("Sol Ring", 4),
+                ParsedDeckData.CardEntry("Plains", 95),
+                ParsedDeckData.CardEntry("Sol Ring", 4) // Duplicate entry
+            ),
+            sideboard = emptyList()
+        )
+
+        val names = data.allCardNames
+        assertEquals(2, names.size)
+        assertTrue(names.contains("Sol Ring"))
+        assertTrue(names.contains("Plains"))
+    }
+
+    // ==================== Error Handling Tests ====================
+
+    @Test
+    fun `parseContent returns error for empty content`() {
+        val result = DeckParser.parseContent("", DeckFormat.PLAIN_TEXT, "Test")
+
+        assertTrue(result is DeckParseResult.Error)
+    }
+
+    @Test
+    fun `parseContent returns error for content with no cards`() {
+        val content = """
+            // Just comments
+            // No cards here
+        """.trimIndent()
+
+        val result = DeckParser.parseContent(content, DeckFormat.PLAIN_TEXT, "Test")
+
+        assertTrue(result is DeckParseResult.Error)
+    }
+
+    // ==================== Commander in Sideboard Tests ====================
+
+    @Test
+    fun `ParsedDeckData toDeck finds commander in sideboard`() {
+        // This is common in Cockatrice where commander is stored in sideboard zone
+        val data = ParsedDeckData(
+            name = "Zedruu Deck",
+            mainboard = listOf(
+                ParsedDeckData.CardEntry("Sol Ring", 4),
+                ParsedDeckData.CardEntry("Plains", 95)
+            ),
+            sideboard = listOf(
+                ParsedDeckData.CardEntry("Zedruu the Greathearted", 1),
+                ParsedDeckData.CardEntry("Counterspell", 2)
+            )
+        )
+
+        val deck = data.toDeck("Zedruu the Greathearted")
+
+        assertEquals("Zedruu Deck", deck.name)
+        assertEquals("Zedruu the Greathearted", deck.commander.name)
+        assertEquals(99, deck.cards.size)
+        // Commander should be removed from sideboard
+        assertEquals(2, deck.sideboard.size)
+        assertEquals(0, deck.sideboard.count { it.name == "Zedruu the Greathearted" })
+    }
+
+    @Test
+    fun `ParsedDeckData allCardNamesIncludingSideboard includes both zones`() {
+        val data = ParsedDeckData(
+            name = "Test",
+            mainboard = listOf(ParsedDeckData.CardEntry("Sol Ring", 4)),
+            sideboard = listOf(ParsedDeckData.CardEntry("Commander Card", 1))
+        )
+
+        val names = data.allCardNamesIncludingSideboard
+        assertEquals(2, names.size)
+        assertTrue(names.contains("Sol Ring"))
+        assertTrue(names.contains("Commander Card"))
+    }
+
+    @Test
+    fun `ParsedDeckData sideboardCardNames returns only sideboard names`() {
+        val data = ParsedDeckData(
+            name = "Test",
+            mainboard = listOf(ParsedDeckData.CardEntry("Sol Ring", 4)),
+            sideboard = listOf(
+                ParsedDeckData.CardEntry("Commander Card", 1),
+                ParsedDeckData.CardEntry("Counterspell", 2)
+            )
+        )
+
+        val names = data.sideboardCardNames
+        assertEquals(2, names.size)
+        assertTrue(names.contains("Commander Card"))
+        assertTrue(names.contains("Counterspell"))
+        assertFalse(names.contains("Sol Ring"))
+    }
+
+    @Test
+    fun `ParsedDeckData toDeck prefers mainboard commander over sideboard`() {
+        // If commander is in both zones (unlikely but possible), prefer mainboard
+        val data = ParsedDeckData(
+            name = "Test",
+            mainboard = listOf(
+                ParsedDeckData.CardEntry("Edgar Markov", 1),
+                ParsedDeckData.CardEntry("Plains", 99)
+            ),
+            sideboard = listOf(
+                ParsedDeckData.CardEntry("Edgar Markov", 1)
+            )
+        )
+
+        val deck = data.toDeck("Edgar Markov")
+
+        assertEquals("Edgar Markov", deck.commander.name)
+        assertEquals(99, deck.cards.size)
+        // Sideboard should still have its copy
+        assertEquals(1, deck.sideboard.size)
+    }
+
+    @Test
+    fun `parseContent cockatrice XML with commander in sideboard zone`() {
+        val content = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <cockatrice_deck version="1">
+                <deckname>Zedruu Politics</deckname>
+                <zone name="main">
+                    <card name="Sol Ring" number="4"/>
+                    <card name="Plains" number="95"/>
+                </zone>
+                <zone name="side">
+                    <card name="Zedruu the Greathearted" number="1"/>
+                    <card name="Counterspell" number="2"/>
+                </zone>
+            </cockatrice_deck>
+        """.trimIndent()
+
+        val result = DeckParser.parseContent(content, DeckFormat.COCKATRICE_XML, "Default Name")
+
+        assertTrue(result is DeckParseResult.NeedsCommanderSelection)
+        val data = (result as DeckParseResult.NeedsCommanderSelection).data
+        assertEquals("Zedruu Politics", data.name)
+        assertEquals(99, data.mainboardSize)
+        assertEquals(3, data.sideboardSize)
+        // Commander should be found in sideboard
+        assertTrue(data.sideboardCardNames.contains("Zedruu the Greathearted"))
+    }
 }

@@ -509,7 +509,8 @@ fun GameScreen(
                             Icon(
                                 imageVector = Icons.Default.Settings,
                                 contentDescription = "Settings",
-                                modifier = Modifier.size(20.dp)
+                                modifier = Modifier.size(20.dp),
+                                tint = MaterialTheme.colorScheme.onSurface
                             )
                         }
                     }

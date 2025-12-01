@@ -48,8 +48,10 @@ A lightweight, cross-platform MTG Commander game client built with Kotlin and Co
 - **Commander-focused**: Designed specifically for EDH/Commander format
 - **Hotseat Multiplayer**: 2-4 players on the same device
 - **Network Multiplayer**: Host or join games over local network
-- **Deck Import**: Load decks from text format
-- **Cross-platform**: Runs on Windows, macOS, and Linux
+- **Multi-format Deck Import**: Load decks from Cockatrice (.cod), .dec, .dek, .txt, .mwDeck formats
+- **Clipboard Paste**: Paste deck lists directly from clipboard on desktop and Android
+- **Commander Selection**: Interactive dialog when importing decks without explicit commander
+- **Cross-platform**: Runs on Windows, macOS, Linux, and Android
 - **Offline Card Cache**: 500MB+ Scryfall bulk data for instant deck loading
 - **Settings Persistence**: Player name and network settings saved between sessions
 - **Keyboard Shortcuts**: 120+ shortcuts for fast gameplay
@@ -75,8 +77,8 @@ Download the latest release from [GitHub Releases](https://github.com/dustinmcaf
 ### Linux
 **Debian/Ubuntu:**
 ```bash
-sudo dpkg -i commander-mtg_X.X.X-1_amd64.deb
-commander-mtg
+sudo dpkg -i dong-a-deuce_X.X.X_amd64.deb
+dong-a-deuce
 ```
 
 **Other distributions:**
@@ -148,7 +150,7 @@ cd dongadeuce
 ./gradlew desktop:packageDeb
 ```
 
-## Current Status (v4.5.14)
+## Current Status (v4.6.0)
 
 **Desktop:** 99% Complete - Fully Playable! ✅
 **Android:** 99% Complete - Fully Playable! ✅
@@ -212,11 +214,11 @@ cd dongadeuce
 - Ktor WebSocket server and client
 - Scryfall API integration
 - Bulk card cache with progress UI
-- Text-based deck parser
+- Multi-format deck parser (Cockatrice, .dec, .dek, .txt, .mwDeck)
 - Sideboard support with deck loading
-- 402 passing unit tests
+- 223+ passing unit tests
 - Comprehensive input validation
-- Cross-platform packaging (Windows, macOS, Linux)
+- Cross-platform packaging (Windows, macOS, Linux, Android)
 
 **Keyboard Shortcuts (120+ implemented):**
 - **Game Phases**: F5-F10 for phases, Ctrl+Space/Tab for next phase, Ctrl+Enter for pass turn
