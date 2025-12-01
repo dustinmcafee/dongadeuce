@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.5.8] - 2025-11-30
+
+### Fixed
+- **Windows UI overflow** - Zone buttons (Library, Graveyard, Exile) no longer get cut off on high-DPI displays
+  - Changed zone cards from fixed heights to flexible weight-based layout
+  - Library gets 1.5x space, Graveyard and Exile get 1x each
+  - Zones now dynamically scale to always fit available sidebar height
+
 ## [4.5.7] - 2025-11-30
 
 ### Fixed

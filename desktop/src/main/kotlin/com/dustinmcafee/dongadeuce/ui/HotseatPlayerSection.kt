@@ -282,7 +282,7 @@ private fun PlayerInfoSidebar(
 ) {
     Column(
         modifier = modifier,
-        verticalArrangement = Arrangement.spacedBy(4.dp)
+        verticalArrangement = Arrangement.spacedBy(2.dp)
     ) {
         Text(
             player.name,
@@ -356,7 +356,7 @@ private fun PlayerInfoSidebar(
             "Library",
             Zone.LIBRARY,
             libraryCount,
-            Modifier.fillMaxWidth().height(80.dp),  // Taller to show card image better
+            Modifier.fillMaxWidth().weight(1.5f),  // Flexible - takes 1.5x space
             onClick = null, // No single-click action
             onDoubleClick = if (isLocalPlayer) ({ viewModel.drawCard(player.id) }) else null,
             onRightClick = if (isLocalPlayer) onShowLibraryOperationsDialog else null,
@@ -376,7 +376,7 @@ private fun PlayerInfoSidebar(
             "Graveyard",
             Zone.GRAVEYARD,
             graveyardCount,
-            Modifier.fillMaxWidth().height(50.dp),
+            Modifier.fillMaxWidth().weight(1f),  // Flexible
             onClick = onShowGraveyardDialog, // Always clickable - shows read-only dialog for non-local players
             dragDropState = if (isLocalPlayer) dragDropState else null,
             onDropCards = if (isLocalPlayer) {
@@ -393,7 +393,7 @@ private fun PlayerInfoSidebar(
             "Exile",
             Zone.EXILE,
             exileCount,
-            Modifier.fillMaxWidth().height(50.dp),
+            Modifier.fillMaxWidth().weight(1f),  // Flexible
             onClick = onShowExileDialog, // Always clickable - shows read-only dialog for non-local players
             dragDropState = if (isLocalPlayer) dragDropState else null,
             onDropCards = if (isLocalPlayer) {

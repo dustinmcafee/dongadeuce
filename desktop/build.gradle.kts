@@ -39,7 +39,9 @@ compose.desktop {
     application {
         mainClass = "com.dustinmcafee.dongadeuce.MainKt"
 
+        // Set application icon for runtime window
         nativeDistributions {
+            appResourcesRootDir.set(project.layout.projectDirectory.dir("../resources"))
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
             packageName = "Dong-A-Deuce"
             // Use numeric version for native packages (strip -alpha, -beta, etc.)
