@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.5.11] - 2025-11-30
+
+### Fixed
+- **Sidebar guaranteed fit** - ALL sidebar elements now use weight-based layout
+  - Header (name, hand count, life): weight 1
+  - Counters: weight 0.8
+  - Command Zone: weight 2
+  - Library: weight 2
+  - Graveyard: weight 1.5
+  - Exile: weight 1.5
+  - Token button: weight 0.7
+  - Elements shrink/grow proportionally to always fit available space
+- **Battlefield card sizing** - Lowered minimum card size from 80dp to 40dp
+  - Cards will shrink further on constrained displays to fit 3 rows
+- **UI Scale slider** - Changed from buttons to slider (50%-200% range)
+
 ## [4.5.10] - 2025-11-30
 
 ### Added
