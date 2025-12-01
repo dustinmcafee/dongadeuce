@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.5.14] - 2025-11-30
+
+### Fixed
+- **Dark theme text colors** - Fixed remaining black text on dark theme
+  - Main menu title "Dong-A-Deuce" now white
+  - Settings gear icon now white
+  - Persistent card viewer card name, type, and counters now properly colored
+
 ## [4.5.13] - 2025-11-30
 
 ### Fixed

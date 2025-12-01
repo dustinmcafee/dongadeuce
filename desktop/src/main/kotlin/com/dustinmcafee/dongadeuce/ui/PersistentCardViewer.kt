@@ -233,6 +233,7 @@ private fun ImageTabContent(cardInstance: CardInstance) {
             text = cardInstance.card.name,
             style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis
         )
@@ -255,7 +256,8 @@ private fun TextTabContent(cardInstance: CardInstance) {
         Text(
             text = cardInstance.card.name,
             style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.Bold
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
 
         // Mana cost
@@ -273,7 +275,8 @@ private fun TextTabContent(cardInstance: CardInstance) {
         Text(
             text = cardInstance.card.type ?: "Unknown",
             style = MaterialTheme.typography.bodySmall,
-            fontWeight = FontWeight.Medium
+            fontWeight = FontWeight.Medium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
 
         Divider()
@@ -354,14 +357,16 @@ private fun TextTabContent(cardInstance: CardInstance) {
                 Text(
                     text = "Counters:",
                     style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 cardInstance.counters.forEach { (type, count) ->
                     val counterType = UIConstants.COUNTER_TYPES.find { it.id == type }
                     val displayName = counterType?.displayName ?: type
                     Text(
                         text = "• $displayName: $count",
-                        style = MaterialTheme.typography.bodySmall
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }

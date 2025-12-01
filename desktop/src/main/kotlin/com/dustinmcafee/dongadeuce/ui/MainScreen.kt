@@ -108,7 +108,8 @@ fun MenuScreen(
         ) {
             Icon(
                 imageVector = Icons.Default.Settings,
-                contentDescription = "Settings"
+                contentDescription = "Settings",
+                tint = MaterialTheme.colorScheme.onBackground
             )
         }
 
@@ -130,7 +131,8 @@ fun MenuScreen(
 
             Text(
                 text = "Dong-A-Deuce",
-                style = MaterialTheme.typography.headlineLarge
+                style = MaterialTheme.typography.headlineLarge,
+                color = MaterialTheme.colorScheme.onBackground
             )
 
             Spacer(modifier = Modifier.height(16.dp))
