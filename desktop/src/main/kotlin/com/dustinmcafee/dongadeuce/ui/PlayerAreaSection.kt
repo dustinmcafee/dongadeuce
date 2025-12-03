@@ -10,8 +10,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.*
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
@@ -145,6 +148,7 @@ fun PlayerArea(
             allPlayers = allPlayers,
             onCardAction = onCardAction,
             selectionState = selectionState,
+            dragDropState = dragDropState,
             onShowHandDialog = { showHandDialog = true },
             modifier = Modifier.fillMaxWidth().weight(0.3f)
         )
@@ -504,6 +508,7 @@ private fun PlayerHandDisplay(
     allPlayers: List<Player>,
     onCardAction: (CardAction) -> Unit,
     selectionState: SelectionState?,
+    dragDropState: DragDropState?,
     onShowHandDialog: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -511,6 +516,10 @@ private fun PlayerHandDisplay(
     var showContextMenu by remember { mutableStateOf(false) }
     var contextMenuOffset by remember { mutableStateOf(Offset.Zero) }
     var showViewHandDialog by remember { mutableStateOf(false) }
+
+    // Track hand area position for reordering calculations
+    var handAreaPositionX by remember { mutableStateOf(0f) }
+    var handAreaWidth by remember { mutableStateOf(0f) }
 
     // View Hand dialog
     if (showViewHandDialog) {
@@ -539,7 +548,20 @@ private fun PlayerHandDisplay(
     }
 
     Card(
-        modifier = modifier,
+        modifier = modifier
+            .onGloballyPositioned { coordinates ->
+                // Register hand as a drop zone so battlefield cards can be dropped here
+                if (dragDropState != null) {
+                    val position = coordinates.positionInWindow()
+                    val bounds = Rect(
+                        left = position.x,
+                        top = position.y,
+                        right = position.x + coordinates.size.width,
+                        bottom = position.y + coordinates.size.height
+                    )
+                    dragDropState.registerZoneBounds(Zone.HAND, bounds)
+                }
+            },
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
         Box {
@@ -563,14 +585,15 @@ private fun PlayerHandDisplay(
 
                     Spacer(modifier = Modifier.height(4.dp))
 
-                    // Shared drag state for hand cards
-                    var draggedHandCardIds by remember { mutableStateOf<Set<String>>(emptySet()) }
-                    var handDragOffset by remember { mutableStateOf(Offset.Zero) }
-
                     // Hand area with right-click support
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
+                            .onGloballyPositioned { coordinates ->
+                                // Track hand area position for reordering
+                                handAreaPositionX = coordinates.positionInWindow().x
+                                handAreaWidth = coordinates.size.width.toFloat()
+                            }
                             .pointerInput(Unit) {
                                 awaitPointerEventScope {
                                     while (true) {
@@ -641,13 +664,33 @@ private fun PlayerHandDisplay(
                                                 },
                                                 onContextAction = onCardAction,
                                                 selectionState = selectionState,
-                                                sharedDraggedCardIds = draggedHandCardIds,
-                                                sharedDragOffset = handDragOffset,
-                                                onDragStateChange = { draggedIds, offset ->
-                                                    draggedHandCardIds = draggedIds
-                                                    handDragOffset = offset
+                                                allPlayers = allPlayers,
+                                                dragDropState = dragDropState,
+                                                onDropToZone = { cardIds, zone ->
+                                                    cardIds.forEach { cardId ->
+                                                        if (zone == Zone.LIBRARY) {
+                                                            viewModel.moveCardToTopOfLibrary(cardId)
+                                                        } else {
+                                                            viewModel.moveCard(cardId, zone)
+                                                        }
+                                                    }
                                                 },
-                                                allPlayers = allPlayers
+                                                onReorderInHand = { cardId, dropXPosition ->
+                                                    // Calculate target position based on drop X coordinate
+                                                    // Use the same spacing calculation as the layout
+                                                    val relativeX = dropXPosition - handAreaPositionX
+                                                    val cardCount = handCards.size
+
+                                                    // Calculate target index based on card spacing
+                                                    val targetIndex = if (cardCount > 1 && cardSpacingPx > 0) {
+                                                        // Divide by spacing to get approximate index
+                                                        // Add half card width to center the drop zone on each card
+                                                        ((relativeX + cardWidthPx / 2) / cardSpacingPx).toInt().coerceIn(0, cardCount - 1)
+                                                    } else {
+                                                        0
+                                                    }
+                                                    viewModel.reorderHandCard(cardId, targetIndex)
+                                                }
                                             )
                                         }
                                     }

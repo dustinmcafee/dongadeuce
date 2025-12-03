@@ -1,10 +1,10 @@
 # Dong-A-Deuce - Development TODO
 
-**Current Version:** v4.6.0
+**Current Version:** v4.7.0
 **Desktop:** 99% complete (fully playable!)
 **Android:** 99% complete (fully playable!)
 **Network Mode:** 100% complete (fully playable!)
-**Last Updated:** 2025-11-30
+**Last Updated:** 2025-12-02
 
 ---
 
@@ -72,16 +72,17 @@ These are nice-to-have features that would improve the experience but aren't req
 ### Drag-and-Drop Enhancements
 **Effort:** 1-2 weeks
 
-- [ ] Drag cards from hand to battlefield (Android)
-- [ ] Drag cards from battlefield to hand (Android)
-- [ ] Drag cards from hand to battlefield (Desktop)
-- [ ] Drag cards from battlefield to hand (Desktop)
+- [x] Drag cards from hand to battlefield (Android)
+- [x] Drag cards from battlefield to hand (Android)
+- [x] Drag cards from hand to battlefield (Desktop)
+- [x] Drag cards from battlefield to hand (Desktop)
+- [x] Reorder cards within hand by dragging (Desktop & Android)
 
 ### Battlefield Visual Fixes
 **Effort:** 2-3 days
 
-- [ ] Fix overlap when multiple stacks of 3 cards on battlefield (Android)
-- [ ] Fix overlap when multiple stacks of 3 cards on battlefield (Desktop)
+- [x] Fix overlap when multiple stacks of 3 cards on battlefield (Android)
+- [x] Fix overlap when multiple stacks of 3 cards on battlefield (Desktop)
 
 ### Animations
 **Effort:** 1-2 weeks
@@ -226,6 +227,7 @@ These are nice-to-have features that would improve the experience but aren't req
 
 | Version | Highlights |
 |---------|------------|
+| v4.7.0 | Hand reordering via drag, drag between hand/battlefield, commander dialog keyboard shortcuts, Android card viewer swipes from left |
 | v4.6.0 | Multi-format deck import (Cockatrice .cod, .dec, .dek, .txt, .mwDeck), clipboard paste, commander selection dialog with legendary filter |
 | v4.5.14 | Dark theme text color fixes (title, settings icon, card viewer) |
 | v4.5.13 | Dark theme background fix for desktop |

@@ -83,6 +83,7 @@ fun HotseatPlayerSection(
                     onCardAction = onCardAction,
                     viewModel = viewModel,
                     selectionState = selectionState,
+                    dragDropState = dragDropState,
                     allPlayers = allPlayers,
                     modifier = Modifier.fillMaxWidth().height(100.dp),
                     onCardFocus = onCardFocus
@@ -179,6 +180,7 @@ fun HotseatPlayerSection(
                     onCardAction = onCardAction,
                     viewModel = viewModel,
                     selectionState = selectionState,
+                    dragDropState = dragDropState,
                     allPlayers = allPlayers,
                     modifier = Modifier.fillMaxWidth().height(100.dp),
                     onCardFocus = onCardFocus

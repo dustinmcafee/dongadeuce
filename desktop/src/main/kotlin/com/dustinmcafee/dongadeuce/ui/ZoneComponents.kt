@@ -16,6 +16,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.input.pointer.*
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
@@ -1119,15 +1121,21 @@ fun HandCardDisplay(
     onDoubleClick: () -> Unit = {},
     onContextAction: (CardAction) -> Unit,
     selectionState: SelectionState? = null,
-    sharedDraggedCardIds: Set<String> = emptySet(),
-    sharedDragOffset: Offset = Offset.Zero,
-    onDragStateChange: (Set<String>, Offset) -> Unit = { _, _ -> },
     allPlayers: List<Player> = emptyList(),
-    onCardFocus: ((CardInstance) -> Unit)? = null
+    onCardFocus: ((CardInstance) -> Unit)? = null,
+    dragDropState: DragDropState? = null,
+    onDropToZone: ((Set<String>, Zone) -> Unit)? = null,
+    onReorderInHand: ((String, Float) -> Unit)? = null // cardId, drop X position in window
 ) {
-    var lastClickTime by remember { mutableStateOf(0L) }
     val isSelected = selectionState?.isSelected(cardInstance.instanceId) == true
-    val isDragged = sharedDraggedCardIds.contains(cardInstance.instanceId)
+
+    // Track card position in window for zone detection during drag
+    var cardPositionInWindow by remember { mutableStateOf(Offset.Zero) }
+
+    // Local drag state for this card
+    var localDragOffset by remember { mutableStateOf(Offset.Zero) }
+    var localIsDragging by remember { mutableStateOf(false) }
+    var localDraggedCardIds by remember { mutableStateOf<Set<String>>(emptySet()) }
 
     CardWithContextMenu(
         cardInstance = cardInstance,
@@ -1138,9 +1146,9 @@ fun HandCardDisplay(
             modifier = Modifier.pointerInput(cardInstance.instanceId) {
                 awaitPointerEventScope {
                     while (true) {
-                        val event = awaitPointerEvent(PointerEventPass.Initial)
-                        // Trigger on Enter or Move to ensure hover works on all platforms
-                        if (event.type == PointerEventType.Enter || event.type == PointerEventType.Move) {
+                        val event = awaitPointerEvent(PointerEventPass.Final)
+                        // Trigger on Enter to update focus (use Final pass to not interfere with drag)
+                        if (event.type == PointerEventType.Enter) {
                             onCardFocus?.invoke(cardInstance)
                         }
                     }
@@ -1151,93 +1159,77 @@ fun HandCardDisplay(
                 modifier = Modifier
                     .width(UIConstants.HAND_CARD_WIDTH)
                     .height(UIConstants.HAND_CARD_HEIGHT)
+                    .onGloballyPositioned { coordinates ->
+                        cardPositionInWindow = coordinates.positionInWindow()
+                    }
                     .graphicsLayer {
-                        if (isDragged) {
-                            alpha = 0.5f
-                            translationX = sharedDragOffset.x
-                            translationY = sharedDragOffset.y
+                        if (localIsDragging) {
+                            alpha = 0.7f
+                            translationX = localDragOffset.x
+                            translationY = localDragOffset.y
+                            scaleX = 1.1f
+                            scaleY = 1.1f
                         }
                     }
-                    // Combined click and drag gesture support
+                    // Use detectDragGestures for reliable drag detection
                     .pointerInput(cardInstance.instanceId) {
-                        awaitPointerEventScope {
-                            while (true) {
-                                val event = awaitPointerEvent()
-
-                                if (event.type == PointerEventType.Press) {
-                                    // Skip right-clicks (they trigger context menu)
-                                    val isPrimaryClick = event.button == PointerButton.Primary
-                                    val isRightClick = !isPrimaryClick && event.button != null
-
-                                    if (isRightClick) {
-                                        // Right-click detected - consume and skip
-                                        awaitPointerEvent()
-                                        continue
-                                    }
-
-                                    // Left click - handle selection and drag
-                                    val isShiftPressed = event.keyboardModifiers.isShiftPressed
-                                    var totalDrag = Offset.Zero
-                                    var isDragging = false
-
-                                    // Track drag or click
-                                    while (true) {
-                                        val moveEvent = awaitPointerEvent()
-
-                                        if (moveEvent.type == PointerEventType.Move) {
-                                            val change = moveEvent.changes.first()
-                                            val dragAmount = change.position - change.previousPosition
-                                            totalDrag += dragAmount
-
-                                            // Start drag if moved more than threshold
-                                            if (!isDragging && totalDrag.getDistance() > UIConstants.DRAG_THRESHOLD_PX) {
-                                                isDragging = true
-                                                val cardsToDrag = if (selectionState?.isSelected(cardInstance.instanceId) == true &&
-                                                                       selectionState.selectedCards.size > 1) {
-                                                    selectionState.selectedCards.toSet()
-                                                } else {
-                                                    setOf(cardInstance.instanceId)
-                                                }
-                                                onDragStateChange(cardsToDrag, Offset.Zero)
-                                            }
-
-                                            if (isDragging) {
-                                                change.consume()
-                                                onDragStateChange(sharedDraggedCardIds, sharedDragOffset + dragAmount)
-                                            }
-                                        } else if (moveEvent.type == PointerEventType.Release) {
-                                            if (isDragging) {
-                                                // Drag ended
-                                                if (sharedDragOffset.getDistance() > UIConstants.DRAG_DISTANCE_THRESHOLD_PX) {
-                                                    onContextAction(CardAction.ToBattlefield(cardInstance))
-                                                }
-                                                onDragStateChange(emptySet(), Offset.Zero)
-                                            } else {
-                                                // Click (no drag)
-                                                val clickTime = System.currentTimeMillis()
-                                                val timeSinceLastClick = clickTime - lastClickTime
-                                                lastClickTime = clickTime
-
-                                                if (timeSinceLastClick < UIConstants.DOUBLE_CLICK_DELAY_MS) {
-                                                    selectionState?.clearSelection()
-                                                    onDoubleClick()
-                                                } else if (isShiftPressed && selectionState != null) {
-                                                    selectionState.toggleSelection(cardInstance.instanceId)
-                                                } else {
-                                                    if (selectionState != null) {
-                                                        selectionState.clearSelection()
-                                                        selectionState.select(cardInstance.instanceId)
-                                                    } else {
-                                                        onCardClick(cardInstance)
-                                                    }
-                                                }
-                                            }
-                                            break
-                                        }
-                                    }
+                        detectDragGestures(
+                            onDragStart = {
+                                localIsDragging = true
+                                localDragOffset = Offset.Zero
+                                localDraggedCardIds = if (selectionState?.isSelected(cardInstance.instanceId) == true &&
+                                                       selectionState.selectedCards.size > 1) {
+                                    selectionState.selectedCards.toSet()
+                                } else {
+                                    setOf(cardInstance.instanceId)
                                 }
+                            },
+                            onDrag = { change, dragAmount ->
+                                change.consume()
+                                localDragOffset += dragAmount
+                            },
+                            onDragEnd = {
+                                // Drag ended - check if dropped on a zone
+                                val absoluteDropPos = cardPositionInWindow + localDragOffset
+                                val dropZone = dragDropState?.getZoneAtPosition(absoluteDropPos)
+
+                                if (dropZone == Zone.HAND && onReorderInHand != null && cardInstance.zone == Zone.HAND) {
+                                    // Reordering within hand - pass the X position for calculating new index
+                                    onReorderInHand(cardInstance.instanceId, absoluteDropPos.x)
+                                } else if (dropZone != null && onDropToZone != null) {
+                                    // Drop to detected zone
+                                    onDropToZone(localDraggedCardIds, dropZone)
+                                } else if (localDragOffset.getDistance() > UIConstants.DRAG_DISTANCE_THRESHOLD_PX) {
+                                    // Fallback: drag far enough = play to battlefield
+                                    onContextAction(CardAction.ToBattlefield(cardInstance))
+                                }
+                                localIsDragging = false
+                                localDragOffset = Offset.Zero
+                                localDraggedCardIds = emptySet()
+                            },
+                            onDragCancel = {
+                                localIsDragging = false
+                                localDragOffset = Offset.Zero
+                                localDraggedCardIds = emptySet()
                             }
-                        }
+                        )
+                    }
+                    // Handle clicks separately
+                    .pointerInput(cardInstance.instanceId) {
+                        detectTapGestures(
+                            onTap = {
+                                if (selectionState != null) {
+                                    selectionState.clearSelection()
+                                    selectionState.select(cardInstance.instanceId)
+                                } else {
+                                    onCardClick(cardInstance)
+                                }
+                            },
+                            onDoubleTap = {
+                                selectionState?.clearSelection()
+                                onDoubleClick()
+                            }
+                        )
                     }
                     .then(
                         if (isSelected) Modifier.border(3.dp, Color(0xFF00FF00), RoundedCornerShape(8.dp)) else Modifier

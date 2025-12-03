@@ -1563,6 +1563,46 @@ class GameViewModel(
     }
 
     /**
+     * Reorder a card within the hand to a new position (for drag-and-drop reordering)
+     * @param cardId The card to move
+     * @param newPosition The target position (0-indexed) in the hand
+     */
+    fun reorderHandCard(cardId: String, newPosition: Int) {
+        _uiState.update { currentState ->
+            val gameState = currentState.gameState ?: return@update currentState
+            val card = gameState.cardInstances.find { it.instanceId == cardId } ?: return@update currentState
+
+            // Only reorder cards in hand
+            if (card.zone != Zone.HAND) return@update currentState
+
+            val playerId = card.ownerId
+
+            // Get current hand cards sorted by position
+            val handCards = gameState.cardInstances
+                .filter { it.ownerId == playerId && it.zone == Zone.HAND }
+                .sortedWith(compareBy({ it.handPosition ?: Int.MAX_VALUE }, { it.card.name }))
+                .toMutableList()
+
+            // Find current index of the card being moved
+            val currentIndex = handCards.indexOfFirst { it.instanceId == cardId }
+            if (currentIndex == -1) return@update currentState
+
+            // Remove card from current position and insert at new position
+            val movedCard = handCards.removeAt(currentIndex)
+            val clampedPosition = newPosition.coerceIn(0, handCards.size)
+            handCards.add(clampedPosition, movedCard)
+
+            // Update all hand positions
+            var updatedGameState = gameState
+            handCards.forEachIndexed { index, c ->
+                updatedGameState = updatedGameState.updateCardInstance(c.instanceId) { it.copy(handPosition = index) }
+            }
+
+            currentState.copy(gameState = updatedGameState)
+        }
+    }
+
+    /**
      * Modify a card's power
      */
     fun modifyPower(cardId: String, amount: Int) {

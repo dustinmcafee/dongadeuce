@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.7.0] - 2025-12-02
+
+### Added
+- **Hand card reordering** - Drag cards within hand to reorder them (Desktop & Android)
+- **Drag between zones** - Drag cards from hand to battlefield and back (Desktop & Android)
+- **Commander selection keyboard shortcuts** - Arrow keys to navigate, Enter to confirm, Escape to cancel
+- **Back to menu button** - Home icon in game sidebar for quick return to menu (Desktop)
+
+### Changed
+- **Android card viewer** - Now swipes from left edge instead of right for easier access
+- **Commander selection grid** - Adaptive columns with accurate keyboard navigation
+
+### Fixed
+- **Android battlefield overlap** - Added padding to prevent bottom row cards from being cut off by player info bar
+
 ## [4.6.0] - 2025-11-30
 
 ### Added

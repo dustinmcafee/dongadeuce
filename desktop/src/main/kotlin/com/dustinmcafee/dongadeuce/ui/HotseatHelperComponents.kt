@@ -295,6 +295,7 @@ fun CompactHandStrip(
     onCardAction: (CardAction) -> Unit,
     viewModel: GameViewModel? = null,
     selectionState: SelectionState? = null,
+    dragDropState: DragDropState? = null,
     allPlayers: List<Player> = emptyList(),
     modifier: Modifier = Modifier,
     onCardFocus: ((CardInstance) -> Unit)? = null
@@ -303,6 +304,10 @@ fun CompactHandStrip(
     var showContextMenu by remember { mutableStateOf(false) }
     var contextMenuOffset by remember { mutableStateOf(Offset.Zero) }
     var showViewHandDialog by remember { mutableStateOf(false) }
+
+    // Track hand area position for reordering calculations
+    var handAreaPositionX by remember { mutableStateOf(0f) }
+    var handAreaWidth by remember { mutableStateOf(0f) }
 
     // View Hand dialog
     if (showViewHandDialog && showCards) {
@@ -335,7 +340,20 @@ fun CompactHandStrip(
     }
 
     Card(
-        modifier = modifier,
+        modifier = modifier
+            .onGloballyPositioned { coordinates ->
+                // Register hand as a drop zone so battlefield cards can be dropped here
+                if (dragDropState != null) {
+                    val position = coordinates.positionInWindow()
+                    val bounds = Rect(
+                        left = position.x,
+                        top = position.y,
+                        right = position.x + coordinates.size.width,
+                        bottom = position.y + coordinates.size.height
+                    )
+                    dragDropState.registerZoneBounds(Zone.HAND, bounds)
+                }
+            },
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
         Box {
@@ -351,15 +369,16 @@ fun CompactHandStrip(
                         modifier = Modifier.width(120.dp)
                     )
 
-                    // Shared drag state for hand cards
-                    var draggedHandCardIds by remember { mutableStateOf<Set<String>>(emptySet()) }
-                    var handDragOffset by remember { mutableStateOf(Offset.Zero) }
-
                     // Hand area with right-click support
                     Box(
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxHeight()
+                            .onGloballyPositioned { coordinates ->
+                                // Track hand area position for reordering
+                                handAreaPositionX = coordinates.positionInWindow().x
+                                handAreaWidth = coordinates.size.width.toFloat()
+                            }
                             .then(
                                 if (showCards) {
                                     Modifier.pointerInput(Unit) {
@@ -441,14 +460,44 @@ fun CompactHandStrip(
                                                 },
                                                 onContextAction = onCardAction,
                                                 selectionState = selectionState,
-                                                sharedDraggedCardIds = draggedHandCardIds,
-                                                sharedDragOffset = handDragOffset,
-                                                onDragStateChange = { draggedIds, offset ->
-                                                    draggedHandCardIds = draggedIds
-                                                    handDragOffset = offset
-                                                },
                                                 allPlayers = allPlayers,
-                                                onCardFocus = onCardFocus
+                                                onCardFocus = onCardFocus,
+                                                dragDropState = dragDropState,
+                                                onDropToZone = { cardIds, zone ->
+                                                    cardIds.forEach { cardId ->
+                                                        when (zone) {
+                                                            Zone.LIBRARY -> viewModel?.moveCardToTopOfLibrary(cardId)
+                                                                ?: onCardAction(CardAction.ToTop(cardInstance))
+                                                            Zone.BATTLEFIELD -> viewModel?.moveCard(cardId, zone)
+                                                                ?: onCardAction(CardAction.ToBattlefield(cardInstance))
+                                                            Zone.GRAVEYARD -> viewModel?.moveCard(cardId, zone)
+                                                                ?: onCardAction(CardAction.ToGraveyard(cardInstance))
+                                                            Zone.EXILE -> viewModel?.moveCard(cardId, zone)
+                                                                ?: onCardAction(CardAction.ToExile(cardInstance))
+                                                            Zone.HAND -> viewModel?.moveCard(cardId, zone)
+                                                                ?: onCardAction(CardAction.ToHand(cardInstance))
+                                                            Zone.COMMAND_ZONE -> viewModel?.moveCard(cardId, zone)
+                                                                ?: onCardAction(CardAction.ToCommandZone(cardInstance))
+                                                            else -> { /* STACK, SIDEBOARD not applicable */ }
+                                                        }
+                                                    }
+                                                },
+                                                onReorderInHand = { cardId, dropXPosition ->
+                                                    // Calculate target position based on drop X coordinate
+                                                    // Use the same spacing calculation as the layout
+                                                    val relativeX = dropXPosition - handAreaPositionX
+                                                    val cardCount = handCards.size
+
+                                                    // Calculate target index based on card spacing
+                                                    val targetIndex = if (cardCount > 1 && cardSpacingPx > 0) {
+                                                        // Divide by spacing to get approximate index
+                                                        // Add half card width to center the drop zone on each card
+                                                        ((relativeX + cardWidthPx / 2) / cardSpacingPx).toInt().coerceIn(0, cardCount - 1)
+                                                    } else {
+                                                        0
+                                                    }
+                                                    viewModel?.reorderHandCard(cardId, targetIndex)
+                                                }
                                             )
                                         }
                                     }

@@ -16,6 +16,8 @@ import androidx.compose.ui.input.pointer.changedToUp
 import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.layout.*
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -348,13 +350,13 @@ fun AndroidGameScreen(
             )
         }
 
-        // Swipe edge detector on right side of screen
+        // Swipe edge detector on left side of screen
         SwipeEdgeDetector(
             drawerState = cardViewerDrawerState,
-            modifier = Modifier.align(Alignment.CenterEnd)
+            modifier = Modifier.align(Alignment.CenterStart)
         )
 
-        // Card viewer drawer (slides in from right)
+        // Card viewer drawer (slides in from left)
         CardViewerDrawer(
             cardInstance = focusedCardState.focusedCard,
             drawerState = cardViewerDrawerState
@@ -1313,15 +1315,22 @@ private fun LocalPlayerSection(
         gameState?.computeBattlefieldPositions(player.id) ?: emptyMap()
     }
 
+    // Track zone bounds for drag-drop between zones
+    var handZoneTop by remember { mutableStateOf(0f) }
+    var battlefieldZoneBottom by remember { mutableStateOf(0f) }
+
     // Light green for active player, dark green for inactive
     Column(modifier = modifier.background(if (isActivePlayer) Color(0xFF1B5E20) else Color(0xFF2E4A2E))) {
-        // Battlefield
+        // Battlefield - extra bottom padding to prevent overlap with PlayerInfoBar
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
                 .clipToBounds()
-                .padding(8.dp)
+                .padding(start = 8.dp, end = 8.dp, top = 8.dp, bottom = 16.dp)
+                .onGloballyPositioned { coordinates ->
+                    battlefieldZoneBottom = coordinates.positionInWindow().y + coordinates.size.height
+                }
         ) {
             if (battlefieldCards.isEmpty()) {
                 Text(
@@ -1336,6 +1345,11 @@ private fun LocalPlayerSection(
                     players = gameState?.players ?: emptyList(),
                     selectionState = selectionState,
                     onCardClick = { card ->
+                        // Single tap just focuses the card
+                        onCardFocus(card)
+                    },
+                    onCardDoubleClick = { card ->
+                        // Double tap toggles tap state
                         onCardFocus(card)
                         gameViewModel.toggleTap(card.instanceId)
                     },
@@ -1343,9 +1357,12 @@ private fun LocalPlayerSection(
                         onCardFocus(card)
                         onShowContextMenu(card)
                     },
-                    onCardAction = onCardAction,
                     onCardPositionChanged = { cardId, col, row ->
                         gameViewModel.updateCardGridPosition(cardId, col, row)
+                    },
+                    handZoneTop = handZoneTop,
+                    onCardDroppedToHand = { cardId ->
+                        gameViewModel.moveCard(cardId, Zone.HAND)
                     }
                 )
             }
@@ -1377,6 +1394,14 @@ private fun LocalPlayerSection(
             },
             onCardFocus = onCardFocus,
             onViewHand = onShowHand,
+            onReorderCard = { cardId, newPosition ->
+                gameViewModel.reorderHandCard(cardId, newPosition)
+            },
+            battlefieldZoneBottom = battlefieldZoneBottom,
+            onCardDroppedToBattlefield = { cardId ->
+                gameViewModel.moveCard(cardId, Zone.BATTLEFIELD)
+            },
+            onZonePositioned = { top -> handZoneTop = top },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(100.dp)
@@ -1399,9 +1424,11 @@ private fun BattlefieldGrid(
     players: List<Player>,
     selectionState: SelectionState,
     onCardClick: (CardInstance) -> Unit,
+    onCardDoubleClick: (CardInstance) -> Unit,
     onCardLongPress: (CardInstance) -> Unit,
-    onCardAction: (CardAction) -> Unit,
-    onCardPositionChanged: ((String, Int, Int) -> Unit)? = null
+    onCardPositionChanged: ((String, Int, Int) -> Unit)? = null,
+    handZoneTop: Float = 0f,
+    onCardDroppedToHand: ((String) -> Unit)? = null
 ) {
     val cardSize = 70.dp
     // Spacing accounts for max stack extension: 2 * 10% * 70dp = ~14dp, plus buffer
@@ -1413,6 +1440,9 @@ private fun BattlefieldGrid(
     var dragOffset by remember { mutableStateOf(Offset.Zero) }
     var dragStartCol by remember { mutableStateOf(0) }
     var dragStartRow by remember { mutableStateOf(0) }
+
+    // Track grid position for zone detection
+    var gridPositionInWindow by remember { mutableStateOf(Offset.Zero) }
 
     // Calculate card positions for drop target detection
     val cardSizePx = with(density) { cardSize.toPx() }
@@ -1474,6 +1504,9 @@ private fun BattlefieldGrid(
         modifier = Modifier
             .fillMaxWidth()
             .height(((totalRows * cellSize) / density.density).dp)
+            .onGloballyPositioned { coordinates ->
+                gridPositionInWindow = coordinates.positionInWindow()
+            }
             .transformable(state = transformState, lockRotationOnZoomPan = true)
             .graphicsLayer {
                 scaleX = scale
@@ -1535,7 +1568,7 @@ private fun BattlefieldGrid(
                         isDragging = isDragging,
                         onClick = { onCardClick(card) },
                         onLongClick = { onCardLongPress(card) },
-                        onDoubleClick = { onCardAction(CardAction.ViewDetails(card)) },
+                        onDoubleClick = { onCardDoubleClick(card) },
                         ownerName = ownerName,
                         onDragStart = {
                             draggingCard = card
@@ -1547,20 +1580,30 @@ private fun BattlefieldGrid(
                             dragOffset += offset
                         },
                         onDragEnd = {
-                            // Calculate target based on how many cells we moved
-                            val cellsMoveX = (dragOffset.x / cellSize).let {
-                                if (it >= 0) (it + 0.5f).toInt() else (it - 0.5f).toInt()
-                            }
-                            val cellsMoveY = (dragOffset.y / cellSize).let {
-                                if (it >= 0) (it + 0.5f).toInt() else (it - 0.5f).toInt()
-                            }
-
-                            val targetCol = (dragStartCol + cellsMoveX).coerceAtLeast(0)
-                            val targetRow = (dragStartRow + cellsMoveY).coerceAtLeast(0).coerceAtMost(UIConstants.BATTLEFIELD_ROWS - 1)
-
                             draggingCard?.let { dragCard ->
-                                // Report user intent to ViewModel - it will enforce the 3-card stack limit
-                                onCardPositionChanged?.invoke(dragCard.instanceId, targetCol, targetRow)
+                                // Calculate absolute Y position of the card
+                                val cardYInGrid = row * cellSize + dragOffset.y
+                                val absoluteY = gridPositionInWindow.y + cardYInGrid
+
+                                // Check if dropped in hand zone
+                                if (handZoneTop > 0f && absoluteY > handZoneTop && onCardDroppedToHand != null) {
+                                    // Dropped in hand zone - move to hand
+                                    onCardDroppedToHand(dragCard.instanceId)
+                                } else {
+                                    // Normal battlefield repositioning
+                                    val cellsMoveX = (dragOffset.x / cellSize).let {
+                                        if (it >= 0) (it + 0.5f).toInt() else (it - 0.5f).toInt()
+                                    }
+                                    val cellsMoveY = (dragOffset.y / cellSize).let {
+                                        if (it >= 0) (it + 0.5f).toInt() else (it - 0.5f).toInt()
+                                    }
+
+                                    val targetCol = (dragStartCol + cellsMoveX).coerceAtLeast(0)
+                                    val targetRow = (dragStartRow + cellsMoveY).coerceAtLeast(0).coerceAtMost(UIConstants.BATTLEFIELD_ROWS - 1)
+
+                                    // Report user intent to ViewModel - it will enforce the 3-card stack limit
+                                    onCardPositionChanged?.invoke(dragCard.instanceId, targetCol, targetRow)
+                                }
                             }
 
                             draggingCard = null
@@ -2057,15 +2100,37 @@ private fun HandStrip(
     onCardLongPress: (CardInstance) -> Unit,
     onCardFocus: (CardInstance) -> Unit = {},
     onViewHand: () -> Unit = {},
+    onReorderCard: (String, Int) -> Unit = { _, _ -> },
+    battlefieldZoneBottom: Float = 0f,
+    onCardDroppedToBattlefield: (String) -> Unit = {},
+    onZonePositioned: (Float) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
+    // Drag state for reordering
+    var draggedCardId by remember { mutableStateOf<String?>(null) }
+    var dragOffsetX by remember { mutableStateOf(0f) }
+    var dragOffsetY by remember { mutableStateOf(0f) }
+
+    // Card dimensions for calculating position
+    val cardWidth = 60.dp
+    val cardSpacing = (-20).dp // Overlap
+    val density = LocalDensity.current
+    val effectiveCardWidth = with(density) { (cardWidth + cardSpacing).toPx() }
+
+    // Track hand zone position
+    var handZonePositionY by remember { mutableStateOf(0f) }
+
     Surface(
         color = Color(0xFF1565C0),
         modifier = modifier
+            .onGloballyPositioned { coordinates ->
+                handZonePositionY = coordinates.positionInWindow().y
+                onZonePositioned(handZonePositionY)
+            }
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
             LazyRow(
-                horizontalArrangement = Arrangement.spacedBy((-20).dp),
+                horizontalArrangement = Arrangement.spacedBy(cardSpacing),
                 contentPadding = PaddingValues(start = 8.dp, end = 50.dp, top = 4.dp, bottom = 4.dp),
                 modifier = Modifier
                     .fillMaxSize()
@@ -2075,12 +2140,45 @@ private fun HandStrip(
                         )
                     }
             ) {
-                items(handCards, key = { it.instanceId }) { card ->
+                items(handCards.size, key = { handCards[it].instanceId }) { index ->
+                    val card = handCards[index]
+                    val isDragging = draggedCardId == card.instanceId
+
                     HandCard(
                         cardInstance = card,
                         onSingleClick = { onCardFocus(card) },
                         onDoubleClick = { onCardClick(card) },
-                        onLongClick = { onCardLongPress(card) }
+                        onLongClick = { onCardLongPress(card) },
+                        isDragging = isDragging,
+                        dragOffsetX = if (isDragging) dragOffsetX else 0f,
+                        dragOffsetY = if (isDragging) dragOffsetY else 0f,
+                        onDragStart = { draggedCardId = card.instanceId },
+                        onDrag = { deltaX, deltaY ->
+                            dragOffsetX += deltaX
+                            dragOffsetY += deltaY
+                        },
+                        onDragEnd = {
+                            if (draggedCardId != null) {
+                                // Calculate absolute Y position
+                                val absoluteY = handZonePositionY + dragOffsetY
+
+                                // Check if dragged upward into battlefield zone
+                                if (battlefieldZoneBottom > 0f && absoluteY < battlefieldZoneBottom) {
+                                    // Dropped in battlefield zone
+                                    onCardDroppedToBattlefield(card.instanceId)
+                                } else if (handCards.size > 1) {
+                                    // Reorder within hand
+                                    val positionDelta = (dragOffsetX / effectiveCardWidth).roundToInt()
+                                    if (positionDelta != 0) {
+                                        val newPosition = (index + positionDelta).coerceIn(0, handCards.size - 1)
+                                        onReorderCard(card.instanceId, newPosition)
+                                    }
+                                }
+                            }
+                            draggedCardId = null
+                            dragOffsetX = 0f
+                            dragOffsetY = 0f
+                        }
                     )
                 }
             }
@@ -2110,15 +2208,46 @@ private fun HandCard(
     cardInstance: CardInstance,
     onSingleClick: () -> Unit = {},
     onDoubleClick: () -> Unit,
-    onLongClick: () -> Unit
+    onLongClick: () -> Unit,
+    isDragging: Boolean = false,
+    dragOffsetX: Float = 0f,
+    dragOffsetY: Float = 0f,
+    onDragStart: () -> Unit = {},
+    onDrag: (Float, Float) -> Unit = { _, _ -> },
+    onDragEnd: () -> Unit = {}
 ) {
     var lastClickTime by remember { mutableStateOf(0L) }
 
     Box(
         modifier = Modifier
             .size(width = 60.dp, height = 90.dp)
+            .graphicsLayer {
+                if (isDragging) {
+                    translationX = dragOffsetX
+                    translationY = dragOffsetY
+                    scaleX = 1.1f
+                    scaleY = 1.1f
+                    alpha = 0.8f
+                }
+            }
+            .zIndex(if (isDragging) 10f else 0f)
             .clip(RoundedCornerShape(4.dp))
-            .border(1.dp, Color.White, RoundedCornerShape(4.dp))
+            .border(
+                width = if (isDragging) 2.dp else 1.dp,
+                color = if (isDragging) Color.Yellow else Color.White,
+                shape = RoundedCornerShape(4.dp)
+            )
+            .pointerInput(cardInstance.instanceId) {
+                detectDragGestures(
+                    onDragStart = { onDragStart() },
+                    onDrag = { change, dragAmount ->
+                        change.consume()
+                        onDrag(dragAmount.x, dragAmount.y)
+                    },
+                    onDragEnd = { onDragEnd() },
+                    onDragCancel = { onDragEnd() }
+                )
+            }
             .pointerInput(cardInstance.instanceId) {
                 detectTapGestures(
                     onTap = {

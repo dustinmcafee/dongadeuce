@@ -71,7 +71,8 @@ class CardViewerDrawerState {
     }
 
     fun updateDragOffset(delta: Float) {
-        dragOffset = (dragOffset + delta).coerceAtLeast(0f)
+        // For left-side drawer, negative delta (dragging left) closes it
+        dragOffset = (dragOffset + delta).coerceAtMost(0f)
     }
 
     fun resetDragOffset() {
@@ -87,8 +88,8 @@ fun rememberCardViewerDrawerState(): CardViewerDrawerState {
 private enum class ViewerTab { IMAGE, TEXT }
 
 /**
- * Swipe-from-right card viewer drawer for Android.
- * Covers ~70% of screen width when open.
+ * Swipe-from-left card viewer drawer for Android.
+ * Covers ~75% of screen width when open.
  */
 @Composable
 fun CardViewerDrawer(
@@ -102,8 +103,8 @@ fun CardViewerDrawer(
     val density = LocalDensity.current
     val drawerWidthPx = with(density) { drawerWidth.toPx() }
 
-    // Animate the drawer position
-    val targetOffset = if (drawerState.isOpen) 0f else drawerWidthPx
+    // Animate the drawer position - negative offset moves it off-screen to the left
+    val targetOffset = if (drawerState.isOpen) 0f else -drawerWidthPx
     val animatedOffset by animateFloatAsState(
         targetValue = targetOffset + drawerState.dragOffset,
         animationSpec = tween(durationMillis = if (drawerState.dragOffset != 0f) 0 else 250),
@@ -113,18 +114,18 @@ fun CardViewerDrawer(
     var selectedTab by remember { mutableStateOf(ViewerTab.IMAGE) }
 
     // Only render when drawer should be visible
-    if (drawerState.isOpen || animatedOffset < drawerWidthPx) {
+    if (drawerState.isOpen || animatedOffset > -drawerWidthPx) {
         Box(modifier = modifier.fillMaxSize()) {
             // Semi-transparent scrim when drawer is open
             if (drawerState.isOpen) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(Color.Black.copy(alpha = 0.4f * (1f - animatedOffset / drawerWidthPx)))
+                        .background(Color.Black.copy(alpha = 0.4f * (1f + animatedOffset / drawerWidthPx)))
                         .pointerInput(Unit) {
                             detectHorizontalDragGestures(
                                 onDragEnd = {
-                                    if (drawerState.dragOffset > drawerWidthPx * 0.3f) {
+                                    if (drawerState.dragOffset < -drawerWidthPx * 0.3f) {
                                         drawerState.close()
                                     } else {
                                         drawerState.resetDragOffset()
@@ -132,7 +133,7 @@ fun CardViewerDrawer(
                                 },
                                 onDragCancel = { drawerState.resetDragOffset() },
                                 onHorizontalDrag = { _, dragAmount ->
-                                    if (dragAmount > 0) { // Only allow dragging right (to close)
+                                    if (dragAmount < 0) { // Only allow dragging left (to close)
                                         drawerState.updateDragOffset(dragAmount)
                                     }
                                 }
@@ -141,17 +142,17 @@ fun CardViewerDrawer(
                 )
             }
 
-            // Drawer panel
+            // Drawer panel - aligned to left (start)
             Card(
                 modifier = Modifier
                     .fillMaxHeight()
                     .width(drawerWidth)
-                    .align(Alignment.CenterEnd)
+                    .align(Alignment.CenterStart)
                     .offset(x = with(density) { animatedOffset.toDp() })
                     .pointerInput(Unit) {
                         detectHorizontalDragGestures(
                             onDragEnd = {
-                                if (drawerState.dragOffset > drawerWidthPx * 0.3f) {
+                                if (drawerState.dragOffset < -drawerWidthPx * 0.3f) {
                                     drawerState.close()
                                 } else {
                                     drawerState.resetDragOffset()
@@ -159,7 +160,7 @@ fun CardViewerDrawer(
                             },
                             onDragCancel = { drawerState.resetDragOffset() },
                             onHorizontalDrag = { _, dragAmount ->
-                                if (dragAmount > 0) { // Only allow dragging right (to close)
+                                if (dragAmount < 0) { // Only allow dragging left (to close)
                                     drawerState.updateDragOffset(dragAmount)
                                 }
                             }
@@ -168,7 +169,7 @@ fun CardViewerDrawer(
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surface
                 ),
-                shape = RoundedCornerShape(topStart = 16.dp, bottomStart = 16.dp),
+                shape = RoundedCornerShape(topEnd = 16.dp, bottomEnd = 16.dp),
                 elevation = CardDefaults.cardElevation(defaultElevation = 16.dp)
             ) {
                 Column(modifier = Modifier.fillMaxSize()) {
@@ -201,7 +202,7 @@ fun CardViewerDrawer(
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = "Tap a card to preview\n\nSwipe right to close",
+                                text = "Tap a card to preview\n\nSwipe left to close",
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                                 textAlign = TextAlign.Center
@@ -238,8 +239,8 @@ fun CardViewerDrawer(
 }
 
 /**
- * Invisible edge detector for swipe-from-right gesture.
- * Place this on the right edge of the screen.
+ * Invisible edge detector for swipe-from-left gesture.
+ * Place this on the left edge of the screen.
  */
 @Composable
 fun SwipeEdgeDetector(
@@ -256,7 +257,7 @@ fun SwipeEdgeDetector(
                 detectHorizontalDragGestures(
                     onDragStart = { totalDrag = 0f },
                     onDragEnd = {
-                        if (totalDrag < -100f) { // Swiped left enough
+                        if (totalDrag > 100f) { // Swiped right enough
                             drawerState.open()
                         }
                         totalDrag = 0f

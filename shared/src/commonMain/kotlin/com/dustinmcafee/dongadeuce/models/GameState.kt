@@ -35,8 +35,14 @@ data class GameState(
         }
 
     fun getPlayerCards(playerId: String, zone: Zone? = null): List<CardInstance> {
-        return cardInstances.filter {
+        val cards = cardInstances.filter {
             it.ownerId == playerId && (zone == null || it.zone == zone)
+        }
+        // Sort hand cards by handPosition (if set), otherwise by name
+        return if (zone == Zone.HAND) {
+            cards.sortedWith(compareBy({ it.handPosition ?: Int.MAX_VALUE }, { it.card.name }))
+        } else {
+            cards
         }
     }
 
