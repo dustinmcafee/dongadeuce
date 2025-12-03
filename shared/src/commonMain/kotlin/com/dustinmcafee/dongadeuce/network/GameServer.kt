@@ -24,7 +24,7 @@ class GameServer(
     private val port: Int = 8080,
     private val hostName: String = "Host",
     private val hostDeck: Deck,
-    private val maxPlayers: Int = 4
+    private val maxPlayers: Int = 6
 ) {
     private var server: ServerWrapper? = null
     private val scope = CoroutineScope(SupervisorJob() + ioDispatcher)

@@ -321,7 +321,8 @@ fun GameScreen(
                                         dragDropState = dragDropState,
                                         selectionState = selectionState,
                                         allPlayers = rotatedPlayers,
-                                        modifier = Modifier.weight(1f)
+                                        modifier = Modifier.weight(1f),
+                                        onCardFocus = { focusedCardState.updateFocusedCard(it) }
                                     )
                                     HotseatPlayerSection(
                                         player = rotatedPlayers[2],
@@ -332,24 +333,23 @@ fun GameScreen(
                                         dragDropState = dragDropState,
                                         selectionState = selectionState,
                                         allPlayers = rotatedPlayers,
-                                        modifier = Modifier.weight(1f)
-                                    )
-                                }
-                                Row(modifier = Modifier.fillMaxWidth().weight(1f)) {
-                                    HotseatPlayerSection(
-                                        player = rotatedPlayers[0],
-                                        viewModel = viewModel,
-                                        gameState = uiState.gameState,
-                                        isActivePlayer = true,
-                                        onCardAction = handleAction,
-                                        dragDropState = dragDropState,
-                                        selectionState = selectionState,
-                                        allPlayers = rotatedPlayers,
                                         modifier = Modifier.weight(1f),
-                                        inverted = true
+                                        onCardFocus = { focusedCardState.updateFocusedCard(it) }
                                     )
-                                    Spacer(modifier = Modifier.weight(1f))
                                 }
+                                HotseatPlayerSection(
+                                    player = rotatedPlayers[0],
+                                    viewModel = viewModel,
+                                    gameState = uiState.gameState,
+                                    isActivePlayer = true,
+                                    onCardAction = handleAction,
+                                    dragDropState = dragDropState,
+                                    selectionState = selectionState,
+                                    allPlayers = rotatedPlayers,
+                                    modifier = Modifier.fillMaxWidth().weight(1f),
+                                    inverted = true,
+                                    onCardFocus = { focusedCardState.updateFocusedCard(it) }
+                                )
                             }
                             4 -> {
                                 Row(modifier = Modifier.fillMaxWidth().weight(1f)) {
@@ -362,7 +362,8 @@ fun GameScreen(
                                         dragDropState = dragDropState,
                                         selectionState = selectionState,
                                         allPlayers = rotatedPlayers,
-                                        modifier = Modifier.weight(1f)
+                                        modifier = Modifier.weight(1f),
+                                        onCardFocus = { focusedCardState.updateFocusedCard(it) }
                                     )
                                     HotseatPlayerSection(
                                         player = rotatedPlayers[3],
@@ -373,7 +374,8 @@ fun GameScreen(
                                         dragDropState = dragDropState,
                                         selectionState = selectionState,
                                         allPlayers = rotatedPlayers,
-                                        modifier = Modifier.weight(1f)
+                                        modifier = Modifier.weight(1f),
+                                        onCardFocus = { focusedCardState.updateFocusedCard(it) }
                                     )
                                 }
                                 Row(modifier = Modifier.fillMaxWidth().weight(1f)) {
@@ -387,7 +389,8 @@ fun GameScreen(
                                         selectionState = selectionState,
                                         allPlayers = rotatedPlayers,
                                         modifier = Modifier.weight(1f),
-                                        inverted = true
+                                        inverted = true,
+                                        onCardFocus = { focusedCardState.updateFocusedCard(it) }
                                     )
                                     HotseatPlayerSection(
                                         player = rotatedPlayers[1],
@@ -399,7 +402,159 @@ fun GameScreen(
                                         selectionState = selectionState,
                                         allPlayers = rotatedPlayers,
                                         modifier = Modifier.weight(1f),
-                                        inverted = true
+                                        inverted = true,
+                                        onCardFocus = { focusedCardState.updateFocusedCard(it) }
+                                    )
+                                }
+                            }
+                            5 -> {
+                                // 5 players: Top row (2), Middle row (2), Bottom row (active)
+                                Row(modifier = Modifier.fillMaxWidth().weight(1f)) {
+                                    HotseatPlayerSection(
+                                        player = rotatedPlayers[3],
+                                        viewModel = viewModel,
+                                        gameState = uiState.gameState,
+                                        isActivePlayer = false,
+                                        onCardAction = handleAction,
+                                        dragDropState = dragDropState,
+                                        selectionState = selectionState,
+                                        allPlayers = rotatedPlayers,
+                                        modifier = Modifier.weight(1f),
+                                        onCardFocus = { focusedCardState.updateFocusedCard(it) }
+                                    )
+                                    HotseatPlayerSection(
+                                        player = rotatedPlayers[4],
+                                        viewModel = viewModel,
+                                        gameState = uiState.gameState,
+                                        isActivePlayer = false,
+                                        onCardAction = handleAction,
+                                        dragDropState = dragDropState,
+                                        selectionState = selectionState,
+                                        allPlayers = rotatedPlayers,
+                                        modifier = Modifier.weight(1f),
+                                        onCardFocus = { focusedCardState.updateFocusedCard(it) }
+                                    )
+                                }
+                                Row(modifier = Modifier.fillMaxWidth().weight(1f)) {
+                                    HotseatPlayerSection(
+                                        player = rotatedPlayers[1],
+                                        viewModel = viewModel,
+                                        gameState = uiState.gameState,
+                                        isActivePlayer = false,
+                                        onCardAction = handleAction,
+                                        dragDropState = dragDropState,
+                                        selectionState = selectionState,
+                                        allPlayers = rotatedPlayers,
+                                        modifier = Modifier.weight(1f),
+                                        onCardFocus = { focusedCardState.updateFocusedCard(it) }
+                                    )
+                                    HotseatPlayerSection(
+                                        player = rotatedPlayers[2],
+                                        viewModel = viewModel,
+                                        gameState = uiState.gameState,
+                                        isActivePlayer = false,
+                                        onCardAction = handleAction,
+                                        dragDropState = dragDropState,
+                                        selectionState = selectionState,
+                                        allPlayers = rotatedPlayers,
+                                        modifier = Modifier.weight(1f),
+                                        onCardFocus = { focusedCardState.updateFocusedCard(it) }
+                                    )
+                                }
+                                HotseatPlayerSection(
+                                    player = rotatedPlayers[0],
+                                    viewModel = viewModel,
+                                    gameState = uiState.gameState,
+                                    isActivePlayer = true,
+                                    onCardAction = handleAction,
+                                    dragDropState = dragDropState,
+                                    selectionState = selectionState,
+                                    allPlayers = rotatedPlayers,
+                                    modifier = Modifier.fillMaxWidth().weight(1f),
+                                    inverted = true,
+                                    onCardFocus = { focusedCardState.updateFocusedCard(it) }
+                                )
+                            }
+                            6 -> {
+                                // 6 players: 3 rows of 2 players each
+                                Row(modifier = Modifier.fillMaxWidth().weight(1f)) {
+                                    HotseatPlayerSection(
+                                        player = rotatedPlayers[4],
+                                        viewModel = viewModel,
+                                        gameState = uiState.gameState,
+                                        isActivePlayer = false,
+                                        onCardAction = handleAction,
+                                        dragDropState = dragDropState,
+                                        selectionState = selectionState,
+                                        allPlayers = rotatedPlayers,
+                                        modifier = Modifier.weight(1f),
+                                        onCardFocus = { focusedCardState.updateFocusedCard(it) }
+                                    )
+                                    HotseatPlayerSection(
+                                        player = rotatedPlayers[5],
+                                        viewModel = viewModel,
+                                        gameState = uiState.gameState,
+                                        isActivePlayer = false,
+                                        onCardAction = handleAction,
+                                        dragDropState = dragDropState,
+                                        selectionState = selectionState,
+                                        allPlayers = rotatedPlayers,
+                                        modifier = Modifier.weight(1f),
+                                        onCardFocus = { focusedCardState.updateFocusedCard(it) }
+                                    )
+                                }
+                                Row(modifier = Modifier.fillMaxWidth().weight(1f)) {
+                                    HotseatPlayerSection(
+                                        player = rotatedPlayers[2],
+                                        viewModel = viewModel,
+                                        gameState = uiState.gameState,
+                                        isActivePlayer = false,
+                                        onCardAction = handleAction,
+                                        dragDropState = dragDropState,
+                                        selectionState = selectionState,
+                                        allPlayers = rotatedPlayers,
+                                        modifier = Modifier.weight(1f),
+                                        onCardFocus = { focusedCardState.updateFocusedCard(it) }
+                                    )
+                                    HotseatPlayerSection(
+                                        player = rotatedPlayers[3],
+                                        viewModel = viewModel,
+                                        gameState = uiState.gameState,
+                                        isActivePlayer = false,
+                                        onCardAction = handleAction,
+                                        dragDropState = dragDropState,
+                                        selectionState = selectionState,
+                                        allPlayers = rotatedPlayers,
+                                        modifier = Modifier.weight(1f),
+                                        onCardFocus = { focusedCardState.updateFocusedCard(it) }
+                                    )
+                                }
+                                Row(modifier = Modifier.fillMaxWidth().weight(1f)) {
+                                    HotseatPlayerSection(
+                                        player = rotatedPlayers[0],
+                                        viewModel = viewModel,
+                                        gameState = uiState.gameState,
+                                        isActivePlayer = true,
+                                        onCardAction = handleAction,
+                                        dragDropState = dragDropState,
+                                        selectionState = selectionState,
+                                        allPlayers = rotatedPlayers,
+                                        modifier = Modifier.weight(1f),
+                                        inverted = true,
+                                        onCardFocus = { focusedCardState.updateFocusedCard(it) }
+                                    )
+                                    HotseatPlayerSection(
+                                        player = rotatedPlayers[1],
+                                        viewModel = viewModel,
+                                        gameState = uiState.gameState,
+                                        isActivePlayer = false,
+                                        onCardAction = handleAction,
+                                        dragDropState = dragDropState,
+                                        selectionState = selectionState,
+                                        allPlayers = rotatedPlayers,
+                                        modifier = Modifier.weight(1f),
+                                        inverted = true,
+                                        onCardFocus = { focusedCardState.updateFocusedCard(it) }
                                     )
                                 }
                             }
@@ -425,7 +580,8 @@ fun GameScreen(
                                     selectionState = null,
                                     allPlayers = allPlayers,
                                     modifier = Modifier.fillMaxWidth().weight(1f),
-                                    isLocalPlayer = false
+                                    isLocalPlayer = false,
+                                    onCardFocus = { focusedCardState.updateFocusedCard(it) }
                                 )
                             }
                             2 -> {
@@ -441,14 +597,16 @@ fun GameScreen(
                                             selectionState = null,
                                             allPlayers = allPlayers,
                                             modifier = Modifier.weight(1f),
-                                            isLocalPlayer = false
+                                            isLocalPlayer = false,
+                                            onCardFocus = { focusedCardState.updateFocusedCard(it) }
                                         )
                                     }
                                 }
                             }
                             3 -> {
+                                // 3 opponents + local = 4 players: top row (2), bottom row (1 opp + local)
                                 Row(modifier = Modifier.fillMaxWidth().weight(1f)) {
-                                    opponents.forEach { opponent ->
+                                    opponents.take(2).forEach { opponent ->
                                         HotseatPlayerSection(
                                             player = opponent,
                                             viewModel = viewModel,
@@ -459,15 +617,154 @@ fun GameScreen(
                                             selectionState = null,
                                             allPlayers = allPlayers,
                                             modifier = Modifier.weight(1f),
-                                            isLocalPlayer = false
+                                            isLocalPlayer = false,
+                                            onCardFocus = { focusedCardState.updateFocusedCard(it) }
+                                        )
+                                    }
+                                }
+                                Row(modifier = Modifier.fillMaxWidth().weight(1f)) {
+                                    if (localPlayer != null) {
+                                        HotseatPlayerSection(
+                                            player = localPlayer,
+                                            viewModel = viewModel,
+                                            gameState = uiState.gameState,
+                                            isActivePlayer = localPlayer.id == activePlayerId,
+                                            onCardAction = handleAction,
+                                            dragDropState = dragDropState,
+                                            selectionState = selectionState,
+                                            allPlayers = allPlayers,
+                                            modifier = Modifier.weight(1f),
+                                            inverted = true,
+                                            isLocalPlayer = true,
+                                            onCardFocus = { focusedCardState.updateFocusedCard(it) }
+                                        )
+                                    }
+                                    HotseatPlayerSection(
+                                        player = opponents[2],
+                                        viewModel = viewModel,
+                                        gameState = uiState.gameState,
+                                        isActivePlayer = opponents[2].id == activePlayerId,
+                                        onCardAction = handleAction,
+                                        dragDropState = null,
+                                        selectionState = null,
+                                        allPlayers = allPlayers,
+                                        modifier = Modifier.weight(1f),
+                                        isLocalPlayer = false,
+                                        inverted = true,
+                                        onCardFocus = { focusedCardState.updateFocusedCard(it) }
+                                    )
+                                }
+                            }
+                            4 -> {
+                                // 4 opponents: 2 rows of 2
+                                Row(modifier = Modifier.fillMaxWidth().weight(1f)) {
+                                    opponents.take(2).forEach { opponent ->
+                                        HotseatPlayerSection(
+                                            player = opponent,
+                                            viewModel = viewModel,
+                                            gameState = uiState.gameState,
+                                            isActivePlayer = opponent.id == activePlayerId,
+                                            onCardAction = handleAction,
+                                            dragDropState = null,
+                                            selectionState = null,
+                                            allPlayers = allPlayers,
+                                            modifier = Modifier.weight(1f),
+                                            isLocalPlayer = false,
+                                            onCardFocus = { focusedCardState.updateFocusedCard(it) }
+                                        )
+                                    }
+                                }
+                                Row(modifier = Modifier.fillMaxWidth().weight(1f)) {
+                                    opponents.drop(2).forEach { opponent ->
+                                        HotseatPlayerSection(
+                                            player = opponent,
+                                            viewModel = viewModel,
+                                            gameState = uiState.gameState,
+                                            isActivePlayer = opponent.id == activePlayerId,
+                                            onCardAction = handleAction,
+                                            dragDropState = null,
+                                            selectionState = null,
+                                            allPlayers = allPlayers,
+                                            modifier = Modifier.weight(1f),
+                                            isLocalPlayer = false,
+                                            onCardFocus = { focusedCardState.updateFocusedCard(it) }
                                         )
                                     }
                                 }
                             }
+                            5 -> {
+                                // 5 opponents + local = 6 players: 3 rows of 2 (local + 1 opp on bottom)
+                                Row(modifier = Modifier.fillMaxWidth().weight(1f)) {
+                                    opponents.slice(2..3).forEach { opponent ->
+                                        HotseatPlayerSection(
+                                            player = opponent,
+                                            viewModel = viewModel,
+                                            gameState = uiState.gameState,
+                                            isActivePlayer = opponent.id == activePlayerId,
+                                            onCardAction = handleAction,
+                                            dragDropState = null,
+                                            selectionState = null,
+                                            allPlayers = allPlayers,
+                                            modifier = Modifier.weight(1f),
+                                            isLocalPlayer = false,
+                                            onCardFocus = { focusedCardState.updateFocusedCard(it) }
+                                        )
+                                    }
+                                }
+                                Row(modifier = Modifier.fillMaxWidth().weight(1f)) {
+                                    opponents.slice(0..1).forEach { opponent ->
+                                        HotseatPlayerSection(
+                                            player = opponent,
+                                            viewModel = viewModel,
+                                            gameState = uiState.gameState,
+                                            isActivePlayer = opponent.id == activePlayerId,
+                                            onCardAction = handleAction,
+                                            dragDropState = null,
+                                            selectionState = null,
+                                            allPlayers = allPlayers,
+                                            modifier = Modifier.weight(1f),
+                                            isLocalPlayer = false,
+                                            onCardFocus = { focusedCardState.updateFocusedCard(it) }
+                                        )
+                                    }
+                                }
+                                Row(modifier = Modifier.fillMaxWidth().weight(1f)) {
+                                    if (localPlayer != null) {
+                                        HotseatPlayerSection(
+                                            player = localPlayer,
+                                            viewModel = viewModel,
+                                            gameState = uiState.gameState,
+                                            isActivePlayer = localPlayer.id == activePlayerId,
+                                            onCardAction = handleAction,
+                                            dragDropState = dragDropState,
+                                            selectionState = selectionState,
+                                            allPlayers = allPlayers,
+                                            modifier = Modifier.weight(1f),
+                                            inverted = true,
+                                            isLocalPlayer = true,
+                                            onCardFocus = { focusedCardState.updateFocusedCard(it) }
+                                        )
+                                    }
+                                    HotseatPlayerSection(
+                                        player = opponents[4],
+                                        viewModel = viewModel,
+                                        gameState = uiState.gameState,
+                                        isActivePlayer = opponents[4].id == activePlayerId,
+                                        onCardAction = handleAction,
+                                        dragDropState = null,
+                                        selectionState = null,
+                                        allPlayers = allPlayers,
+                                        modifier = Modifier.weight(1f),
+                                        isLocalPlayer = false,
+                                        inverted = true,
+                                        onCardFocus = { focusedCardState.updateFocusedCard(it) }
+                                    )
+                                }
+                            }
                         }
 
-                        // Local player at bottom
-                        if (localPlayer != null) {
+                        // Local player at bottom (only for layouts where local isn't already in a shared row)
+                        if (localPlayer != null && opponents.size !in listOf(3, 5)) {
                             HotseatPlayerSection(
                                 player = localPlayer,
                                 viewModel = viewModel,
@@ -479,7 +776,8 @@ fun GameScreen(
                                 allPlayers = allPlayers,
                                 modifier = Modifier.fillMaxWidth().weight(1f),
                                 inverted = true,
-                                isLocalPlayer = true
+                                isLocalPlayer = true,
+                                onCardFocus = { focusedCardState.updateFocusedCard(it) }
                             )
                         }
                     }

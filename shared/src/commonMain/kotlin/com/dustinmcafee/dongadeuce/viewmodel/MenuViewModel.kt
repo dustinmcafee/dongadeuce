@@ -164,10 +164,10 @@ class MenuViewModel {
     }
 
     /**
-     * Set player count for hotseat games (2-4 players)
+     * Set player count for hotseat games (2-6 players)
      */
     fun setPlayerCount(count: Int) {
-        _uiState.update { it.copy(playerCount = count.coerceIn(2, 4)) }
+        _uiState.update { it.copy(playerCount = count.coerceIn(2, 6)) }
     }
 
     /**
@@ -198,9 +198,23 @@ class MenuViewModel {
                         finishLoadingDeck(parseResult.deck, null)
                     }
                     is DeckParseResult.NeedsCommanderSelection -> {
+                        // Validate deck has exactly 100 cards before commander selection
+                        val data = parseResult.data
+                        val totalCards = data.mainboardSize + data.sideboardSize
+                        if (totalCards != 100) {
+                            _uiState.update {
+                                it.copy(
+                                    isLoading = false,
+                                    loadingProgress = "",
+                                    error = "Commander decks must have exactly 100 cards. This deck has $totalCards cards."
+                                )
+                            }
+                            return@launch
+                        }
+
                         // Need to select commander - load card data first
                         _uiState.update { it.copy(loadingProgress = "Loading card data...") }
-                        val candidates = loadCommanderCandidates(parseResult.data)
+                        val candidates = loadCommanderCandidates(data)
 
                         if (candidates.isEmpty()) {
                             _uiState.update {
@@ -217,7 +231,7 @@ class MenuViewModel {
                             it.copy(
                                 isLoading = false,
                                 loadingProgress = "",
-                                pendingDeckData = parseResult.data,
+                                pendingDeckData = data,
                                 pendingDeckPlayerIndex = null,
                                 commanderCandidates = candidates
                             )
@@ -453,9 +467,23 @@ class MenuViewModel {
                         finishLoadingDeck(parseResult.deck, null)
                     }
                     is DeckParseResult.NeedsCommanderSelection -> {
+                        // Validate deck has exactly 100 cards before commander selection
+                        val data = parseResult.data
+                        val totalCards = data.mainboardSize + data.sideboardSize
+                        if (totalCards != 100) {
+                            _uiState.update {
+                                it.copy(
+                                    isLoading = false,
+                                    loadingProgress = "",
+                                    error = "Commander decks must have exactly 100 cards. This deck has $totalCards cards."
+                                )
+                            }
+                            return@launch
+                        }
+
                         // Need to select commander - load card data first
                         _uiState.update { it.copy(loadingProgress = "Loading card data...") }
-                        val candidates = loadCommanderCandidates(parseResult.data)
+                        val candidates = loadCommanderCandidates(data)
 
                         if (candidates.isEmpty()) {
                             _uiState.update {
@@ -472,7 +500,7 @@ class MenuViewModel {
                             it.copy(
                                 isLoading = false,
                                 loadingProgress = "",
-                                pendingDeckData = parseResult.data,
+                                pendingDeckData = data,
                                 pendingDeckPlayerIndex = null,
                                 commanderCandidates = candidates
                             )
@@ -522,9 +550,23 @@ class MenuViewModel {
                         finishLoadingDeck(parseResult.deck, playerIndex)
                     }
                     is DeckParseResult.NeedsCommanderSelection -> {
+                        // Validate deck has exactly 100 cards before commander selection
+                        val data = parseResult.data
+                        val totalCards = data.mainboardSize + data.sideboardSize
+                        if (totalCards != 100) {
+                            _uiState.update {
+                                it.copy(
+                                    isLoading = false,
+                                    loadingProgress = "",
+                                    error = "Commander decks must have exactly 100 cards. Player ${playerIndex + 1}'s deck has $totalCards cards."
+                                )
+                            }
+                            return@launch
+                        }
+
                         // Need to select commander - load card data first
                         _uiState.update { it.copy(loadingProgress = "Loading card data...") }
-                        val candidates = loadCommanderCandidates(parseResult.data)
+                        val candidates = loadCommanderCandidates(data)
 
                         if (candidates.isEmpty()) {
                             _uiState.update {
@@ -541,7 +583,7 @@ class MenuViewModel {
                             it.copy(
                                 isLoading = false,
                                 loadingProgress = "",
-                                pendingDeckData = parseResult.data,
+                                pendingDeckData = data,
                                 pendingDeckPlayerIndex = playerIndex,
                                 commanderCandidates = candidates
                             )
@@ -585,9 +627,23 @@ class MenuViewModel {
                         finishLoadingDeck(parseResult.deck, playerIndex)
                     }
                     is DeckParseResult.NeedsCommanderSelection -> {
+                        // Validate deck has exactly 100 cards before commander selection
+                        val data = parseResult.data
+                        val totalCards = data.mainboardSize + data.sideboardSize
+                        if (totalCards != 100) {
+                            _uiState.update {
+                                it.copy(
+                                    isLoading = false,
+                                    loadingProgress = "",
+                                    error = "Commander decks must have exactly 100 cards. Player ${playerIndex + 1}'s deck has $totalCards cards."
+                                )
+                            }
+                            return@launch
+                        }
+
                         // Need to select commander - load card data first
                         _uiState.update { it.copy(loadingProgress = "Loading card data...") }
-                        val candidates = loadCommanderCandidates(parseResult.data)
+                        val candidates = loadCommanderCandidates(data)
 
                         if (candidates.isEmpty()) {
                             _uiState.update {
@@ -604,7 +660,7 @@ class MenuViewModel {
                             it.copy(
                                 isLoading = false,
                                 loadingProgress = "",
-                                pendingDeckData = parseResult.data,
+                                pendingDeckData = data,
                                 pendingDeckPlayerIndex = playerIndex,
                                 commanderCandidates = candidates
                             )

@@ -271,11 +271,11 @@ fun MenuScreen(
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        listOf(2, 3, 4).forEach { count ->
+                        listOf(2, 3, 4, 5, 6).forEach { count ->
                             FilterChip(
                                 selected = uiState.playerCount == count,
                                 onClick = { viewModel.setPlayerCount(count) },
-                                label = { Text("$count Players") }
+                                label = { Text("$count") }
                             )
                         }
                     }

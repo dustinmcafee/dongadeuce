@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.0.0] - 2025-12-02
+
+### Added
+- **2-6 player support** - Both hotseat and network modes now support up to 6 players
+- **Deck validation** - Decks are validated to have exactly 100 cards before commander selection
+
+### Changed
+- **Player layouts** - Consistent 2-per-row layouts for 4 and 6 player games (hotseat and network)
+
+### Fixed
+- **Network mode feature parity** - All player layouts now match hotseat mode exactly
+- **Persistent card viewer** - Fixed onCardFocus not working in 3+ player games
+- **Commander selection Enter key** - Changed to onPreviewKeyEvent for reliable confirmation
+
 ## [4.7.0] - 2025-12-02
 
 ### Added

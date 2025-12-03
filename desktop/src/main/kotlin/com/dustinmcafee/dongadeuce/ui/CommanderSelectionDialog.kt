@@ -90,7 +90,7 @@ fun CommanderSelectionDialog(
                 .heightIn(max = 800.dp)
                 .focusRequester(focusRequester)
                 .focusable()
-                .onKeyEvent { event ->
+                .onPreviewKeyEvent { event ->
                     if (event.type == KeyEventType.KeyDown) {
                         when (event.key) {
                             Key.Enter, Key.NumPadEnter -> {

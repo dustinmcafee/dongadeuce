@@ -280,8 +280,8 @@ fun MenuScreen(
                 ) {
                     Text("Player Count", style = MaterialTheme.typography.labelMedium)
                     Spacer(modifier = Modifier.height(8.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        listOf(2, 3, 4).forEach { count ->
+                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        listOf(2, 3, 4, 5, 6).forEach { count ->
                             FilterChip(
                                 selected = uiState.playerCount == count,
                                 onClick = { viewModel.setPlayerCount(count) },

@@ -12,8 +12,8 @@ android {
         applicationId = "com.dustinmcafee.dongadeuce"
         minSdk = 29
         targetSdk = 34
-        versionCode = 20
-        versionName = "4.7.0"
+        versionCode = 21
+        versionName = "5.0.0"
 
         vectorDrawables {
             useSupportLibrary = true

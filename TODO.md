@@ -1,6 +1,6 @@
 # Dong-A-Deuce - Development TODO
 
-**Current Version:** v4.7.0
+**Current Version:** v5.0.0
 **Desktop:** 99% complete (fully playable!)
 **Android:** 99% complete (fully playable!)
 **Network Mode:** 100% complete (fully playable!)
@@ -11,7 +11,7 @@
 ## Current Status
 
 Dong-A-Deuce is a **fully functional multiplayer Commander game** with:
-- 2-4 player support (hotseat and network)
+- 2-6 player support (hotseat and network)
 - 120+ keyboard shortcuts
 - Full Commander rules (40 life, 21 commander damage, poison)
 - Card images from Scryfall with offline cache
@@ -188,8 +188,8 @@ These are nice-to-have features that would improve the experience but aren't req
 - Multi-card Selection with batch operations
 
 ### Multiplayer (100%)
-- 2-4 Player Hotseat Mode
-- 2-4 Player Network Mode (WebSocket)
+- 2-6 Player Hotseat Mode
+- 2-6 Player Network Mode (WebSocket)
 - Host/Join lobby system
 - Player disconnect handling
 - Real-time state synchronization
@@ -227,6 +227,7 @@ These are nice-to-have features that would improve the experience but aren't req
 
 | Version | Highlights |
 |---------|------------|
+| v5.0.0 | 2-6 player support (hotseat & network), deck validation (100 cards), network/hotseat feature parity |
 | v4.7.0 | Hand reordering via drag, drag between hand/battlefield, commander dialog keyboard shortcuts, Android card viewer swipes from left |
 | v4.6.0 | Multi-format deck import (Cockatrice .cod, .dec, .dek, .txt, .mwDeck), clipboard paste, commander selection dialog with legendary filter |
 | v4.5.14 | Dark theme text color fixes (title, settings icon, card viewer) |

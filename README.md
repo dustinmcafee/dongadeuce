@@ -46,8 +46,8 @@ A lightweight, cross-platform MTG Commander game client built with Kotlin and Co
 ## Features
 
 - **Commander-focused**: Designed specifically for EDH/Commander format
-- **Hotseat Multiplayer**: 2-4 players on the same device
-- **Network Multiplayer**: Host or join games over local network
+- **Hotseat Multiplayer**: 2-6 players on the same device
+- **Network Multiplayer**: Host or join games over local network (2-6 players)
 - **Multi-format Deck Import**: Load decks from Cockatrice (.cod), .dec, .dek, .txt, .mwDeck formats
 - **Clipboard Paste**: Paste deck lists directly from clipboard on desktop and Android
 - **Commander Selection**: Interactive dialog when importing decks without explicit commander
@@ -150,7 +150,7 @@ cd dongadeuce
 ./gradlew desktop:packageDeb
 ```
 
-## Current Status (v4.6.0)
+## Current Status (v5.0.0)
 
 **Desktop:** 99% Complete - Fully Playable! ✅
 **Android:** 99% Complete - Fully Playable! ✅
@@ -186,7 +186,7 @@ cd dongadeuce
 - **Give Control** - Transfer control of permanents between players
 
 **Hotseat Multiplayer:**
-- **2-4 Player Support** - Full local multiplayer
+- **2-6 Player Support** - Full local multiplayer
 - **Per-Player Deck Loading** - Each player loads their own deck
 - **Automatic Player Rotation** - UI rotates to show active player
 - **Hand Privacy** - Only active player sees their cards
