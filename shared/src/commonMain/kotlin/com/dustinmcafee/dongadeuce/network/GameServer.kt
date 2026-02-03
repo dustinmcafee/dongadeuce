@@ -634,6 +634,10 @@ class GameServer(
                     oldZone == Zone.BATTLEFIELD &&
                     action.targetZone != Zone.BATTLEFIELD
 
+                // Hide card name when moving from Library to Hand (both are hidden zones)
+                val hideCardName = oldZone == Zone.LIBRARY && action.targetZone == Zone.HAND
+                val displayCardName = if (hideCardName) "a card" else card.card.name
+
                 val event = if (action.targetZone == Zone.BATTLEFIELD && oldZone != Zone.BATTLEFIELD) {
                     GameEvent.CardPlayed(
                         playerId = playerId,
@@ -645,7 +649,7 @@ class GameServer(
                     GameEvent.CardMoved(
                         playerId = playerId,
                         playerName = player.name,
-                        cardName = card.card.name,
+                        cardName = displayCardName,
                         fromZone = oldZone,
                         toZone = action.targetZone
                     )

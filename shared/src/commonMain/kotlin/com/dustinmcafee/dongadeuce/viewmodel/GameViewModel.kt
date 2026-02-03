@@ -698,7 +698,11 @@ class GameViewModel(
             }
 
             // Log card moved event (only if zone actually changed)
+            // Hide card name when moving from Library to Hand (both are hidden zones)
             if (fromZone != targetZone) {
+                val hideCardName = fromZone == Zone.LIBRARY && targetZone == Zone.HAND
+                val displayCardName = if (hideCardName) "a card" else card.card.name
+
                 val event = if (shouldRemove) {
                     // Token/clone removed from game
                     GameEvent.CardMoved(
@@ -721,7 +725,7 @@ class GameViewModel(
                     GameEvent.CardMoved(
                         playerId = player.id,
                         playerName = player.name,
-                        cardName = card.card.name,
+                        cardName = displayCardName,
                         fromZone = fromZone,
                         toZone = targetZone
                     )

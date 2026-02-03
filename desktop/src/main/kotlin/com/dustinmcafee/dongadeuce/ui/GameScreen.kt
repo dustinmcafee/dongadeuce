@@ -1009,13 +1009,13 @@ fun GameScreen(
 
     // Die roller dialog
     if (showDieRollerDialog) {
-        val activePlayer = uiState.gameState?.activePlayer
-        val playerName = activePlayer?.name ?: "Player"
+        val localPlayer = uiState.localPlayer
+        val playerName = localPlayer?.name ?: "Player"
         DieRollerDialog(
             playerName = playerName,
             onDismiss = { showDieRollerDialog = false },
             onRollLogged = { dieType, result, numberOfDice ->
-                activePlayer?.let {
+                localPlayer?.let {
                     viewModel.logDieRoll(it.id, dieType, result, numberOfDice)
                 }
             }

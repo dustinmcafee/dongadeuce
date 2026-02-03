@@ -445,10 +445,10 @@ fun AndroidGameScreen(
 
     if (showDieRollerDialog) {
         DieRollerDialog(
-            playerName = activePlayer?.name ?: "Player",
+            playerName = localPlayer?.name ?: "Player",
             onDismiss = { showDieRollerDialog = false },
             onRollLogged = { dieType, result, numDice ->
-                activePlayer?.let { gameViewModel.logDieRoll(it.id, dieType, result, numDice) }
+                localPlayer?.let { gameViewModel.logDieRoll(it.id, dieType, result, numDice) }
             }
         )
     }

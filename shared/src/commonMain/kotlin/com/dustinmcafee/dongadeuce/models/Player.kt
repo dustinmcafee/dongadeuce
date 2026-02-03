@@ -15,19 +15,13 @@ data class Player(
 ) {
     fun takeDamage(amount: Int): Player {
         val newLife = life - amount
-        return copy(
-            life = newLife,
-            hasLost = hasLost || newLife <= 0
-        )
+        return copy(life = newLife)
     }
 
     fun takeCommanderDamage(commanderId: String, amount: Int): Player {
         val current = commanderDamage[commanderId] ?: 0
         val newDamage = current + amount
-        return copy(
-            commanderDamage = commanderDamage + (commanderId to newDamage),
-            hasLost = hasLost || newDamage >= GameConstants.COMMANDER_DAMAGE_THRESHOLD
-        )
+        return copy(commanderDamage = commanderDamage + (commanderId to newDamage))
     }
 
     fun gainLife(amount: Int): Player {
@@ -36,10 +30,7 @@ data class Player(
     }
 
     fun setLife(newLife: Int): Player {
-        return copy(
-            life = newLife,
-            hasLost = hasLost || newLife <= 0
-        )
+        return copy(life = newLife)
     }
 
     fun addCounter(counterType: String, amount: Int = 1): Player {
@@ -50,12 +41,7 @@ data class Player(
         } else {
             counters - counterType
         }
-        // Check for poison loss condition (10+ poison = loss)
-        val poisonLoss = counterType == "poison" && newAmount >= GameConstants.POISON_THRESHOLD
-        return copy(
-            counters = newCounters,
-            hasLost = hasLost || poisonLoss
-        )
+        return copy(counters = newCounters)
     }
 
     fun removeCounter(counterType: String, amount: Int = 1): Player {
@@ -68,12 +54,7 @@ data class Player(
         } else {
             counters - counterType
         }
-        // Check for poison loss condition (10+ poison = loss)
-        val poisonLoss = counterType == "poison" && amount >= GameConstants.POISON_THRESHOLD
-        return copy(
-            counters = newCounters,
-            hasLost = hasLost || poisonLoss
-        )
+        return copy(counters = newCounters)
     }
 
     fun getCounter(counterType: String): Int {
