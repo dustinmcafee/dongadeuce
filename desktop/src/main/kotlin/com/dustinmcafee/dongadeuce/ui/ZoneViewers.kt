@@ -18,7 +18,9 @@ fun GraveyardDialog(
     playerName: String,
     onDismiss: () -> Unit,
     onReturnToHand: (CardInstance) -> Unit,
-    onReturnToBattlefield: (CardInstance) -> Unit
+    onReturnToBattlefield: (CardInstance) -> Unit,
+    onAction: (com.dustinmcafee.dongadeuce.models.CardAction) -> Unit = {},
+    allPlayers: List<com.dustinmcafee.dongadeuce.models.Player> = emptyList()
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -39,7 +41,9 @@ fun GraveyardDialog(
                             cardInstance = cardInstance,
                             onReturnToHand = { onReturnToHand(it) },
                             onReturnToBattlefield = { onReturnToBattlefield(it) },
-                            showBattlefieldAction = true
+                            showBattlefieldAction = true,
+                            onAction = onAction,
+                            allPlayers = allPlayers
                         )
                     }
                 }
@@ -59,7 +63,9 @@ fun ExileDialog(
     playerName: String,
     onDismiss: () -> Unit,
     onReturnToHand: (CardInstance) -> Unit,
-    onReturnToBattlefield: (CardInstance) -> Unit
+    onReturnToBattlefield: (CardInstance) -> Unit,
+    onAction: (com.dustinmcafee.dongadeuce.models.CardAction) -> Unit = {},
+    allPlayers: List<com.dustinmcafee.dongadeuce.models.Player> = emptyList()
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -80,7 +86,9 @@ fun ExileDialog(
                             cardInstance = cardInstance,
                             onReturnToHand = { onReturnToHand(it) },
                             onReturnToBattlefield = { onReturnToBattlefield(it) },
-                            showBattlefieldAction = true
+                            showBattlefieldAction = true,
+                            onAction = onAction,
+                            allPlayers = allPlayers
                         )
                     }
                 }
@@ -244,8 +252,15 @@ private fun ZoneCard(
     cardInstance: CardInstance,
     onReturnToHand: (CardInstance) -> Unit,
     onReturnToBattlefield: (CardInstance) -> Unit,
-    showBattlefieldAction: Boolean
+    showBattlefieldAction: Boolean,
+    onAction: (com.dustinmcafee.dongadeuce.models.CardAction) -> Unit = {},
+    allPlayers: List<com.dustinmcafee.dongadeuce.models.Player> = emptyList()
 ) {
+    CardWithContextMenu(
+        cardInstance = cardInstance,
+        onAction = onAction,
+        allPlayers = allPlayers
+    ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
@@ -344,6 +359,7 @@ private fun ZoneCard(
                 }
             }
         }
+    }
     }
 }
 

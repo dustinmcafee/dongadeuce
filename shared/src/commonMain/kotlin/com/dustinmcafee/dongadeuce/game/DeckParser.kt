@@ -570,7 +570,14 @@ object DeckParser {
         name = name.replace(Regex("""^\[[A-Z]+\]\s*"""), "")
 
         // Normalize split card separators
-        name = name.replace("|", " // ").replace("/", " // ")
+        // Replace | with // (Cockatrice uses | for split/transform cards)
+        name = name.replace("|", " // ")
+        // Replace single / with // only if // is not already present
+        // (to handle formats that use single / for split cards, but not break existing //)
+        if (!name.contains("//")) {
+            name = name.replace("/", " // ")
+        }
+        // Normalize whitespace around //
         name = name.replace(Regex("""\s*//\s*"""), " // ")
 
         return name.trim()

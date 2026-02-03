@@ -154,10 +154,12 @@ fun BattlefieldCard(
             elevation = CardDefaults.cardElevation(defaultElevation = CARD_ELEVATION)
         ) {
             Box(modifier = Modifier.fillMaxSize()) {
-                // Card image as background (show card back if flipped)
-                val imageUrl = if (cardInstance.isFlipped) {
-                    // Standard Magic card back image from Scryfall
-                    "https://cards.scryfall.io/back.png"
+                // Card image as background
+                // For transform cards: show back face image when flipped
+                // For non-transform cards: isFlipped has no visual effect (use face-down for hidden cards)
+                val imageUrl = if (cardInstance.isFlipped && cardInstance.card.backFaceImageUri != null) {
+                    // Transform card - show back face
+                    cardInstance.card.backFaceImageUri
                 } else {
                     cardInstance.card.imageUri
                 }

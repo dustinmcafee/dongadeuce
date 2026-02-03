@@ -16,8 +16,13 @@ data class Card(
     val toughness: String? = null,
     val colors: List<String> = emptyList(),
     val imageUri: String? = null,
-    val scryfallId: String? = null
+    val scryfallId: String? = null,
+    val backFaceImageUri: String? = null,  // For transform/double-faced cards
+    val backFaceName: String? = null       // Name of the back face (e.g., "Insectile Aberration")
 ) {
+    /** True if this is a double-faced/transform card */
+    val isDoubleFaced: Boolean
+        get() = backFaceImageUri != null || name.contains(" // ")
     val isLegendary: Boolean
         get() = type?.contains("Legendary", ignoreCase = true) == true
 

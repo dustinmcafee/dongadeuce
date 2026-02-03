@@ -1115,7 +1115,9 @@ fun GameScreen(
             playerName = activePlayer.name,
             onDismiss = { showGraveyardDialog = false },
             onReturnToHand = { card -> viewModel.moveCard(card.instanceId, Zone.HAND) },
-            onReturnToBattlefield = { card -> viewModel.moveCard(card.instanceId, Zone.BATTLEFIELD) }
+            onReturnToBattlefield = { card -> viewModel.moveCard(card.instanceId, Zone.BATTLEFIELD) },
+            onAction = handleAction,
+            allPlayers = uiState.gameState?.players ?: emptyList()
         )
     }
 
@@ -1130,7 +1132,9 @@ fun GameScreen(
             playerName = activePlayer.name,
             onDismiss = { showExileDialog = false },
             onReturnToHand = { card -> viewModel.moveCard(card.instanceId, Zone.HAND) },
-            onReturnToBattlefield = { card -> viewModel.moveCard(card.instanceId, Zone.BATTLEFIELD) }
+            onReturnToBattlefield = { card -> viewModel.moveCard(card.instanceId, Zone.BATTLEFIELD) },
+            onAction = handleAction,
+            allPlayers = uiState.gameState?.players ?: emptyList()
         )
     }
 

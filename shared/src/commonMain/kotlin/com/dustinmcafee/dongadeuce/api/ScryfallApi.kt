@@ -137,6 +137,11 @@ data class ScryfallCard(
         val mainImageUri = imageUris?.normal
             ?: cardFaces?.firstOrNull()?.imageUris?.normal
 
+        // Get back face image and name for double-faced cards
+        val backFace = cardFaces?.getOrNull(1)
+        val backFaceImageUri = backFace?.imageUris?.normal
+        val backFaceName = backFace?.name
+
         return Card(
             name = name,
             manaCost = manaCost,
@@ -147,7 +152,9 @@ data class ScryfallCard(
             toughness = toughness,
             colors = colors,
             imageUri = mainImageUri,
-            scryfallId = id
+            scryfallId = id,
+            backFaceImageUri = backFaceImageUri,
+            backFaceName = backFaceName
         )
     }
 }

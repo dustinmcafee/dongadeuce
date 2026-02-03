@@ -726,7 +726,12 @@ fun JoinLobbyScreen(viewModel: MenuViewModel) {
                 }
             } else {
                 // Connected - show lobby
-                Card(modifier = Modifier.width(400.dp)) {
+                Card(
+                    modifier = Modifier.width(400.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    )
+                ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text("Connected to lobby", style = MaterialTheme.typography.titleMedium)
                         Spacer(modifier = Modifier.height(8.dp))

@@ -145,7 +145,9 @@ fun OpponentArea(
             },
             onReturnToBattlefield = { cardInstance ->
                 viewModel.moveCard(cardInstance.instanceId, Zone.BATTLEFIELD)
-            }
+            },
+            onAction = onCardAction,
+            allPlayers = allPlayers
         )
     }
 
@@ -160,7 +162,9 @@ fun OpponentArea(
             },
             onReturnToBattlefield = { cardInstance ->
                 viewModel.moveCard(cardInstance.instanceId, Zone.BATTLEFIELD)
-            }
+            },
+            onAction = onCardAction,
+            allPlayers = allPlayers
         )
     }
 

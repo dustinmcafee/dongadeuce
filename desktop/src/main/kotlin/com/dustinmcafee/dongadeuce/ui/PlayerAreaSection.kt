@@ -215,7 +215,9 @@ private fun PlayerAreaDialogs(
             },
             onReturnToBattlefield = { cardInstance ->
                 viewModel.moveCard(cardInstance.instanceId, Zone.BATTLEFIELD)
-            }
+            },
+            onAction = onCardAction,
+            allPlayers = allPlayers
         )
     }
 
@@ -229,7 +231,9 @@ private fun PlayerAreaDialogs(
             },
             onReturnToBattlefield = { cardInstance ->
                 viewModel.moveCard(cardInstance.instanceId, Zone.BATTLEFIELD)
-            }
+            },
+            onAction = onCardAction,
+            allPlayers = allPlayers
         )
     }
 

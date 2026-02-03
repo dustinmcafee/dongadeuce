@@ -166,6 +166,17 @@ class CardCache(
                         val newCard = selectBetterPrinting(existing, card)
                         cardsByName[nameKey] = newCard
                     }
+
+                    // For double-faced cards (name contains " // "), also index by each face name
+                    if (card.name.contains(" // ")) {
+                        val faces = card.name.split(" // ")
+                        for (faceName in faces) {
+                            val faceNameLower = faceName.trim().lowercase()
+                            if (!cardsByName.containsKey(faceNameLower)) {
+                                cardsByName[faceNameLower] = card
+                            }
+                        }
+                    }
                 }
 
                 cardMap = cardsByName.mapValues { it.value.toCard() }
@@ -361,6 +372,7 @@ class CardCache(
     /**
      * Parse a JSON object and check if its name matches any we're looking for.
      * Only does full JSON parsing if quick name extraction matches.
+     * Also handles double-faced cards by checking the front face name.
      */
     private fun parseAndMatchCard(jsonBuilder: StringBuilder, namesToFind: Set<String>): Card? {
         // Quick extraction: find "name":"..." pattern without full parsing
@@ -375,8 +387,21 @@ class CardCache(
         val cardName = jsonBuilder.substring(nameStart, nameEnd)
         val cardNameLower = cardName.lowercase()
 
-        // O(1) HashSet lookup - this is the key optimization
-        if (cardNameLower !in namesToFind) return null
+        // O(1) HashSet lookup - check full name first
+        var matched = cardNameLower in namesToFind
+
+        // For double-faced cards, also check if any face name matches
+        if (!matched && cardName.contains(" // ")) {
+            val faces = cardName.split(" // ")
+            for (faceName in faces) {
+                if (faceName.trim().lowercase() in namesToFind) {
+                    matched = true
+                    break
+                }
+            }
+        }
+
+        if (!matched) return null
 
         // Only parse JSON for matching cards
         return try {
@@ -525,7 +550,9 @@ data class CardCacheEntry(
     val toughness: String? = null,
     val colors: List<String> = emptyList(),
     val imageUri: String? = null,
-    val scryfallId: String? = null
+    val scryfallId: String? = null,
+    val backFaceImageUri: String? = null,
+    val backFaceName: String? = null
 ) {
     fun toCard() = Card(
         name = name,
@@ -537,7 +564,9 @@ data class CardCacheEntry(
         toughness = toughness,
         colors = colors,
         imageUri = imageUri,
-        scryfallId = scryfallId
+        scryfallId = scryfallId,
+        backFaceImageUri = backFaceImageUri,
+        backFaceName = backFaceName
     )
 
     companion object {
@@ -551,7 +580,9 @@ data class CardCacheEntry(
             toughness = card.toughness,
             colors = card.colors,
             imageUri = card.imageUri,
-            scryfallId = card.scryfallId
+            scryfallId = card.scryfallId,
+            backFaceImageUri = card.backFaceImageUri,
+            backFaceName = card.backFaceName
         )
     }
 }

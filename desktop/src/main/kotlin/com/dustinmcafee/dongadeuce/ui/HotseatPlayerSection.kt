@@ -485,7 +485,9 @@ private fun HotseatPlayerDialogs(
             },
             onReturnToBattlefield = { cardInstance ->
                 viewModel.moveCard(cardInstance.instanceId, Zone.BATTLEFIELD)
-            }
+            },
+            onAction = onCardAction,
+            allPlayers = allPlayers
         )
     }
 
@@ -499,7 +501,9 @@ private fun HotseatPlayerDialogs(
             },
             onReturnToBattlefield = { cardInstance ->
                 viewModel.moveCard(cardInstance.instanceId, Zone.BATTLEFIELD)
-            }
+            },
+            onAction = onCardAction,
+            allPlayers = allPlayers
         )
     }
 
