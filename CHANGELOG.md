@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.0.3-alpha] - 2026-03-14
+
+### Added
+- **509 automated tests** - 100% coverage of all public methods across GameEngine (130), GameViewModel (82), MenuViewModel (23), P2P integration (15), dedicated server integration (9), REST API (7), LobbyManager (13), cross-platform serialization (28), NetworkAction (50), DeckParser (63), CardInstance (26), GameState (21), Player (28), Deck (14)
+- Zero untested public methods on GameViewModel, MenuViewModel, GameEngine, or LobbyManager
+
+### Fixed
+- **4-player P2P bug** - maxPlayers=4 was too restrictive when all slots are client connections
+
 ## [6.0.2-alpha] - 2026-03-14
 
 ### Added
