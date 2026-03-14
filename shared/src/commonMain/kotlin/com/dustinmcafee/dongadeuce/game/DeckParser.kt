@@ -44,44 +44,59 @@ data class ParsedDeckData(
     /** Get sideboard card names (often where commander is stored in Cockatrice) */
     val sideboardCardNames: List<String> get() = sideboard.map { it.name }.distinct()
 
-    /** Convert to a Deck with the given commander */
-    fun toDeck(commanderName: String): Deck {
-        // Check both mainboard and sideboard for commander
-        val commanderInMainboard = mainboard.find { it.name.equals(commanderName, ignoreCase = true) }
-        val commanderInSideboard = sideboard.find { it.name.equals(commanderName, ignoreCase = true) }
+    /** Convert to a Deck with the given commander (and optional partner) */
+    fun toDeck(commanderName: String, partnerCommanderName: String? = null): Deck {
+        // Collect all commander names to remove
+        val commanderNames = mutableListOf(commanderName)
+        if (partnerCommanderName != null) commanderNames.add(partnerCommanderName)
 
-        val commanderEntry = commanderInMainboard ?: commanderInSideboard
+        // Find the primary commander
+        val commanderEntry = mainboard.find { it.name.equals(commanderName, ignoreCase = true) }
+            ?: sideboard.find { it.name.equals(commanderName, ignoreCase = true) }
             ?: throw IllegalArgumentException("Commander '$commanderName' not found in deck")
-
         val commander = Card(name = commanderEntry.name)
-        val isCommanderInSideboard = commanderInMainboard == null
 
-        // Build card list
+        // Find the partner commander if specified
+        var partnerCommander: Card? = null
+        if (partnerCommanderName != null) {
+            val partnerEntry = mainboard.find { it.name.equals(partnerCommanderName, ignoreCase = true) }
+                ?: sideboard.find { it.name.equals(partnerCommanderName, ignoreCase = true) }
+                ?: throw IllegalArgumentException("Partner commander '$partnerCommanderName' not found in deck")
+            partnerCommander = Card(name = partnerEntry.name)
+        }
+
+        // Build card list, removing all commanders (from mainboard or sideboard)
         val cards = mutableListOf<Card>()
-        var commanderRemoved = false
+        val removedFromMainboard = mutableSetOf<String>()
 
-        // Add mainboard cards, removing commander if it's there
         for (entry in mainboard) {
             val card = Card(name = entry.name)
             repeat(entry.quantity) {
-                if (!isCommanderInSideboard && entry.name.equals(commanderName, ignoreCase = true) && !commanderRemoved) {
-                    commanderRemoved = true
-                    // Skip this copy - it's the commander
+                val matchesCommander = commanderNames.any { cmdName ->
+                    entry.name.equals(cmdName, ignoreCase = true) && cmdName.lowercase() !in removedFromMainboard
+                }
+                if (matchesCommander) {
+                    removedFromMainboard.add(entry.name.lowercase())
                 } else {
                     cards.add(card)
                 }
             }
         }
 
-        // Build sideboard, removing commander if it's there
+        // Build sideboard, removing commanders that weren't found in mainboard
         val sideboardCards = mutableListOf<Card>()
-        var commanderRemovedFromSideboard = false
+        val removedFromSideboard = mutableSetOf<String>()
+
         for (entry in sideboard) {
             val card = Card(name = entry.name)
             repeat(entry.quantity) {
-                if (isCommanderInSideboard && entry.name.equals(commanderName, ignoreCase = true) && !commanderRemovedFromSideboard) {
-                    commanderRemovedFromSideboard = true
-                    // Skip this copy - it's the commander
+                val matchesCommander = commanderNames.any { cmdName ->
+                    entry.name.equals(cmdName, ignoreCase = true) &&
+                    cmdName.lowercase() !in removedFromMainboard &&
+                    cmdName.lowercase() !in removedFromSideboard
+                }
+                if (matchesCommander) {
+                    removedFromSideboard.add(entry.name.lowercase())
                 } else {
                     sideboardCards.add(card)
                 }
@@ -89,9 +104,10 @@ data class ParsedDeckData(
         }
 
         // Check if we have the right number of cards
-        if (cards.size != GameConstants.DECK_SIZE) {
+        val expectedSize = if (partnerCommander != null) GameConstants.DECK_SIZE - 1 else GameConstants.DECK_SIZE
+        if (cards.size != expectedSize) {
             throw IllegalArgumentException(
-                "Deck must have exactly ${GameConstants.DECK_SIZE} cards (excluding commander), found ${cards.size}"
+                "Deck must have exactly $expectedSize cards (excluding commander${if (partnerCommander != null) "s" else ""}), found ${cards.size}"
             )
         }
 
@@ -99,7 +115,8 @@ data class ParsedDeckData(
             name = name,
             commander = commander,
             cards = cards,
-            sideboard = sideboardCards
+            sideboard = sideboardCards,
+            partnerCommander = partnerCommander
         )
     }
 }

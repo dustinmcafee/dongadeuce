@@ -6,12 +6,18 @@ import kotlinx.serialization.Serializable
 data class Deck(
     val name: String,
     val commander: Card,
-    val cards: List<Card>, // Should be exactly 99 cards for Commander
-    val sideboard: List<Card> = emptyList() // Optional sideboard (typically 15 cards max)
+    val cards: List<Card>, // Should be 99 cards (or 98 with partner commanders)
+    val sideboard: List<Card> = emptyList(), // Optional sideboard
+    val partnerCommander: Card? = null // Second commander for partner/friends forever
 ) {
     init {
-        require(cards.size == GameConstants.DECK_SIZE) {
-            "Commander deck must have exactly ${GameConstants.DECK_SIZE} cards (excluding commander)"
+        val expectedSize = if (partnerCommander != null) {
+            GameConstants.DECK_SIZE - 1 // 98 cards with 2 commanders
+        } else {
+            GameConstants.DECK_SIZE // 99 cards with 1 commander
+        }
+        require(cards.size == expectedSize) {
+            "Commander deck must have exactly $expectedSize cards (excluding commander${if (partnerCommander != null) "s" else ""}), found ${cards.size}"
         }
     }
 

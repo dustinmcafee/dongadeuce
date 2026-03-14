@@ -18,7 +18,12 @@ data class Card(
     val imageUri: String? = null,
     val scryfallId: String? = null,
     val backFaceImageUri: String? = null,  // For transform/double-faced cards
-    val backFaceName: String? = null       // Name of the back face (e.g., "Insectile Aberration")
+    val backFaceName: String? = null,      // Name of the back face (e.g., "Insectile Aberration")
+    val backFaceType: String? = null,      // Type line of the back face
+    val backFaceOracleText: String? = null, // Oracle text of the back face
+    val backFaceManaCost: String? = null,  // Mana cost of the back face (if any)
+    val backFacePower: String? = null,     // Power of the back face (if creature)
+    val backFaceToughness: String? = null  // Toughness of the back face (if creature)
 ) {
     /** True if this is a double-faced/transform card */
     val isDoubleFaced: Boolean

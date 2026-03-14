@@ -122,7 +122,8 @@ data class ScryfallCard(
     // Fields for determining best printing
     @SerialName("released_at") val releasedAt: String? = null,  // YYYY-MM-DD format
     val digital: Boolean = false,  // True if digital-only printing
-    val games: List<String> = emptyList()  // ["paper", "arena", "mtgo"]
+    val games: List<String> = emptyList(),  // ["paper", "arena", "mtgo"]
+    val layout: String? = null  // Card layout: "normal", "transform", "modal_dfc", "art_series", etc.
 ) {
     /**
      * Check if this is a paper printing (not digital-only)
@@ -130,31 +131,48 @@ data class ScryfallCard(
     fun isPaper(): Boolean = !digital && games.contains("paper")
 
     /**
+     * Check if this is a non-playable card (art series, token, etc.)
+     */
+    fun isNonPlayable(): Boolean = layout in setOf("art_series", "double_faced_token", "emblem")
+
+    /**
      * Convert to our Card model
      */
     fun toCard(): Card {
-        // Handle double-faced cards
-        val mainImageUri = imageUris?.normal
-            ?: cardFaces?.firstOrNull()?.imageUris?.normal
-
-        // Get back face image and name for double-faced cards
+        val frontFace = cardFaces?.firstOrNull()
         val backFace = cardFaces?.getOrNull(1)
+
+        // Handle double-faced cards: top-level fields are null for DFCs,
+        // so fall back to front face data
+        val mainImageUri = imageUris?.normal
+            ?: frontFace?.imageUris?.normal
         val backFaceImageUri = backFace?.imageUris?.normal
-        val backFaceName = backFace?.name
+
+        // Use front face name for DFCs instead of "Front // Back" combined name
+        val cardName = if (frontFace != null && name.contains(" // ")) {
+            frontFace.name
+        } else {
+            name
+        }
 
         return Card(
-            name = name,
-            manaCost = manaCost,
+            name = cardName,
+            manaCost = manaCost ?: frontFace?.manaCost,
             cmc = cmc,
-            type = typeLine,
-            oracleText = oracleText,
-            power = power,
-            toughness = toughness,
-            colors = colors,
+            type = typeLine ?: frontFace?.typeLine,
+            oracleText = oracleText ?: frontFace?.oracleText,
+            power = power ?: frontFace?.power,
+            toughness = toughness ?: frontFace?.toughness,
+            colors = colors.ifEmpty { frontFace?.colors ?: emptyList() },
             imageUri = mainImageUri,
             scryfallId = id,
             backFaceImageUri = backFaceImageUri,
-            backFaceName = backFaceName
+            backFaceName = backFace?.name,
+            backFaceType = backFace?.typeLine,
+            backFaceOracleText = backFace?.oracleText,
+            backFaceManaCost = backFace?.manaCost,
+            backFacePower = backFace?.power,
+            backFaceToughness = backFace?.toughness
         )
     }
 }

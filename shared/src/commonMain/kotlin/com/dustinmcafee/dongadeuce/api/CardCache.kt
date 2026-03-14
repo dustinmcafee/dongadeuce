@@ -168,11 +168,13 @@ class CardCache(
                     }
 
                     // For double-faced cards (name contains " // "), also index by each face name
-                    if (card.name.contains(" // ")) {
+                    // Skip non-playable cards (art_series, tokens) to avoid polluting the index
+                    if (card.name.contains(" // ") && !card.isNonPlayable()) {
                         val faces = card.name.split(" // ")
                         for (faceName in faces) {
                             val faceNameLower = faceName.trim().lowercase()
-                            if (!cardsByName.containsKey(faceNameLower)) {
+                            val existingFace = cardsByName[faceNameLower]
+                            if (existingFace == null || existingFace.isNonPlayable()) {
                                 cardsByName[faceNameLower] = card
                             }
                         }
@@ -204,6 +206,12 @@ class CardCache(
      * 2. More recent release date
      */
     private fun selectBetterPrinting(existing: ScryfallCard, candidate: ScryfallCard): ScryfallCard {
+        // Prefer playable cards over non-playable (art_series, tokens, emblems)
+        val existingNonPlayable = existing.isNonPlayable()
+        val candidateNonPlayable = candidate.isNonPlayable()
+        if (existingNonPlayable && !candidateNonPlayable) return candidate
+        if (!existingNonPlayable && candidateNonPlayable) return existing
+
         val existingIsPaper = existing.isPaper()
         val candidateIsPaper = candidate.isPaper()
 
@@ -335,12 +343,21 @@ class CardCache(
                                 if (braceDepth == 0 && objectBuilder.isNotEmpty()) {
                                     // Complete JSON object - check if it matches
                                     cardsScanned++
-                                    val card = parseAndMatchCard(objectBuilder, namesToFind)
-                                    if (card != null) {
-                                        val key = card.name.lowercase()
-                                        foundCards[key] = card
-                                        namesToFind.remove(key)
-                                        log("Found: ${card.name} (${foundCards.size}/${names.size})")
+                                    val match = parseAndMatchCard(objectBuilder, namesToFind)
+                                    if (match != null) {
+                                        val key = match.card.name.lowercase()
+                                        val existing = foundCards[key]
+                                        if (existing == null || match.isNonPlayable.not()) {
+                                            // Store the card (prefer playable over non-playable)
+                                            foundCards[key] = match.card
+                                            // Only remove from search set if we found a playable version
+                                            if (!match.isNonPlayable) {
+                                                namesToFind.remove(key)
+                                                log("Found: ${match.card.name} (${foundCards.size}/${names.size})")
+                                            } else {
+                                                log("Found non-playable: ${match.card.name} (continuing search)")
+                                            }
+                                        }
                                     }
                                     objectBuilder.clear()
                                 }
@@ -370,11 +387,17 @@ class CardCache(
     }
 
     /**
+     * Result of parsing and matching a card from the cache file.
+     * Includes both the Card model and whether it's a non-playable printing (art_series, etc.)
+     */
+    private data class ParsedMatch(val card: Card, val isNonPlayable: Boolean)
+
+    /**
      * Parse a JSON object and check if its name matches any we're looking for.
      * Only does full JSON parsing if quick name extraction matches.
      * Also handles double-faced cards by checking the front face name.
      */
-    private fun parseAndMatchCard(jsonBuilder: StringBuilder, namesToFind: Set<String>): Card? {
+    private fun parseAndMatchCard(jsonBuilder: StringBuilder, namesToFind: Set<String>): ParsedMatch? {
         // Quick extraction: find "name":"..." pattern without full parsing
         val nameKey = "\"name\":\""
         val nameIdx = jsonBuilder.indexOf(nameKey)
@@ -403,11 +426,19 @@ class CardCache(
 
         if (!matched) return null
 
+        // Quick-skip non-playable layouts (art_series, double_faced_token, emblem)
+        // to avoid expensive JSON parsing and incorrect card data
+        val jsonStr = jsonBuilder.toString()
+        if (jsonStr.contains("\"layout\":\"art_series\"") ||
+            jsonStr.contains("\"layout\":\"double_faced_token\"") ||
+            jsonStr.contains("\"layout\":\"emblem\"")) {
+            return null
+        }
+
         // Only parse JSON for matching cards
         return try {
-            val jsonStr = jsonBuilder.toString()
             val scryfallCard = json.decodeFromString<ScryfallCard>(jsonStr)
-            scryfallCard.toCard()
+            ParsedMatch(scryfallCard.toCard(), scryfallCard.isNonPlayable())
         } catch (e: Exception) {
             log("Failed to parse card: ${e.message}")
             null

@@ -279,7 +279,7 @@ class GameViewModel(
             // Create card instances for all cards in the deck
             val cardInstances = mutableListOf<CardInstance>()
 
-            // Commander goes to command zone
+            // Commander(s) go to command zone
             cardInstances.add(
                 CardInstance(
                     card = deck.commander,
@@ -287,6 +287,15 @@ class GameViewModel(
                     zone = Zone.COMMAND_ZONE
                 )
             )
+            deck.partnerCommander?.let { partner ->
+                cardInstances.add(
+                    CardInstance(
+                        card = partner,
+                        ownerId = playerId,
+                        zone = Zone.COMMAND_ZONE
+                    )
+                )
+            }
 
             // All other cards start in library
             deck.cards.forEach { card ->
