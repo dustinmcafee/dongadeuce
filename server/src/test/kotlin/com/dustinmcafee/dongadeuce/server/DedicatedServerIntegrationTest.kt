@@ -18,6 +18,7 @@ import io.ktor.server.websocket.WebSockets as ServerWS
 import io.ktor.server.websocket.webSocket
 import io.ktor.websocket.*
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.first
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlin.test.*
@@ -480,6 +481,194 @@ class DedicatedServerIntegrationTest {
             assertEquals(8, lastState!!.cardInstances.count { it.ownerId == id1 && it.zone == Zone.HAND })
             assertEquals(35, lastState!!.players.find { it.id == id1 }!!.life)
             assertEquals(GamePhase.MAIN_1, lastState!!.phase)
+
+            session1.close()
+            session2.close()
+        } finally {
+            client.close()
+            server.stop(500, 1000)
+        }
+    }
+
+    @Test
+    fun `three player game on dedicated server`() = runBlocking {
+        val port = findFreePort()
+        val config = ServerConfig(port = port, maxGames = 10, maxPlayersPerGame = 4)
+        val lobbyManager = LobbyManager(config)
+        val room = lobbyManager.createGame()!!
+        val server = startDedicatedServer(port, lobbyManager)
+        delay(500)
+        val client = createWsClient()
+
+        try {
+            val (s1, id1) = connectPlayer(client, port, room.code, "Alice", createTestDeck())
+            waitForLobbySize(s1, 1)
+            val (s2, id2) = connectPlayer(client, port, room.code, "Bob", createTestDeck())
+            waitForLobbySize(s1, 2)
+            waitForLobbySize(s2, 2)
+            val (s3, id3) = connectPlayer(client, port, room.code, "Charlie", createTestDeck())
+            waitForLobbySize(s1, 3)
+            waitForLobbySize(s2, 3)
+            waitForLobbySize(s3, 3)
+
+            // Ready non-admin
+            s2.send(Frame.Text(json.encodeToString<GameMessage>(GameMessage.PlayerReady(id2, true))))
+            s3.send(Frame.Text(json.encodeToString<GameMessage>(GameMessage.PlayerReady(id3, true))))
+
+            withTimeout(3000) {
+                while (true) {
+                    val frame = s1.incoming.receive() as Frame.Text
+                    val msg = json.decodeFromString<GameMessage>(frame.readText())
+                    if (msg is GameMessage.LobbyState &&
+                        msg.players.filter { !it.isAdmin }.all { it.isReady }) break
+                }
+            }
+
+            assertTrue(room.startGame())
+            val start1 = waitForGameStart(s1)
+            waitForGameStart(s2)
+            waitForGameStart(s3)
+
+            assertEquals(3, start1.gameState.players.size)
+
+            // Turn cycle: Alice → Bob → Charlie → Alice
+            s1.send(Frame.Text(json.encodeToString<GameMessage>(
+                GameMessage.GameAction(NetworkAction.PassTurn, id1)
+            )))
+            val t2 = waitForStateUpdate(s1)
+            assertEquals(2, t2.gameState.turnNumber)
+            assertEquals(id2, t2.gameState.activePlayer.id)
+
+            // Drain s2 to current state
+            withTimeout(3000) {
+                while (true) {
+                    val frame = s2.incoming.receive() as Frame.Text
+                    val msg = json.decodeFromString<GameMessage>(frame.readText())
+                    if (msg is GameMessage.StateUpdate && msg.gameState.turnNumber == 2) break
+                }
+            }
+
+            s2.send(Frame.Text(json.encodeToString<GameMessage>(
+                GameMessage.GameAction(NetworkAction.PassTurn, id2)
+            )))
+            val t3 = waitForStateUpdate(s2)
+            assertEquals(3, t3.gameState.turnNumber)
+            assertEquals(id3, t3.gameState.activePlayer.id)
+
+            s1.close()
+            s2.close()
+            s3.close()
+        } finally {
+            client.close()
+            server.stop(500, 1000)
+        }
+    }
+
+    @Test
+    fun `GameClient connects to dedicated server by game code`() = runBlocking {
+        val port = findFreePort()
+        val config = ServerConfig(port = port, maxGames = 10, maxPlayersPerGame = 4)
+        val lobbyManager = LobbyManager(config)
+        val room = lobbyManager.createGame()!!
+        val server = startDedicatedServer(port, lobbyManager)
+        delay(500)
+
+        // Use actual GameClient with gameCode parameter
+        val gc1 = GameClient()
+        val gc2 = GameClient()
+        val deck = createTestDeck()
+
+        val job1 = launch { gc1.connect("localhost", port, "Alice", deck, gameCode = room.code) }
+        withTimeout(5000) { gc1.connectionState.first { it is ConnectionState.Connected } }
+
+        val job2 = launch { gc2.connect("localhost", port, "Bob", deck, gameCode = room.code) }
+        withTimeout(5000) { gc2.connectionState.first { it is ConnectionState.Connected } }
+
+        // Both should see each other
+        withTimeout(3000) { gc1.lobbyState.first { it?.players?.size == 2 } }
+        withTimeout(3000) { gc2.lobbyState.first { it?.players?.size == 2 } }
+
+        val names = gc1.lobbyState.value!!.players.map { it.name }.toSet()
+        assertEquals(setOf("Alice", "Bob"), names)
+
+        // Ready + start
+        gc2.setReady(true)
+        withTimeout(3000) {
+            gc1.lobbyState.first { it?.players?.any { p -> !p.isAdmin && p.isReady } == true }
+        }
+        room.startGame()
+        withTimeout(5000) { gc1.gameStarted.first { it } }
+        withTimeout(5000) { gc2.gameStarted.first { it } }
+
+        assertEquals(2, gc1.gameState.value!!.players.size)
+
+        // Action works through GameClient
+        val aliceId = gc1.playerId.value!!
+        gc1.sendAction(NetworkAction.DrawCard(aliceId))
+
+        withTimeout(3000) {
+            gc2.gameState.first { state ->
+                state != null && state.cardInstances.count {
+                    it.ownerId == aliceId && it.zone == Zone.HAND
+                } == 8
+            }
+        }
+
+        gc1.disconnect()
+        gc2.disconnect()
+        job1.cancel()
+        job2.cancel()
+        server.stop(500, 1000)
+    }
+
+    @Test
+    fun `chat message broadcasts to all players in room`() = runBlocking {
+        val port = findFreePort()
+        val config = ServerConfig(port = port, maxGames = 10, maxPlayersPerGame = 4)
+        val lobbyManager = LobbyManager(config)
+        val room = lobbyManager.createGame()!!
+        val server = startDedicatedServer(port, lobbyManager)
+        delay(500)
+        val client = createWsClient()
+
+        try {
+            val (session1, id1) = connectPlayer(client, port, room.code, "Alice", createTestDeck())
+            waitForLobbySize(session1, 1)
+            val (session2, id2) = connectPlayer(client, port, room.code, "Bob", createTestDeck())
+            waitForLobbySize(session1, 2)
+            waitForLobbySize(session2, 2)
+
+            // Ready + start
+            session2.send(Frame.Text(json.encodeToString<GameMessage>(
+                GameMessage.PlayerReady(id2, true)
+            )))
+            withTimeout(3000) {
+                while (true) {
+                    val frame = session1.incoming.receive() as Frame.Text
+                    val msg = json.decodeFromString<GameMessage>(frame.readText())
+                    if (msg is GameMessage.LobbyState && msg.players.any { it.id == id2 && it.isReady }) break
+                }
+            }
+            room.startGame()
+            waitForGameStart(session1)
+            waitForGameStart(session2)
+
+            // Alice sends chat
+            session1.send(Frame.Text(json.encodeToString<GameMessage>(
+                GameMessage.Chat(id1, "Alice", "Hello!")
+            )))
+
+            // Bob should receive the chat
+            withTimeout(3000) {
+                while (true) {
+                    val frame = session2.incoming.receive() as Frame.Text
+                    val msg = json.decodeFromString<GameMessage>(frame.readText())
+                    if (msg is GameMessage.Chat && msg.message == "Hello!") {
+                        assertEquals("Alice", msg.playerName)
+                        return@withTimeout
+                    }
+                }
+            }
 
             session1.close()
             session2.close()

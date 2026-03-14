@@ -448,4 +448,336 @@ class P2PIntegrationTest {
         job2.cancel()
         server.stop()
     }
+
+    // Helper to set up a started 2-player game, returns (server, client1, client2, job1, job2)
+    private suspend fun CoroutineScope.setupStartedGame(port: Int): StartedGame {
+        val server = GameServer(port = port, maxPlayers = 4)
+        server.start()
+        delay(500)
+
+        val client1 = GameClient()
+        val client2 = GameClient()
+        val deck = createTestDeck()
+
+        val job1 = launch { client1.connect("localhost", port, "Alice", deck) }
+        withTimeout(5000) { client1.connectionState.first { it is ConnectionState.Connected } }
+        val job2 = launch { client2.connect("localhost", port, "Bob", deck) }
+        withTimeout(5000) { client2.connectionState.first { it is ConnectionState.Connected } }
+        withTimeout(3000) { client2.lobbyState.first { it?.players?.size == 2 } }
+
+        client2.setReady(true)
+        withTimeout(3000) {
+            client1.lobbyState.first { it?.players?.any { p -> !p.isAdmin && p.isReady } == true }
+        }
+        server.startGame()
+        withTimeout(5000) { client1.gameStarted.first { it } }
+        withTimeout(5000) { client2.gameStarted.first { it } }
+
+        return StartedGame(server, client1, client2, job1, job2)
+    }
+
+    private data class StartedGame(
+        val server: GameServer,
+        val client1: GameClient,
+        val client2: GameClient,
+        val job1: Job,
+        val job2: Job
+    ) {
+        fun cleanup() {
+            client1.disconnect()
+            client2.disconnect()
+            job1.cancel()
+            job2.cancel()
+            server.stop()
+        }
+    }
+
+    @Test
+    fun `P2P player disconnect during game pauses for all`() = runBlocking {
+        val port = findFreePort()
+        val game = setupStartedGame(port)
+
+        try {
+            // Bob disconnects
+            game.client2.disconnect()
+
+            // Alice should see game pause
+            withTimeout(5000) {
+                game.client1.isPaused.first { it }
+            }
+
+            assertTrue(game.client1.isPaused.value)
+        } finally {
+            game.cleanup()
+        }
+    }
+
+    @Test
+    fun `P2P kick player removes from lobby`() = runBlocking {
+        val port = findFreePort()
+        val server = GameServer(port = port, maxPlayers = 4)
+        server.start()
+        delay(500)
+
+        val client1 = GameClient()
+        val client2 = GameClient()
+        val deck = createTestDeck()
+
+        val job1 = launch { client1.connect("localhost", port, "Alice", deck) }
+        withTimeout(5000) { client1.connectionState.first { it is ConnectionState.Connected } }
+        val job2 = launch { client2.connect("localhost", port, "Bob", deck) }
+        withTimeout(5000) { client2.connectionState.first { it is ConnectionState.Connected } }
+        withTimeout(3000) { client1.lobbyState.first { it?.players?.size == 2 } }
+
+        // Get Bob's ID
+        val bobId = client2.playerId.value!!
+
+        // Host kicks Bob
+        server.kickPlayer(bobId)
+
+        // Alice should see lobby go back to 1 player
+        withTimeout(3000) {
+            client1.lobbyState.first { it?.players?.size == 1 }
+        }
+
+        assertEquals(1, client1.lobbyState.value!!.players.size)
+
+        // Bob should get disconnected or error state
+        withTimeout(5000) {
+            client2.connectionState.first {
+                it is ConnectionState.Error || it is ConnectionState.Disconnected
+            }
+        }
+
+        // Cleanup
+        client1.disconnect()
+        client2.disconnect()
+        job1.cancel()
+        job2.cancel()
+        server.stop()
+    }
+
+    @Test
+    fun `P2P chat message received by other client`() = runBlocking {
+        val port = findFreePort()
+        val game = setupStartedGame(port)
+
+        try {
+            val aliceId = game.client1.playerId.value!!
+
+            // Alice sends chat
+            game.client1.sendChat("Hello Bob!")
+
+            // Bob should see state update with chat event in game log
+            withTimeout(3000) {
+                game.client2.gameState.first { state ->
+                    state != null && state.gameLog.any {
+                        it is GameEvent.ChatMessage && it.message == "Hello Bob!"
+                    }
+                }
+            }
+        } finally {
+            game.cleanup()
+        }
+    }
+
+    @Test
+    fun `P2P three player game works`() = runBlocking {
+        val port = findFreePort()
+        val server = GameServer(port = port, maxPlayers = 4)
+        server.start()
+        delay(500)
+
+        val client1 = GameClient()
+        val client2 = GameClient()
+        val client3 = GameClient()
+        val deck = createTestDeck()
+
+        val job1 = launch { client1.connect("localhost", port, "Alice", deck) }
+        withTimeout(5000) { client1.connectionState.first { it is ConnectionState.Connected } }
+        val job2 = launch { client2.connect("localhost", port, "Bob", deck) }
+        withTimeout(5000) { client2.connectionState.first { it is ConnectionState.Connected } }
+        val job3 = launch { client3.connect("localhost", port, "Charlie", deck) }
+        withTimeout(5000) { client3.connectionState.first { it is ConnectionState.Connected } }
+
+        // All 3 should see each other
+        withTimeout(3000) { client1.lobbyState.first { it?.players?.size == 3 } }
+        withTimeout(3000) { client2.lobbyState.first { it?.players?.size == 3 } }
+        withTimeout(3000) { client3.lobbyState.first { it?.players?.size == 3 } }
+
+        val names = client1.lobbyState.value!!.players.map { it.name }.toSet()
+        assertEquals(setOf("Alice", "Bob", "Charlie"), names)
+
+        // Ready up non-admin players
+        client2.setReady(true)
+        client3.setReady(true)
+
+        withTimeout(3000) {
+            client1.lobbyState.first { lobby ->
+                lobby != null && lobby.players.filter { !it.isAdmin }.all { it.isReady }
+            }
+        }
+
+        // Start game
+        assertTrue(server.startGame())
+        withTimeout(5000) { client1.gameStarted.first { it } }
+        withTimeout(5000) { client2.gameStarted.first { it } }
+        withTimeout(5000) { client3.gameStarted.first { it } }
+
+        // All 3 should have game state with 3 players
+        assertEquals(3, client1.gameState.value!!.players.size)
+        assertEquals(3, client2.gameState.value!!.players.size)
+        assertEquals(3, client3.gameState.value!!.players.size)
+
+        // Turn passes through all 3
+        val aliceId = client1.playerId.value!!
+        client1.sendAction(NetworkAction.PassTurn)
+        withTimeout(3000) { client2.gameState.first { it?.turnNumber == 2 } }
+
+        val bobId = client2.playerId.value!!
+        client2.sendAction(NetworkAction.PassTurn)
+        withTimeout(3000) { client3.gameState.first { it?.turnNumber == 3 } }
+
+        val charlieId = client3.playerId.value!!
+        client3.sendAction(NetworkAction.PassTurn)
+        withTimeout(3000) { client1.gameState.first { it?.turnNumber == 4 } }
+
+        // Back to Alice
+        assertEquals(aliceId, client1.gameState.value!!.activePlayer.id)
+
+        // Cleanup
+        client1.disconnect()
+        client2.disconnect()
+        client3.disconnect()
+        job1.cancel()
+        job2.cancel()
+        job3.cancel()
+        server.stop()
+    }
+
+    @Test
+    fun `P2P four player game initializes correctly`() = runBlocking {
+        val port = findFreePort()
+        // maxPlayers must be > 4 since the server itself doesn't consume a slot,
+        // but each client connect becomes a player via the engine
+        val server = GameServer(port = port, maxPlayers = 6)
+        server.start()
+        delay(500)
+
+        val clients = (1..4).map { GameClient() }
+        val deck = createTestDeck()
+        val names = listOf("Alice", "Bob", "Charlie", "Diana")
+
+        // Connect sequentially to avoid races
+        val jobs = mutableListOf<Job>()
+        for (i in 0 until 4) {
+            val job = launch { clients[i].connect("localhost", port, names[i], deck) }
+            jobs.add(job)
+            withTimeout(5000) { clients[i].connectionState.first { it is ConnectionState.Connected } }
+            // Wait for lobby to reflect this player
+            withTimeout(3000) { clients[0].lobbyState.first { it?.players?.size == i + 1 } }
+        }
+
+        // All 4 see each other
+        val lobbyNames = clients[0].lobbyState.value!!.players.map { it.name }.toSet()
+        assertEquals(setOf("Alice", "Bob", "Charlie", "Diana"), lobbyNames)
+
+        // Ready up non-admin
+        for (c in clients.drop(1)) {
+            c.setReady(true)
+            delay(100) // Stagger to avoid message ordering issues
+        }
+        withTimeout(5000) {
+            clients[0].lobbyState.first { lobby ->
+                lobby != null && lobby.players.filter { !it.isAdmin }.all { it.isReady }
+            }
+        }
+
+        server.startGame()
+        clients.forEach { client ->
+            withTimeout(5000) { client.gameStarted.first { it } }
+        }
+
+        // All 4 should have game state with 4 players at 40 life
+        clients.forEach { client ->
+            val state = client.gameState.value!!
+            assertEquals(4, state.players.size)
+            state.players.forEach { p -> assertEquals(GameConstants.STARTING_LIFE, p.life) }
+        }
+
+        // Cleanup
+        clients.forEach { it.disconnect() }
+        jobs.forEach { it.cancel() }
+        server.stop()
+    }
+
+    @Test
+    fun `P2P resume after pause`() = runBlocking {
+        val port = findFreePort()
+        val game = setupStartedGame(port)
+
+        try {
+            // Bob disconnects → game pauses
+            game.client2.disconnect()
+            game.job2.cancel()
+
+            withTimeout(5000) {
+                game.client1.isPaused.first { it }
+            }
+            assertTrue(game.client1.isPaused.value)
+
+            // Host resumes
+            game.server.resumeGame()
+
+            withTimeout(3000) {
+                game.client1.isPaused.first { !it }
+            }
+            assertFalse(game.client1.isPaused.value)
+
+            // Alice can still take actions
+            val aliceId = game.client1.playerId.value!!
+            game.client1.sendAction(NetworkAction.DrawCard(aliceId))
+
+            withTimeout(3000) {
+                game.client1.gameState.first { state ->
+                    state != null && state.cardInstances.count {
+                        it.ownerId == aliceId && it.zone == Zone.HAND
+                    } == 8
+                }
+            }
+        } finally {
+            game.client1.disconnect()
+            game.job1.cancel()
+            game.server.stop()
+        }
+    }
+
+    @Test
+    fun `P2P game cannot start before all players ready`() = runBlocking {
+        val port = findFreePort()
+        val server = GameServer(port = port, maxPlayers = 4)
+        server.start()
+        delay(500)
+
+        val client1 = GameClient()
+        val client2 = GameClient()
+        val deck = createTestDeck()
+
+        val job1 = launch { client1.connect("localhost", port, "Alice", deck) }
+        withTimeout(5000) { client1.connectionState.first { it is ConnectionState.Connected } }
+        val job2 = launch { client2.connect("localhost", port, "Bob", deck) }
+        withTimeout(5000) { client2.connectionState.first { it is ConnectionState.Connected } }
+        withTimeout(3000) { client1.lobbyState.first { it?.players?.size == 2 } }
+
+        // Try starting without ready — should fail
+        assertFalse(server.startGame())
+        assertFalse(client1.gameStarted.value)
+
+        // Cleanup
+        client1.disconnect()
+        client2.disconnect()
+        job1.cancel()
+        job2.cancel()
+        server.stop()
+    }
 }
