@@ -1413,4 +1413,635 @@ class GameEngineTest {
         assertEquals(100, p1Total, "Player 1 total card count should be preserved")
         assertEquals(100, p2Total, "Player 2 total card count should be preserved")
     }
+
+    // ==================== Library Position (specific) ====================
+
+    @Test
+    fun `move card to library position from top`() {
+        val (engine, p1, _) = createStartedEngine()
+        val state = engine.getCurrentState()!!
+        val handCard = state.cardInstances.first { it.ownerId == p1 && it.zone == Zone.HAND }
+
+        // Move to 3rd from top
+        engine.executeAction(NetworkAction.MoveCardToLibraryPosition(handCard.instanceId, 3), p1)
+
+        val after = engine.getCurrentState()!!
+        val libCards = after.cardInstances.filter { it.ownerId == p1 && it.zone == Zone.LIBRARY }
+        // Card should be in library (hand count decreased)
+        val handAfter = after.cardInstances.count { it.ownerId == p1 && it.zone == Zone.HAND }
+        assertEquals(6, handAfter) // 7 - 1
+        assertTrue(libCards.any { it.instanceId == handCard.instanceId })
+    }
+
+    @Test
+    fun `move card to library position from bottom`() {
+        val (engine, p1, _) = createStartedEngine()
+        val state = engine.getCurrentState()!!
+        val handCard = state.cardInstances.first { it.ownerId == p1 && it.zone == Zone.HAND }
+
+        engine.executeAction(NetworkAction.MoveCardToLibraryPositionFromBottom(handCard.instanceId, 2), p1)
+
+        val after = engine.getCurrentState()!!
+        val libCards = after.cardInstances.filter { it.ownerId == p1 && it.zone == Zone.LIBRARY }
+        assertTrue(libCards.any { it.instanceId == handCard.instanceId })
+        // Should be near the bottom (second from bottom = index 1)
+        assertEquals(handCard.instanceId, libCards[1].instanceId)
+    }
+
+    // ==================== Bulk Zone Moves ====================
+
+    @Test
+    fun `move top cards to zone`() {
+        val (engine, p1, _) = createStartedEngine()
+        val graveBefore = engine.getCurrentState()!!.cardInstances.count {
+            it.ownerId == p1 && it.zone == Zone.GRAVEYARD
+        }
+        val libBefore = engine.getCurrentState()!!.cardInstances.count {
+            it.ownerId == p1 && it.zone == Zone.LIBRARY
+        }
+
+        engine.executeAction(NetworkAction.MoveTopCardsToZone(p1, 3, Zone.GRAVEYARD), p1)
+
+        val after = engine.getCurrentState()!!
+        val graveAfter = after.cardInstances.count { it.ownerId == p1 && it.zone == Zone.GRAVEYARD }
+        val libAfter = after.cardInstances.count { it.ownerId == p1 && it.zone == Zone.LIBRARY }
+
+        assertEquals(graveBefore + 3, graveAfter)
+        assertEquals(libBefore - 3, libAfter)
+    }
+
+    @Test
+    fun `move bottom cards to zone`() {
+        val (engine, p1, _) = createStartedEngine()
+        val exileBefore = engine.getCurrentState()!!.cardInstances.count {
+            it.ownerId == p1 && it.zone == Zone.EXILE
+        }
+
+        engine.executeAction(NetworkAction.MoveBottomCardsToZone(p1, 4, Zone.EXILE), p1)
+
+        val after = engine.getCurrentState()!!
+        val exileAfter = after.cardInstances.count { it.ownerId == p1 && it.zone == Zone.EXILE }
+        assertEquals(exileBefore + 4, exileAfter)
+    }
+
+    @Test
+    fun `move bottom card to top`() {
+        val (engine, p1, _) = createStartedEngine()
+        val state = engine.getCurrentState()!!
+        val libCards = state.cardInstances.filter { it.ownerId == p1 && it.zone == Zone.LIBRARY }
+        val bottomCard = libCards.first() // first = bottom
+
+        engine.executeAction(NetworkAction.MoveBottomCardToTop(p1), p1)
+
+        val after = engine.getCurrentState()!!
+        val libAfter = after.cardInstances.filter { it.ownerId == p1 && it.zone == Zone.LIBRARY }
+        assertEquals(bottomCard.instanceId, libAfter.last().instanceId, "Bottom card should now be on top")
+        assertEquals(libCards.size, libAfter.size, "Library size should be unchanged")
+    }
+
+    @Test
+    fun `move bottom card to top on empty library is no-op`() {
+        val (engine, p1, _) = createStartedEngine()
+
+        // Empty the library
+        val state = engine.getCurrentState()!!
+        state.cardInstances.filter { it.ownerId == p1 && it.zone == Zone.LIBRARY }.forEach {
+            engine.executeAction(NetworkAction.MoveCard(it.instanceId, Zone.GRAVEYARD), p1)
+        }
+
+        // Should not crash
+        val result = engine.executeAction(NetworkAction.MoveBottomCardToTop(p1), p1)
+        assertTrue(result.success) // no-op but doesn't fail
+    }
+
+    // ==================== Partial Shuffles ====================
+
+    @Test
+    fun `shuffle top cards preserves library size`() {
+        val (engine, p1, _) = createStartedEngine()
+        val libBefore = engine.getCurrentState()!!.cardInstances.count {
+            it.ownerId == p1 && it.zone == Zone.LIBRARY
+        }
+
+        engine.executeAction(NetworkAction.ShuffleTopCards(p1, 10), p1)
+
+        val libAfter = engine.getCurrentState()!!.cardInstances.count {
+            it.ownerId == p1 && it.zone == Zone.LIBRARY
+        }
+        assertEquals(libBefore, libAfter)
+    }
+
+    @Test
+    fun `shuffle bottom cards preserves library size`() {
+        val (engine, p1, _) = createStartedEngine()
+        val libBefore = engine.getCurrentState()!!.cardInstances.count {
+            it.ownerId == p1 && it.zone == Zone.LIBRARY
+        }
+
+        engine.executeAction(NetworkAction.ShuffleBottomCards(p1, 10), p1)
+
+        val libAfter = engine.getCurrentState()!!.cardInstances.count {
+            it.ownerId == p1 && it.zone == Zone.LIBRARY
+        }
+        assertEquals(libBefore, libAfter)
+    }
+
+    @Test
+    fun `shuffle top cards with count 1 is no-op`() {
+        val (engine, p1, _) = createStartedEngine()
+        val state = engine.getCurrentState()!!
+        val libBefore = state.cardInstances.filter { it.ownerId == p1 && it.zone == Zone.LIBRARY }
+            .map { it.instanceId }
+
+        engine.executeAction(NetworkAction.ShuffleTopCards(p1, 1), p1)
+
+        val libAfter = engine.getCurrentState()!!.cardInstances.filter { it.ownerId == p1 && it.zone == Zone.LIBRARY }
+            .map { it.instanceId }
+        assertEquals(libBefore, libAfter, "Shuffling 1 card should be no-op")
+    }
+
+    // ==================== SetPowerToughness / Flow ====================
+
+    @Test
+    fun `set power toughness to exact values`() {
+        val (engine, p1, _) = createStartedEngine()
+        val state = engine.getCurrentState()!!
+        // Find a creature with known P/T
+        val creature = state.cardInstances.first {
+            it.ownerId == p1 && it.zone == Zone.HAND && it.card.power == "2"
+        }
+
+        engine.executeAction(NetworkAction.MoveCard(creature.instanceId, Zone.BATTLEFIELD), p1)
+        engine.executeAction(NetworkAction.SetPowerToughness(creature.instanceId, 5, 7), p1)
+
+        val after = engine.getCurrentState()!!
+        val updated = after.cardInstances.find { it.instanceId == creature.instanceId }!!
+        // base power is 2, modifier should be 3 to get to 5
+        assertEquals(3, updated.powerModifier)
+        // base toughness is 2, modifier should be 5 to get to 7
+        assertEquals(5, updated.toughnessModifier)
+    }
+
+    @Test
+    fun `flow power increases power decreases toughness`() {
+        val (engine, p1, _) = createStartedEngine()
+        val state = engine.getCurrentState()!!
+        val card = state.cardInstances.first { it.ownerId == p1 && it.zone == Zone.HAND }
+
+        engine.executeAction(NetworkAction.MoveCard(card.instanceId, Zone.BATTLEFIELD), p1)
+        engine.executeAction(NetworkAction.FlowPower(card.instanceId), p1)
+
+        val after = engine.getCurrentState()!!
+        val updated = after.cardInstances.find { it.instanceId == card.instanceId }!!
+        assertEquals(1, updated.powerModifier)
+        assertEquals(-1, updated.toughnessModifier)
+    }
+
+    @Test
+    fun `flow toughness decreases power increases toughness`() {
+        val (engine, p1, _) = createStartedEngine()
+        val state = engine.getCurrentState()!!
+        val card = state.cardInstances.first { it.ownerId == p1 && it.zone == Zone.HAND }
+
+        engine.executeAction(NetworkAction.MoveCard(card.instanceId, Zone.BATTLEFIELD), p1)
+        engine.executeAction(NetworkAction.FlowToughness(card.instanceId), p1)
+
+        val after = engine.getCurrentState()!!
+        val updated = after.cardInstances.find { it.instanceId == card.instanceId }!!
+        assertEquals(-1, updated.powerModifier)
+        assertEquals(1, updated.toughnessModifier)
+    }
+
+    @Test
+    fun `multiple flow operations accumulate`() {
+        val (engine, p1, _) = createStartedEngine()
+        val state = engine.getCurrentState()!!
+        val card = state.cardInstances.first { it.ownerId == p1 && it.zone == Zone.HAND }
+
+        engine.executeAction(NetworkAction.MoveCard(card.instanceId, Zone.BATTLEFIELD), p1)
+        engine.executeAction(NetworkAction.FlowPower(card.instanceId), p1)
+        engine.executeAction(NetworkAction.FlowPower(card.instanceId), p1)
+        engine.executeAction(NetworkAction.FlowPower(card.instanceId), p1)
+
+        val after = engine.getCurrentState()!!
+        val updated = after.cardInstances.find { it.instanceId == card.instanceId }!!
+        assertEquals(3, updated.powerModifier)
+        assertEquals(-3, updated.toughnessModifier)
+    }
+
+    // ==================== SetPhase UNTAP auto-untap ====================
+
+    @Test
+    fun `set phase to UNTAP auto-untaps active player permanents`() {
+        val (engine, p1, _) = createStartedEngine()
+        val state = engine.getCurrentState()!!
+        val cards = state.cardInstances.filter { it.ownerId == p1 && it.zone == Zone.HAND }.take(2)
+
+        // Play and tap
+        cards.forEach {
+            engine.executeAction(NetworkAction.MoveCard(it.instanceId, Zone.BATTLEFIELD), p1)
+            engine.executeAction(NetworkAction.ToggleTap(it.instanceId), p1)
+        }
+
+        // Move to main phase first
+        engine.executeAction(NetworkAction.SetPhase(GamePhase.MAIN_1), p1)
+
+        // Set back to UNTAP — should auto-untap
+        engine.executeAction(NetworkAction.SetPhase(GamePhase.UNTAP), p1)
+
+        val after = engine.getCurrentState()!!
+        val tapped = after.cardInstances.count {
+            it.ownerId == p1 && it.zone == Zone.BATTLEFIELD && it.isTapped
+        }
+        assertEquals(0, tapped, "SetPhase(UNTAP) should auto-untap active player's permanents")
+    }
+
+    @Test
+    fun `set phase to UNTAP does not untap doesntUntap cards`() {
+        val (engine, p1, _) = createStartedEngine()
+        val state = engine.getCurrentState()!!
+        val card = state.cardInstances.first { it.ownerId == p1 && it.zone == Zone.HAND }
+
+        engine.executeAction(NetworkAction.MoveCard(card.instanceId, Zone.BATTLEFIELD), p1)
+        engine.executeAction(NetworkAction.ToggleTap(card.instanceId), p1)
+        engine.executeAction(NetworkAction.ToggleDoesntUntap(card.instanceId), p1)
+
+        engine.executeAction(NetworkAction.SetPhase(GamePhase.MAIN_1), p1)
+        engine.executeAction(NetworkAction.SetPhase(GamePhase.UNTAP), p1)
+
+        val after = engine.getCurrentState()!!
+        val frozen = after.cardInstances.find { it.instanceId == card.instanceId }!!
+        assertTrue(frozen.isTapped, "doesntUntap card should remain tapped during UNTAP phase")
+    }
+
+    // ==================== Library Visibility ====================
+
+    @Test
+    fun `toggle reveal top card`() {
+        val (engine, p1, _) = createStartedEngine()
+
+        engine.executeAction(NetworkAction.ToggleRevealTopCard(p1), p1)
+
+        val state = engine.getCurrentState()!!
+        val player = state.players.find { it.id == p1 }!!
+        assertTrue(player.revealTopCard)
+        assertTrue(player.lookAtTopCard, "Revealing should also enable looking")
+    }
+
+    @Test
+    fun `toggle reveal top card off`() {
+        val (engine, p1, _) = createStartedEngine()
+
+        engine.executeAction(NetworkAction.ToggleRevealTopCard(p1), p1) // on
+        engine.executeAction(NetworkAction.ToggleRevealTopCard(p1), p1) // off
+
+        val state = engine.getCurrentState()!!
+        val player = state.players.find { it.id == p1 }!!
+        assertFalse(player.revealTopCard)
+    }
+
+    @Test
+    fun `toggle look at top card`() {
+        val (engine, p1, _) = createStartedEngine()
+
+        engine.executeAction(NetworkAction.ToggleLookAtTopCard(p1), p1)
+
+        val state = engine.getCurrentState()!!
+        val player = state.players.find { it.id == p1 }!!
+        assertTrue(player.lookAtTopCard)
+    }
+
+    @Test
+    fun `toggle look at top card off also disables reveal`() {
+        val (engine, p1, _) = createStartedEngine()
+
+        engine.executeAction(NetworkAction.ToggleRevealTopCard(p1), p1) // reveal on (also sets look)
+        engine.executeAction(NetworkAction.ToggleLookAtTopCard(p1), p1) // look off
+
+        val state = engine.getCurrentState()!!
+        val player = state.players.find { it.id == p1 }!!
+        assertFalse(player.lookAtTopCard)
+        assertFalse(player.revealTopCard, "Disabling look should also disable reveal")
+    }
+
+    @Test
+    fun `cannot toggle library visibility for another player`() {
+        val (engine, p1, p2) = createStartedEngine()
+
+        val result = engine.executeAction(NetworkAction.ToggleRevealTopCard(p2), p1)
+        assertFalse(result.success)
+        assertEquals("Cannot toggle library visibility for another player", result.reason)
+    }
+
+    // ==================== Die Roll & Chat ====================
+
+    @Test
+    fun `log die roll adds event`() {
+        val (engine, p1, _) = createStartedEngine()
+
+        engine.executeAction(NetworkAction.LogDieRoll(p1, "d20", 17), p1)
+
+        val state = engine.getCurrentState()!!
+        val dieEvents = state.gameLog.filterIsInstance<GameEvent.DieRolled>()
+        assertEquals(1, dieEvents.size)
+        assertEquals("d20", dieEvents[0].dieType)
+        assertEquals(17, dieEvents[0].result)
+    }
+
+    @Test
+    fun `log die roll with multiple dice`() {
+        val (engine, p1, _) = createStartedEngine()
+
+        engine.executeAction(
+            NetworkAction.LogDieRoll(p1, "d6", 9, numberOfDice = 2, individualResults = listOf(3, 6)),
+            p1
+        )
+
+        val state = engine.getCurrentState()!!
+        val dieEvents = state.gameLog.filterIsInstance<GameEvent.DieRolled>()
+        assertEquals(1, dieEvents.size)
+        assertEquals(2, dieEvents[0].numberOfDice)
+        assertEquals(listOf(3, 6), dieEvents[0].individualResults)
+    }
+
+    @Test
+    fun `send chat message adds event`() {
+        val (engine, p1, _) = createStartedEngine()
+
+        engine.executeAction(NetworkAction.SendChatMessage(p1, "GG"), p1)
+
+        val state = engine.getCurrentState()!!
+        val chatEvents = state.gameLog.filterIsInstance<GameEvent.ChatMessage>()
+        assertEquals(1, chatEvents.size)
+        assertEquals("GG", chatEvents[0].message)
+    }
+
+    // ==================== Grid Position ====================
+
+    @Test
+    fun `update card grid position`() {
+        val (engine, p1, _) = createStartedEngine()
+        val state = engine.getCurrentState()!!
+        val card = state.cardInstances.first { it.ownerId == p1 && it.zone == Zone.HAND }
+
+        engine.executeAction(NetworkAction.MoveCard(card.instanceId, Zone.BATTLEFIELD), p1)
+        engine.executeAction(NetworkAction.UpdateCardGridPosition(card.instanceId, 3, 1), p1)
+
+        val after = engine.getCurrentState()!!
+        val updated = after.cardInstances.find { it.instanceId == card.instanceId }!!
+        assertEquals(3, updated.gridX)
+        assertEquals(1, updated.gridY)
+    }
+
+    // ==================== Control Revert on Zone Change ====================
+
+    @Test
+    fun `control reverts to owner when card leaves battlefield`() {
+        val (engine, p1, p2) = createStartedEngine()
+        val state = engine.getCurrentState()!!
+        val card = state.cardInstances.first { it.ownerId == p1 && it.zone == Zone.HAND }
+
+        // Play and give control to p2
+        engine.executeAction(NetworkAction.MoveCard(card.instanceId, Zone.BATTLEFIELD), p1)
+        engine.executeAction(NetworkAction.GiveControlTo(card.instanceId, p2), p1)
+
+        // Verify p2 controls it
+        val mid = engine.getCurrentState()!!
+        assertEquals(p2, mid.cardInstances.find { it.instanceId == card.instanceId }!!.controllerId)
+
+        // Move to graveyard — control should revert to owner
+        engine.executeAction(NetworkAction.MoveCard(card.instanceId, Zone.GRAVEYARD), p2)
+
+        val after = engine.getCurrentState()!!
+        val inGrave = after.cardInstances.find { it.instanceId == card.instanceId }!!
+        assertEquals(p1, inGrave.controllerId, "Control should revert to owner when leaving battlefield")
+        assertEquals(p1, inGrave.ownerId)
+    }
+
+    // ==================== Multiple Counter Types ====================
+
+    @Test
+    fun `multiple counter types on same card`() {
+        val (engine, p1, _) = createStartedEngine()
+        val state = engine.getCurrentState()!!
+        val card = state.cardInstances.first { it.ownerId == p1 && it.zone == Zone.HAND }
+
+        engine.executeAction(NetworkAction.MoveCard(card.instanceId, Zone.BATTLEFIELD), p1)
+        engine.executeAction(NetworkAction.AddCardCounter(card.instanceId, "+1/+1", 3), p1)
+        engine.executeAction(NetworkAction.AddCardCounter(card.instanceId, "charge", 5), p1)
+        engine.executeAction(NetworkAction.AddCardCounter(card.instanceId, "loyalty", 2), p1)
+
+        val after = engine.getCurrentState()!!
+        val updated = after.cardInstances.find { it.instanceId == card.instanceId }!!
+        assertEquals(3, updated.counters["+1/+1"])
+        assertEquals(5, updated.counters["charge"])
+        assertEquals(2, updated.counters["loyalty"])
+        assertEquals(3, updated.counters.size)
+    }
+
+    // ==================== 6-Player Game ====================
+
+    @Test
+    fun `6-player game initializes and cycles turns`() {
+        val engine = GameEngine(maxPlayers = 6)
+        val ids = (1..6).map { engine.addPlayer("P$it", createTestDeck(), isAdmin = it == 1) }
+        ids.drop(1).forEach { engine.setPlayerReady(it, true) }
+        assertTrue(engine.startGame())
+
+        val state = engine.getCurrentState()!!
+        assertEquals(6, state.players.size)
+        state.players.forEach {
+            assertEquals(GameConstants.STARTING_LIFE, it.life)
+        }
+
+        // Cycle through all 6 players
+        for (i in 0 until 6) {
+            val activeId = engine.getCurrentState()!!.activePlayer.id
+            assertEquals(ids[i], activeId)
+            engine.executeAction(NetworkAction.PassTurn, activeId)
+        }
+        // Should be back to first player
+        assertEquals(ids[0], engine.getCurrentState()!!.activePlayer.id)
+        assertEquals(7, engine.getCurrentState()!!.turnNumber)
+    }
+
+    // ==================== Multiple Concessions ====================
+
+    @Test
+    fun `multiple players can concede independently`() {
+        val engine = GameEngine(maxPlayers = 4)
+        val ids = (1..4).map { engine.addPlayer("P$it", createTestDeck(), isAdmin = it == 1) }
+        ids.drop(1).forEach { engine.setPlayerReady(it, true) }
+        assertTrue(engine.startGame())
+
+        // P2 and P4 concede
+        engine.executeAction(NetworkAction.Concede(ids[1]), ids[1])
+        engine.executeAction(NetworkAction.Concede(ids[3]), ids[3])
+
+        val state = engine.getCurrentState()!!
+        assertFalse(state.players.find { it.id == ids[0] }!!.hasLost)
+        assertTrue(state.players.find { it.id == ids[1] }!!.hasLost)
+        assertFalse(state.players.find { it.id == ids[2] }!!.hasLost)
+        assertTrue(state.players.find { it.id == ids[3] }!!.hasLost)
+    }
+
+    // ==================== Commander Damage from Multiple Sources ====================
+
+    @Test
+    fun `commander damage tracked per commander`() {
+        val (engine, p1, p2) = createStartedEngine()
+        val state = engine.getCurrentState()!!
+
+        val p1Cmd = state.cardInstances.first { it.ownerId == p1 && it.zone == Zone.COMMAND_ZONE }
+        val p2Cmd = state.cardInstances.first { it.ownerId == p2 && it.zone == Zone.COMMAND_ZONE }
+
+        // Both commanders deal damage to p1
+        engine.executeAction(NetworkAction.UpdateCommanderDamage(p1, p1Cmd.instanceId, 10), p1)
+        engine.executeAction(NetworkAction.UpdateCommanderDamage(p1, p2Cmd.instanceId, 8), p1)
+
+        val after = engine.getCurrentState()!!
+        val p1Player = after.players.find { it.id == p1 }!!
+        assertEquals(10, p1Player.commanderDamage[p1Cmd.instanceId])
+        assertEquals(8, p1Player.commanderDamage[p2Cmd.instanceId])
+        assertFalse(p1Player.hasLost, "Neither source reached 21")
+    }
+
+    @Test
+    fun `commander damage from one source reaching 21 kills even if others are low`() {
+        val (engine, p1, p2) = createStartedEngine()
+        val state = engine.getCurrentState()!!
+
+        val p1Cmd = state.cardInstances.first { it.ownerId == p1 && it.zone == Zone.COMMAND_ZONE }
+        val p2Cmd = state.cardInstances.first { it.ownerId == p2 && it.zone == Zone.COMMAND_ZONE }
+
+        // p2Cmd deals only 5 to p1
+        engine.executeAction(NetworkAction.UpdateCommanderDamage(p1, p2Cmd.instanceId, 5), p1)
+        // p1's own commander deals 21 to p1
+        engine.executeAction(NetworkAction.UpdateCommanderDamage(p1, p1Cmd.instanceId, 21), p1)
+
+        val after = engine.getCurrentState()!!
+        val p1Player = after.players.find { it.id == p1 }!!
+        assertTrue(p1Player.hasLost, "Should die from 21 damage from single commander source")
+    }
+
+    // ==================== Clone to Non-Battlefield ====================
+
+    @Test
+    fun `clone card to hand`() {
+        val (engine, p1, _) = createStartedEngine()
+        val state = engine.getCurrentState()!!
+        val card = state.cardInstances.first { it.ownerId == p1 && it.zone == Zone.HAND }
+
+        engine.executeAction(NetworkAction.MoveCard(card.instanceId, Zone.BATTLEFIELD), p1)
+
+        val handBefore = engine.getCurrentState()!!.cardInstances.count { it.ownerId == p1 && it.zone == Zone.HAND }
+
+        engine.executeAction(NetworkAction.CloneCard(card.instanceId, p1, Zone.HAND, 1), p1)
+
+        val after = engine.getCurrentState()!!
+        val handAfter = after.cardInstances.count { it.ownerId == p1 && it.zone == Zone.HAND }
+        assertEquals(handBefore + 1, handAfter)
+
+        val clone = after.cardInstances.find {
+            it.isClone && it.ownerId == p1 && it.zone == Zone.HAND
+        }
+        assertNotNull(clone)
+        assertEquals(card.card.name, clone.card.name)
+    }
+
+    // ==================== Clone Token Ceases to Exist ====================
+
+    @Test
+    fun `cloned card ceases to exist when leaving battlefield`() {
+        val (engine, p1, _) = createStartedEngine()
+        val state = engine.getCurrentState()!!
+        val card = state.cardInstances.first { it.ownerId == p1 && it.zone == Zone.HAND }
+
+        engine.executeAction(NetworkAction.MoveCard(card.instanceId, Zone.BATTLEFIELD), p1)
+        engine.executeAction(NetworkAction.CloneCard(card.instanceId, p1, Zone.BATTLEFIELD, 1), p1)
+
+        val mid = engine.getCurrentState()!!
+        val clone = mid.cardInstances.find { it.isClone && it.ownerId == p1 }!!
+
+        // Move clone off battlefield
+        engine.executeAction(NetworkAction.MoveCard(clone.instanceId, Zone.GRAVEYARD), p1)
+
+        val after = engine.getCurrentState()!!
+        assertNull(after.cardInstances.find { it.instanceId == clone.instanceId },
+            "Clone should cease to exist when leaving battlefield")
+    }
+
+    // ==================== setPlayerReady toggle ====================
+
+    @Test
+    fun `setPlayerReady can toggle off`() {
+        val engine = GameEngine()
+        engine.addPlayer("Alice", createTestDeck(), isAdmin = true)
+        val p2 = engine.addPlayer("Bob", createTestDeck())
+
+        engine.setPlayerReady(p2, true)
+        assertTrue(engine.getPlayer(p2)!!.isReady)
+
+        engine.setPlayerReady(p2, false)
+        assertFalse(engine.getPlayer(p2)!!.isReady)
+
+        // Game should not start with unready player
+        assertFalse(engine.startGame())
+    }
+
+    // ==================== getPlayerIds ====================
+
+    @Test
+    fun `getPlayerIds returns all player IDs`() {
+        val engine = GameEngine()
+        val id1 = engine.addPlayer("Alice", createTestDeck(), isAdmin = true)
+        val id2 = engine.addPlayer("Bob", createTestDeck())
+        val id3 = engine.addPlayer("Charlie", createTestDeck())
+
+        val ids = engine.getPlayerIds()
+        assertEquals(setOf(id1, id2, id3), ids)
+    }
+
+    // ==================== Edge Cases ====================
+
+    @Test
+    fun `action with nonexistent player ID fails`() {
+        val (engine, _, _) = createStartedEngine()
+
+        val result = engine.executeAction(NetworkAction.DrawCard("nonexistent"), "nonexistent")
+        assertFalse(result.success)
+        assertEquals("Player not found", result.reason)
+    }
+
+    @Test
+    fun `move nonexistent card is no-op`() {
+        val (engine, p1, _) = createStartedEngine()
+
+        // MoveCard with bad ID — executeAction succeeds but state unchanged
+        val result = engine.executeAction(NetworkAction.MoveCard("bad-card-id", Zone.GRAVEYARD), p1)
+        // Validation passes (ownership check can't find card → "Card not found")
+        assertFalse(result.success)
+        assertEquals("Card not found", result.reason)
+    }
+
+    @Test
+    fun `tap nonexistent card fails validation`() {
+        val (engine, p1, _) = createStartedEngine()
+
+        val result = engine.executeAction(NetworkAction.ToggleTap("bad-card-id"), p1)
+        assertFalse(result.success)
+        assertEquals("Card not found", result.reason)
+    }
+
+    @Test
+    fun `player counters do not go below zero`() {
+        val (engine, p1, _) = createStartedEngine()
+
+        engine.executeAction(NetworkAction.AddPlayerCounter(p1, "energy", 3), p1)
+        engine.executeAction(NetworkAction.RemovePlayerCounter(p1, "energy", 10), p1)
+
+        val state = engine.getCurrentState()!!
+        val counter = state.players.find { it.id == p1 }!!.getCounter("energy")
+        assertTrue(counter >= 0, "Player counter should not go below 0")
+    }
 }
