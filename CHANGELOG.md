@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.0.1-alpha] - 2026-03-14
+
+### Added
+- **387 automated tests** - 130 GameEngine unit tests, 8 P2P integration tests (real WebSocket), 6 dedicated server integration tests (real Netty+game codes), 13 LobbyManager tests, 28 cross-platform serialization tests, plus existing model/parser tests
+- **CI runs all tests** - Both shared module and server module tests run in CI before any build
+
+### Fixed
+- **Server module compilation** - Fixed missing WebSocket import in `Main.kt`
+- **GameRoom.startGame()** - Changed from `runBlocking` to suspend function to avoid nested coroutine issues
+
 ## [6.0.0-alpha] - 2026-03-14
 
 ### Added
