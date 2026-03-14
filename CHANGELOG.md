@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [6.0.0] - 2026-03-14
+## [6.0.0-alpha] - 2026-03-14
 
 ### Added
 - **Dedicated server mode** - New `server/` module: standalone JVM server with REST API for game management and WebSocket gameplay, deployable via Docker/Cloud Run
