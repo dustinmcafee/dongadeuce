@@ -52,12 +52,43 @@ sealed class GameMessage {
     // ==================== Lobby Messages ====================
 
     /**
-     * Host -> All: Current state of the lobby
+     * Client -> Server: Create a new game room (dedicated server mode)
+     */
+    @Serializable
+    data class CreateGame(
+        val playerName: String,
+        val deck: Deck,
+        val maxPlayers: Int = 4
+    ) : GameMessage()
+
+    /**
+     * Server -> Client: Game room created with code
+     */
+    @Serializable
+    data class GameCreated(
+        val gameCode: String,
+        val playerId: String
+    ) : GameMessage()
+
+    /**
+     * Client -> Server: Join an existing game room by code (dedicated server mode)
+     */
+    @Serializable
+    data class JoinGame(
+        val gameCode: String,
+        val playerName: String,
+        val deck: Deck
+    ) : GameMessage()
+
+    /**
+     * Host/Server -> All: Current state of the lobby
      */
     @Serializable
     data class LobbyState(
         val players: List<LobbyPlayer>,
         val hostId: String,
+        val adminId: String = "",
+        val gameCode: String = "",
         val maxPlayers: Int = 4
     ) : GameMessage()
 
@@ -179,7 +210,8 @@ data class LobbyPlayer(
     val name: String,
     val hasDeck: Boolean,
     val isReady: Boolean,
-    val isHost: Boolean = false
+    val isHost: Boolean = false,
+    val isAdmin: Boolean = false
 )
 
 /**

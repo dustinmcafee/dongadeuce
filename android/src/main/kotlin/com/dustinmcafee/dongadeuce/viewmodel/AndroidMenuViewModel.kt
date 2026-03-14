@@ -3,6 +3,7 @@ package com.dustinmcafee.dongadeuce.viewmodel
 import androidx.lifecycle.ViewModel
 import com.dustinmcafee.dongadeuce.network.GameClient
 import com.dustinmcafee.dongadeuce.network.GameServer
+import com.dustinmcafee.dongadeuce.viewmodel.ServerMode
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -125,6 +126,16 @@ class AndroidMenuViewModel : ViewModel() {
      * Resume a paused game (host only)
      */
     fun resumeGame() = delegate.resumeGame()
+
+    /**
+     * Set server mode (LAN or DEDICATED)
+     */
+    fun setServerMode(mode: ServerMode) = delegate.setServerMode(mode)
+
+    /**
+     * Set game code for joining a dedicated server game
+     */
+    fun setGameCode(code: String?) = delegate.setGameCode(code)
 
     /**
      * Return to main menu

@@ -579,10 +579,10 @@ fun HostLobbyScreen(
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
-                                if (player.isHost) "${player.name} (Host)" else player.name,
+                                if (player.isAdmin || player.isHost) "${player.name} (Host)" else player.name,
                                 style = MaterialTheme.typography.bodyMedium
                             )
-                            if (player.isReady && !player.isHost) {
+                            if (player.isReady && !player.isAdmin && !player.isHost) {
                                 Text(
                                     " Ready",
                                     style = MaterialTheme.typography.bodySmall,
@@ -591,7 +591,7 @@ fun HostLobbyScreen(
                             }
                         }
 
-                        if (!player.isHost) {
+                        if (!player.isAdmin && !player.isHost) {
                             TextButton(onClick = { viewModel.kickPlayer(player.id) }) {
                                 Text("Kick", color = MaterialTheme.colorScheme.error)
                             }
@@ -603,7 +603,7 @@ fun HostLobbyScreen(
 
         Spacer(modifier = Modifier.weight(1f))
 
-        val allReady = lobbyState?.players?.filter { !it.isHost }?.all { it.isReady } ?: false
+        val allReady = lobbyState?.players?.filter { !it.isAdmin && !it.isHost }?.all { it.isReady } ?: false
         val enoughPlayers = (lobbyState?.players?.size ?: 0) >= 2
 
         Button(
@@ -728,13 +728,13 @@ fun JoinLobbyScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                if (player.isHost) "${player.name} (Host)" else player.name,
+                                if (player.isAdmin || player.isHost) "${player.name} (Host)" else player.name,
                                 style = MaterialTheme.typography.bodyMedium
                             )
                             if (player.id == currentPlayerId) {
                                 Text(" (You)", style = MaterialTheme.typography.bodySmall)
                             }
-                            if (player.isReady && !player.isHost) {
+                            if (player.isReady && !player.isAdmin && !player.isHost) {
                                 Text(
                                     " Ready",
                                     style = MaterialTheme.typography.bodySmall,

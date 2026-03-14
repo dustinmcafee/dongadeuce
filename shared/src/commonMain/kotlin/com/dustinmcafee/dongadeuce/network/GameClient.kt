@@ -66,10 +66,14 @@ class GameClient {
         encodeDefaults = true
     }
 
+    // Game code for dedicated server mode
+    private var lastGameCode: String? = null
+
     /**
-     * Connect to a game server
+     * Connect to a game server.
+     * @param gameCode If set, connects to /game/{code} (dedicated server mode). If null, connects to /game (P2P mode).
      */
-    suspend fun connect(host: String, port: Int, playerName: String, deck: Deck): Boolean {
+    suspend fun connect(host: String, port: Int, playerName: String, deck: Deck, gameCode: String? = null): Boolean {
         if (_connectionState.value is ConnectionState.Connected ||
             _connectionState.value is ConnectionState.Connecting) {
             return false
@@ -83,13 +87,16 @@ class GameClient {
         lastPort = port
         lastPlayerName = playerName
         lastDeck = deck
+        lastGameCode = gameCode
+
+        val path = if (gameCode != null) "/game/$gameCode" else "/game"
 
         try {
             client = HttpClient(createHttpClientEngine()) {
                 install(WebSockets)
             }
 
-            client?.webSocket(host = host, port = port, path = "/game") {
+            client?.webSocket(host = host, port = port, path = path) {
                 session = this
                 _connectionState.value = ConnectionState.Connecting
 
@@ -183,6 +190,12 @@ class GameClient {
 
             is GameMessage.Chat -> {
                 // Chat messages are included in game state updates
+            }
+
+            is GameMessage.GameCreated -> {
+                // Dedicated server: game room created with code
+                _playerId.value = message.playerId
+                _connectionState.value = ConnectionState.Connected(message.playerId)
             }
 
             is GameMessage.Pong -> {
@@ -291,7 +304,7 @@ class GameClient {
         val name = lastPlayerName ?: return false
         val deck = lastDeck ?: return false
 
-        return connect(host, port, name, deck)
+        return connect(host, port, name, deck, lastGameCode)
     }
 
     /**

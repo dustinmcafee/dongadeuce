@@ -23,6 +23,14 @@ import kotlinx.coroutines.launch
 /**
  * UI state for the menu/lobby screen
  */
+/**
+ * Server mode for network games
+ */
+enum class ServerMode {
+    LAN,       // P2P / LAN: host runs embedded server
+    DEDICATED  // Dedicated server: connect to remote server
+}
+
 data class MenuUiState(
     val playerName: String = "Player 1",
     val playerCount: Int = 2, // Total players for hotseat: 2, 3, or 4
@@ -49,6 +57,10 @@ data class MenuUiState(
     val isPaused: Boolean = false,
     val pauseReason: String? = null,
     val serverUrl: String? = null, // WebSocket URL for clients to connect
+    // Server mode
+    val serverMode: ServerMode = ServerMode.LAN,
+    val gameCode: String? = null, // Game code for dedicated server mode
+    val availableGames: List<String> = emptyList(), // Available games from dedicated server
     // Commander selection state
     val pendingDeckData: ParsedDeckData? = null, // Deck waiting for commander selection
     val pendingDeckPlayerIndex: Int? = null, // Player index for hotseat (null for single deck)
@@ -708,7 +720,8 @@ class MenuViewModel {
     }
 
     /**
-     * Start hosting a game
+     * Start hosting a LAN game.
+     * Creates an embedded server, then connects to it as a regular GameClient.
      */
     fun startHosting() {
         val deck = _uiState.value.loadedDeck
@@ -720,49 +733,13 @@ class MenuViewModel {
         val port = _uiState.value.serverPort
         val playerName = _uiState.value.playerName
 
-        // Create and start the server
+        // 1. Create and start the embedded server (no host deck/name coupling)
         gameServer = GameServer(
             port = port,
-            hostName = playerName,
-            hostDeck = deck,
             maxPlayers = 4
         )
 
         val serverUrl = gameServer?.start()
-
-        // Observe server state
-        viewModelScope.launch {
-            gameServer?.lobbyState?.collect { lobby ->
-                _uiState.update { it.copy(lobbyState = lobby) }
-            }
-        }
-
-        viewModelScope.launch {
-            gameServer?.gameState?.collect { state ->
-                _uiState.update { it.copy(networkGameState = state) }
-            }
-        }
-
-        viewModelScope.launch {
-            gameServer?.gameStarted?.collect { started ->
-                _uiState.update { it.copy(isNetworkGameStarted = started) }
-                if (started) {
-                    _uiState.update { it.copy(currentScreen = Screen.Game) }
-                }
-            }
-        }
-
-        viewModelScope.launch {
-            gameServer?.isPaused?.collect { paused ->
-                _uiState.update { it.copy(isPaused = paused) }
-            }
-        }
-
-        viewModelScope.launch {
-            gameServer?.pauseReason?.collect { reason ->
-                _uiState.update { it.copy(pauseReason = reason) }
-            }
-        }
 
         _uiState.update {
             it.copy(
@@ -772,6 +749,9 @@ class MenuViewModel {
                 error = null
             )
         }
+
+        // 2. Connect to own server as a regular client
+        connectAsClient("localhost", port, playerName, deck, gameCode = null)
     }
 
     /**
@@ -797,7 +777,7 @@ class MenuViewModel {
     }
 
     /**
-     * Connect to a hosted game
+     * Connect to a hosted game (P2P or dedicated server)
      */
     fun connectToGame() {
         val deck = _uiState.value.loadedDeck
@@ -817,8 +797,18 @@ class MenuViewModel {
 
         _uiState.update { it.copy(isLoading = true, error = null) }
 
-        // Create client
-        gameClient = GameClient()
+        connectAsClient(address, port, playerName, deck, gameCode = _uiState.value.gameCode)
+    }
+
+    /**
+     * Shared connection flow: create a GameClient, observe its state, and connect.
+     * Used by both startHosting() (to localhost) and connectToGame() (to remote).
+     */
+    private fun connectAsClient(host: String, port: Int, playerName: String, deck: Deck, gameCode: String?) {
+        // Create client (reuse if already created, e.g. for host reconnect)
+        if (gameClient == null) {
+            gameClient = GameClient()
+        }
 
         // Observe client state
         viewModelScope.launch {
@@ -879,7 +869,7 @@ class MenuViewModel {
 
         // Connect to server
         viewModelScope.launch {
-            val success = gameClient?.connect(address, port, playerName, deck) ?: false
+            val success = gameClient?.connect(host, port, playerName, deck, gameCode) ?: false
             if (!success) {
                 _uiState.update {
                     it.copy(
@@ -920,6 +910,8 @@ class MenuViewModel {
                 isPaused = false,
                 pauseReason = null,
                 serverUrl = null,
+                gameCode = null,
+                availableGames = emptyList(),
                 error = null
             )
         }
@@ -969,15 +961,29 @@ class MenuViewModel {
     }
 
     /**
+     * Set server mode (LAN or DEDICATED)
+     */
+    fun setServerMode(mode: ServerMode) {
+        _uiState.update { it.copy(serverMode = mode) }
+    }
+
+    /**
+     * Set game code for joining a dedicated server game
+     */
+    fun setGameCode(code: String?) {
+        _uiState.update { it.copy(gameCode = code) }
+    }
+
+    /**
      * Check if we're the host
      */
     fun isHost(): Boolean = gameServer != null
 
     /**
-     * Get the local player ID
+     * Get the local player ID (always from GameClient now)
      */
     fun getLocalPlayerId(): String? {
-        return gameServer?.getHostId() ?: (uiState.value.connectionState as? ConnectionState.Connected)?.playerId
+        return (uiState.value.connectionState as? ConnectionState.Connected)?.playerId
     }
 
     /**

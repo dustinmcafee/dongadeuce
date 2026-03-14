@@ -35,7 +35,7 @@ data class GameUiState(
 
 class GameViewModel(
     private val networkClient: GameClient? = null,
-    private val networkServer: GameServer? = null,
+    private val networkServer: GameServer? = null, // Kept for backward compat; unused for state
     private val localPlayerId: String? = null
 ) {
     private val _uiState = MutableStateFlow(GameUiState())
@@ -45,11 +45,11 @@ class GameViewModel(
     private val viewModelScope = CoroutineScope(SupervisorJob() + ioDispatcher)
     private val scryfallApi = ScryfallApi()
 
-    // Track if we're in network mode (either as host or client)
-    val isNetworkGame: Boolean get() = networkClient != null || networkServer != null
+    // Track if we're in network mode — all players use GameClient now
+    val isNetworkGame: Boolean get() = networkClient != null
 
     init {
-        // If we have a network client (joining player), observe its state
+        // All players (including host) observe state through GameClient
         networkClient?.let { client ->
             viewModelScope.launch {
                 client.gameState.collect { gameState ->
@@ -67,29 +67,6 @@ class GameViewModel(
 
             viewModelScope.launch {
                 client.pauseReason.collect { reason ->
-                    _uiState.update { it.copy(pauseReason = reason) }
-                }
-            }
-        }
-
-        // If we have a network server (host), observe its state
-        networkServer?.let { server ->
-            viewModelScope.launch {
-                server.gameState.collect { gameState ->
-                    if (gameState != null) {
-                        handleNetworkStateUpdate(gameState)
-                    }
-                }
-            }
-
-            viewModelScope.launch {
-                server.isPaused.collect { paused ->
-                    _uiState.update { it.copy(isPaused = paused) }
-                }
-            }
-
-            viewModelScope.launch {
-                server.pauseReason.collect { reason ->
                     _uiState.update { it.copy(pauseReason = reason) }
                 }
             }
@@ -128,20 +105,12 @@ class GameViewModel(
     }
 
     /**
-     * Helper to send network action
-     * For clients: sends action to server via WebSocket
-     * For host: executes action directly on the server
+     * Helper to send network action.
+     * All players (including host) send actions through GameClient via WebSocket.
      */
     private fun sendNetworkAction(action: NetworkAction) {
         viewModelScope.launch {
-            if (networkClient != null) {
-                // Client: send to server
-                networkClient.sendAction(action)
-            } else if (networkServer != null) {
-                // Host: execute directly on server
-                val hostId = networkServer.getHostId()
-                networkServer.executeHostAction(action, hostId)
-            }
+            networkClient?.sendAction(action)
         }
     }
 

@@ -344,7 +344,7 @@ fun AndroidGameScreen(
         if (uiState.isPaused) {
             PausedOverlay(
                 pauseReason = uiState.pauseReason,
-                isHost = menuViewModel.isHost(),
+                isAdmin = menuViewModel.isHost(),
                 onResume = { menuViewModel.resumeGame() },
                 onReturnToMenu = { menuViewModel.returnToMenu() }
             )
@@ -2403,7 +2403,7 @@ private fun BottomActionBar(
 @Composable
 private fun PausedOverlay(
     pauseReason: String?,
-    isHost: Boolean,
+    isAdmin: Boolean,
     onResume: () -> Unit,
     onReturnToMenu: () -> Unit
 ) {
@@ -2425,7 +2425,7 @@ private fun PausedOverlay(
                 Text(pauseReason ?: "A player has disconnected.")
                 Spacer(modifier = Modifier.height(16.dp))
 
-                if (isHost) {
+                if (isAdmin) {
                     Button(onClick = onResume) {
                         Text("Resume Game")
                     }

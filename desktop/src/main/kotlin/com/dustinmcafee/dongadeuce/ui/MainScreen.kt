@@ -54,7 +54,7 @@ fun MainScreen(
                 viewModel = gameViewModel,
                 isPaused = uiState.isPaused,
                 pauseReason = uiState.pauseReason,
-                isHost = menuViewModel.isHost(),
+                isAdmin = menuViewModel.isHost(),
                 onResumeGame = { menuViewModel.resumeGame() },
                 onReturnToMenu = { menuViewModel.returnToMenu() }
             )
@@ -588,17 +588,17 @@ fun HostLobbyScreen(viewModel: MenuViewModel) {
                             ) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Text(
-                                        if (player.isHost) "👑 ${player.name}" else "• ${player.name}",
+                                        if (player.isAdmin || player.isHost) "👑 ${player.name}" else "• ${player.name}",
                                         style = MaterialTheme.typography.bodyMedium
                                     )
-                                    if (player.isReady && !player.isHost) {
+                                    if (player.isReady && !player.isAdmin && !player.isHost) {
                                         Text(" ✓ Ready", style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.primary)
                                     }
                                 }
 
                                 // Kick button (not for host)
-                                if (!player.isHost) {
+                                if (!player.isAdmin && !player.isHost) {
                                     TextButton(
                                         onClick = { viewModel.kickPlayer(player.id) }
                                     ) {
@@ -614,7 +614,7 @@ fun HostLobbyScreen(viewModel: MenuViewModel) {
             Spacer(modifier = Modifier.height(16.dp))
 
             // Check if all non-host players are ready
-            val allReady = lobbyState?.players?.filter { !it.isHost }?.all { it.isReady } ?: false
+            val allReady = lobbyState?.players?.filter { !it.isAdmin && !it.isHost }?.all { it.isReady } ?: false
             val enoughPlayers = (lobbyState?.players?.size ?: 0) >= 2
 
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -744,13 +744,13 @@ fun JoinLobbyScreen(viewModel: MenuViewModel) {
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    if (player.isHost) "👑 ${player.name}" else "• ${player.name}",
+                                    if (player.isAdmin || player.isHost) "👑 ${player.name}" else "• ${player.name}",
                                     style = MaterialTheme.typography.bodyMedium
                                 )
                                 if (player.id == currentPlayerId) {
                                     Text(" (You)", style = MaterialTheme.typography.bodySmall)
                                 }
-                                if (player.isReady && !player.isHost) {
+                                if (player.isReady && !player.isAdmin && !player.isHost) {
                                     Text(" ✓ Ready", style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.primary)
                                 }

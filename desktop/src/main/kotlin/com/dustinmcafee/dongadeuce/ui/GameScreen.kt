@@ -30,7 +30,7 @@ fun GameScreen(
     // Network mode parameters
     isPaused: Boolean = false,
     pauseReason: String? = null,
-    isHost: Boolean = false,
+    isAdmin: Boolean = false,
     onResumeGame: () -> Unit = {},
     onReturnToMenu: () -> Unit = {}
 ) {
@@ -1447,7 +1447,7 @@ fun GameScreen(
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        if (isHost) {
+                        if (isAdmin) {
                             "Waiting for player to reconnect. You can kick the player and resume, or return to menu."
                         } else {
                             "Waiting for the host to resolve the situation..."
@@ -1457,14 +1457,14 @@ fun GameScreen(
                 }
             },
             confirmButton = {
-                if (isHost) {
+                if (isAdmin) {
                     TextButton(onClick = onResumeGame) {
                         Text("Resume Game")
                     }
                 }
             },
             dismissButton = {
-                if (isHost) {
+                if (isAdmin) {
                     TextButton(onClick = onReturnToMenu) {
                         Text("Return to Menu")
                     }

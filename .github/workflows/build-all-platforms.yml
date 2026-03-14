@@ -112,6 +112,33 @@ jobs:
         name: linux-deb
         path: desktop/build/compose/binaries/main/deb/*.deb
 
+  build-server:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        cache: gradle
+
+    - name: Build shared JAR for server
+      run: ./gradlew :shared:jvmJar
+
+    - name: Build server shadow JAR
+      working-directory: server
+      run: ../gradlew shadowJar
+
+    - name: Upload server JAR
+      uses: actions/upload-artifact@v4
+      with:
+        name: server-jar
+        path: server/build/libs/dongadeuce-server-*-all.jar
+
   build-android:
     needs: test
     runs-on: ubuntu-latest
@@ -181,7 +208,7 @@ jobs:
         path: android/build/outputs/apk/release/dongadeuce-*.apk
 
   create-release:
-    needs: [build-windows, build-macos, build-linux, build-android]
+    needs: [build-windows, build-macos, build-linux, build-android, build-server]
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/v')
     steps:
@@ -199,6 +226,7 @@ jobs:
           artifacts/macos-dmg/*.dmg
           artifacts/linux-deb/*.deb
           artifacts/android-apk/*.apk
+          artifacts/server-jar/*.jar
         draft: false
         prerelease: false
         generate_release_notes: true

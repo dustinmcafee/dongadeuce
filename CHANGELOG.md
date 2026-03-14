@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.0.0] - 2026-03-14
+
+### Added
+- **Dedicated server mode** - New `server/` module: standalone JVM server with REST API for game management and WebSocket gameplay, deployable via Docker/Cloud Run
+- **GameEngine extraction** - Extracted all game logic (validation, execution, state management) into shared `GameEngine` class used by both P2P and dedicated server modes
+- **Game rooms with codes** - Dedicated server creates game rooms with 6-character codes for easy joining
+- **Lobby browser** - REST API (`GET /api/games`, `POST /api/games`) for browsing and creating online games
+- **Server mode selection** - New `ServerMode` enum (LAN/DEDICATED) with UI support for mode switching
+- **Admin concept** - `isAdmin` field on `LobbyPlayer` replaces hardcoded host checks; first player to connect becomes admin
+
+### Changed
+- **Host connects as client** - P2P host now connects to their own embedded server via GameClient (eliminates `executeHostAction` bypass and dual code paths)
+- **GameServer simplified** - Removed `hostName`/`hostDeck` from constructor; delegates all game logic to GameEngine
+- **Unified connection flow** - `MenuViewModel.startHosting()` and `connectToGame()` now share a single `connectAsClient()` method
+- **GameViewModel simplified** - Removed `networkServer` state observation path; all players (including host) observe state through GameClient
+- **isHost -> isAdmin** - UI components now check `isAdmin` for pause/resume controls
+
+### Protocol
+- Added `CreateGame`, `GameCreated`, `JoinGame` message types for dedicated server mode
+- Added `adminId`, `gameCode` fields to `LobbyState` (with defaults for backward compatibility)
+- Added `isAdmin` field to `LobbyPlayer` (with default for backward compatibility)
+
 ## [5.0.1] - 2026-03-13
 
 ### Added

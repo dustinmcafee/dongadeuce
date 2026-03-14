@@ -1,10 +1,10 @@
 # Dong-A-Deuce - Development TODO
 
-**Current Version:** v5.0.1
+**Current Version:** v6.0.0
 **Desktop:** 99% complete (fully playable!)
 **Android:** 99% complete (fully playable!)
-**Network Mode:** 100% complete (fully playable!)
-**Last Updated:** 2026-03-13
+**Network Mode:** 100% complete (P2P + Dedicated Server)
+**Last Updated:** 2026-03-14
 
 ---
 
@@ -124,6 +124,16 @@ These are nice-to-have features that would improve the experience but aren't req
 - [ ] Save/load deck files
 - [ ] Import/export formats (MTGO, Arena, Moxfield)
 - [ ] Deck statistics (mana curve, color distribution)
+
+### Dedicated Server Enhancements
+**Effort:** Variable
+
+- [x] Dedicated server mode with game rooms and codes
+- [x] GameEngine extraction (shared by P2P and dedicated server)
+- [x] Host connects as client (unified code path)
+- [ ] Authentication (player accounts)
+- [ ] Matchmaking (auto-pair players)
+- [ ] Server-side game persistence (reconnect to ongoing games)
 
 ### Spectator Mode
 **Effort:** 2-3 days

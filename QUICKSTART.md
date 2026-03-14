@@ -41,7 +41,7 @@ Deck format (text file):
 3. Load a deck for each player
 4. Click "Start Game"
 
-### Network Multiplayer (2-6 Players, Over Network)
+### Network Multiplayer — LAN (2-6 Players)
 
 **To Host:**
 1. Select "Network" mode
@@ -57,6 +57,33 @@ Deck format (text file):
 3. Click "Join Game"
 4. Enter the host's address and port
 5. Click "Connect", then "Ready!"
+
+### Online Play — Dedicated Server
+
+**To Host an Online Game:**
+1. Deploy the dedicated server (`server/` module) — see below
+2. In the client, set the server address to the dedicated server's hostname
+3. Click "Create Game" — you'll get a 6-character game code
+4. Share the game code with other players
+
+**To Join an Online Game:**
+1. Enter the dedicated server address
+2. Enter the game code shared by the host
+3. Click "Join Game"
+
+**Running the Dedicated Server:**
+```bash
+cd server
+../gradlew shadowJar
+java -jar build/libs/dongadeuce-server-*-all.jar
+```
+
+Or with Docker:
+```bash
+cd server
+docker build -t dongadeuce-server .
+docker run -p 9090:9090 dongadeuce-server
+```
 
 ## Game Controls
 

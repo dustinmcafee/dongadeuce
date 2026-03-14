@@ -47,7 +47,7 @@ A lightweight, cross-platform MTG Commander game client built with Kotlin and Co
 
 - **Commander-focused**: Designed specifically for EDH/Commander format
 - **Hotseat Multiplayer**: 2-6 players on the same device
-- **Network Multiplayer**: Host or join games over local network (2-6 players)
+- **Network Multiplayer**: Host or join games over LAN, or connect to a dedicated server (2-6 players)
 - **Multi-format Deck Import**: Load decks from Cockatrice (.cod), .dec, .dek, .txt, .mwDeck formats
 - **Clipboard Paste**: Paste deck lists directly from clipboard on desktop and Android
 - **Commander Selection**: Interactive dialog when importing decks without explicit commander
@@ -98,32 +98,51 @@ Android APK builds are available from GitHub Releases. Full touch support with d
 
 ```
 dongadeuce/
-├── shared/              # Shared game logic and models
+├── shared/              # Shared game logic and models (Kotlin Multiplatform)
 │   ├── models/         # Card, Deck, GameState, Player, Zone
-│   ├── network/        # WebSocket server/client, network protocol
+│   ├── network/        # GameEngine, GameServer, GameClient, protocol
 │   ├── settings/       # User settings persistence
 │   └── game/           # Game logic, deck parser
 ├── desktop/            # Compose Desktop UI
 │   ├── ui/             # UI components (game screen, zones, cards)
 │   ├── viewmodel/      # ViewModels with StateFlow (MVVM architecture)
 │   └── utils/          # Image cache, utilities
+├── android/            # Android app
+├── server/             # Dedicated game server (standalone JVM app)
+│   └── src/            # LobbyManager, GameRoom, Main, ServerConfig
+├── mcp-server/         # MCP server for AI integration
 └── resources/          # Icons and assets
 ```
 
 ## Architecture
 
-This project follows the **MVVM (Model-View-ViewModel)** pattern:
+This project follows the **MVVM (Model-View-ViewModel)** pattern with a **dual-mode networking architecture**:
+
+### Dual-Mode Networking
+
+The game supports two network modes that share the same core components:
+
+- **LAN / P2P Mode**: One player runs an embedded Ktor server; all players (including host) connect via GameClient
+- **Dedicated Server Mode**: A standalone server manages multiple game rooms; players connect by game code
+
+Shared components (zero duplication):
+- **GameEngine**: All game logic — validation, execution, state management
+- **GameClient**: All players use this to connect (even the P2P host connects to localhost)
+- **GameMessage protocol**: Identical for both modes
+
+### MVVM Layers
 
 - **Models** (`shared/models/`): Domain objects like Card, Deck, Player, GameState
-- **ViewModels** (`desktop/viewmodel/`): Manage UI state with Kotlin StateFlow
+- **ViewModels** (`shared/viewmodel/`): Manage UI state with Kotlin StateFlow
   - `GameViewModel`: Manages game state, player actions, card movements
   - `MenuViewModel`: Handles menu navigation, deck loading, lobby management
-- **Views** (`desktop/ui/`): Composable UI components that observe ViewModel state
+- **Views** (`desktop/ui/`, `android/ui/`): Composable UI components that observe ViewModel state
 
 Benefits:
 - Clean separation of concerns
 - Testable business logic
 - Reactive state management with StateFlow
+- Single code path for host and client networking
 - Easy to integrate P2P networking (ViewModels handle network events)
 
 ## Building and Running

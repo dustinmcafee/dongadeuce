@@ -31,6 +31,7 @@ This directory contains GitHub Actions workflows for building dongadeuce across 
 - Builds Windows MSI installer and JAR
 - Builds macOS DMG installer
 - Builds Linux DEB package
+- Builds dedicated server shadow JAR (Docker-deployable)
 - Creates a comprehensive GitHub release with all platform builds
 
 **Manual trigger:**
@@ -79,6 +80,7 @@ This will automatically trigger the workflows and create a GitHub release with a
 - **Windows JAR**: Cross-platform JAR (requires Java 17+)
 - **macOS DMG**: Native installer for macOS
 - **Linux DEB**: Debian/Ubuntu package
+- **Server JAR**: Dedicated game server shadow JAR (deploy with Docker or `java -jar`)
 
 ## Troubleshooting
 
