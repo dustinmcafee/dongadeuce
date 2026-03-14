@@ -269,4 +269,77 @@ class AndroidGameEngineTest {
         assertEquals(100, state.cardInstances.count { it.ownerId == p1 })
         assertEquals(100, state.cardInstances.count { it.ownerId == p2 })
     }
+
+    // ==================== Partner Commanders ====================
+
+    private fun createPartnerDeck(): Deck {
+        return Deck(
+            name = "Partner Deck",
+            commander = Card(name = "Partner A", type = "Legendary Creature", power = "3", toughness = "3"),
+            partnerCommander = Card(name = "Partner B", type = "Legendary Creature", power = "2", toughness = "2"),
+            cards = (1..98).map { i ->
+                if (i <= 35) Card(name = "Land $i", type = "Basic Land")
+                else Card(name = "Spell $i", type = "Instant")
+            }
+        )
+    }
+
+    @Test
+    fun partnerCommanders_bothInCommandZone() {
+        val engine = GameEngine(maxPlayers = 4)
+        val p1 = engine.addPlayer("Alice", createPartnerDeck(), isAdmin = true)
+        val p2 = engine.addPlayer("Bob", createTestDeck())
+        engine.setPlayerReady(p2, true)
+        assertTrue(engine.startGame())
+
+        val state = engine.getCurrentState()!!
+        val commanders = state.cardInstances.filter {
+            it.ownerId == p1 && it.zone == Zone.COMMAND_ZONE
+        }
+        assertEquals(2, commanders.size)
+        val names = commanders.map { it.card.name }.toSet()
+        assertTrue("Partner A" in names)
+        assertTrue("Partner B" in names)
+    }
+
+    @Test
+    fun partnerCommanders_totalCardCountCorrect() {
+        val engine = GameEngine(maxPlayers = 4)
+        val p1 = engine.addPlayer("Alice", createPartnerDeck(), isAdmin = true)
+        val p2 = engine.addPlayer("Bob", createTestDeck())
+        engine.setPlayerReady(p2, true)
+        assertTrue(engine.startGame())
+
+        val state = engine.getCurrentState()!!
+        // 98 cards + 2 commanders = 100
+        assertEquals(100, state.cardInstances.count { it.ownerId == p1 })
+        // 7 hand + 91 library + 2 command zone = 100
+        assertEquals(7, state.cardInstances.count { it.ownerId == p1 && it.zone == Zone.HAND })
+        assertEquals(91, state.cardInstances.count { it.ownerId == p1 && it.zone == Zone.LIBRARY })
+        assertEquals(2, state.cardInstances.count { it.ownerId == p1 && it.zone == Zone.COMMAND_ZONE })
+    }
+
+    @Test
+    fun partnerCommanders_canBePlayedIndependently() {
+        val engine = GameEngine(maxPlayers = 4)
+        val p1 = engine.addPlayer("Alice", createPartnerDeck(), isAdmin = true)
+        val p2 = engine.addPlayer("Bob", createTestDeck())
+        engine.setPlayerReady(p2, true)
+        assertTrue(engine.startGame())
+
+        val state = engine.getCurrentState()!!
+        val cmdA = state.cardInstances.first {
+            it.ownerId == p1 && it.zone == Zone.COMMAND_ZONE && it.card.name == "Partner A"
+        }
+        val cmdB = state.cardInstances.first {
+            it.ownerId == p1 && it.zone == Zone.COMMAND_ZONE && it.card.name == "Partner B"
+        }
+
+        // Play Partner A to battlefield
+        engine.executeAction(NetworkAction.MoveCard(cmdA.instanceId, Zone.BATTLEFIELD), p1)
+
+        val after = engine.getCurrentState()!!
+        assertEquals(Zone.BATTLEFIELD, after.cardInstances.find { it.instanceId == cmdA.instanceId }!!.zone)
+        assertEquals(Zone.COMMAND_ZONE, after.cardInstances.find { it.instanceId == cmdB.instanceId }!!.zone)
+    }
 }

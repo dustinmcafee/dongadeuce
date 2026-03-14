@@ -375,12 +375,12 @@ class CrossPlatformSerializationTest {
         val deck = Deck(
             name = "SB Deck",
             commander = Card(name = "Commander", type = "Legendary Creature"),
-            cards = (1..84).map { Card(name = "Card $it") },
+            cards = (1..99).map { Card(name = "Card $it") },
             sideboard = (1..15).map { Card(name = "SB Card $it") }
         )
         val serialized = json.encodeToString(deck)
         val deserialized = json.decodeFromString<Deck>(serialized)
-        assertEquals(84, deserialized.cards.size)
+        assertEquals(99, deserialized.cards.size)
         assertEquals(15, deserialized.sideboard.size)
     }
 
