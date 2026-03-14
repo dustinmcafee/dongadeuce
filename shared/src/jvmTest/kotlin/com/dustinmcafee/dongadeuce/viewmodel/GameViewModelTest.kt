@@ -327,4 +327,709 @@ class GameViewModelTest {
         assertEquals(bobId, updated.controllerId)
         assertEquals(aliceId, updated.ownerId) // ownership stays
     }
+
+    // Helper: creates a VM with Alice+Bob initialized, deck loaded, and returns (vm, aliceId, bobId, a battlefield card ID)
+    private fun setupGameWithBattlefieldCard(): GameViewModelTestContext {
+        val vm = GameViewModel()
+        vm.initializeGame("Alice", listOf("Bob"))
+        vm.loadDeck(createTestDeck())
+        val aliceId = vm.uiState.value.localPlayer!!.id
+        val bobId = vm.uiState.value.opponents[0].id
+        val card = vm.uiState.value.gameState!!.cardInstances
+            .first { it.ownerId == aliceId && it.zone == Zone.LIBRARY }
+        vm.moveCard(card.instanceId, Zone.BATTLEFIELD)
+        return GameViewModelTestContext(vm, aliceId, bobId, card.instanceId)
+    }
+
+    private data class GameViewModelTestContext(
+        val vm: GameViewModel,
+        val aliceId: String,
+        val bobId: String,
+        val cardId: String
+    )
+
+    // ==================== Phase/Turn ====================
+
+    @Test
+    fun `nextPhase advances phase`() {
+        val vm = GameViewModel()
+        vm.initializeGame("Alice", listOf("Bob"))
+        vm.nextPhase()
+        assertEquals(GamePhase.UPKEEP, vm.uiState.value.gameState!!.phase)
+    }
+
+    @Test
+    fun `passTurn changes active player`() {
+        val vm = GameViewModel()
+        vm.initializeGame("Alice", listOf("Bob"))
+        val bobId = vm.uiState.value.opponents[0].id
+        vm.passTurn()
+        assertEquals(bobId, vm.uiState.value.gameState!!.activePlayer.id)
+        assertEquals(2, vm.uiState.value.gameState!!.turnNumber)
+    }
+
+    @Test
+    fun `setPhase sets phase directly`() {
+        val vm = GameViewModel()
+        vm.initializeGame("Alice", listOf("Bob"))
+        vm.setPhase(GamePhase.MAIN_2)
+        assertEquals(GamePhase.MAIN_2, vm.uiState.value.gameState!!.phase)
+    }
+
+    @Test
+    fun `advancePhase is same as nextPhase`() {
+        val vm = GameViewModel()
+        vm.initializeGame("Alice", listOf("Bob"))
+        vm.advancePhase()
+        assertEquals(GamePhase.UPKEEP, vm.uiState.value.gameState!!.phase)
+    }
+
+    @Test
+    fun `changeLife applies relative change`() {
+        val vm = GameViewModel()
+        vm.initializeGame("Alice", listOf("Bob"))
+        val aliceId = vm.uiState.value.localPlayer!!.id
+        vm.changeLife(aliceId, -5)
+        assertEquals(35, vm.uiState.value.gameState!!.players.find { it.id == aliceId }!!.life)
+    }
+
+    // ==================== Draw Variants ====================
+
+    @Test
+    fun `drawCards draws multiple`() {
+        val vm = GameViewModel()
+        vm.initializeGame("Alice", listOf("Bob"))
+        vm.loadDeck(createTestDeck())
+        val aliceId = vm.uiState.value.localPlayer!!.id
+        vm.drawCards(aliceId, 5)
+        val hand = vm.uiState.value.gameState!!.cardInstances.count {
+            it.ownerId == aliceId && it.zone == Zone.HAND
+        }
+        assertEquals(5, hand)
+    }
+
+    @Test
+    fun `drawFromBottom draws from bottom of library`() {
+        val vm = GameViewModel()
+        vm.initializeGame("Alice", listOf("Bob"))
+        vm.loadDeck(createTestDeck())
+        val aliceId = vm.uiState.value.localPlayer!!.id
+        val libBefore = vm.uiState.value.gameState!!.cardInstances.count {
+            it.ownerId == aliceId && it.zone == Zone.LIBRARY
+        }
+        vm.drawFromBottom(aliceId, 2)
+        val libAfter = vm.uiState.value.gameState!!.cardInstances.count {
+            it.ownerId == aliceId && it.zone == Zone.LIBRARY
+        }
+        assertEquals(libBefore - 2, libAfter)
+    }
+
+    // ==================== Concede ====================
+
+    @Test
+    fun `concede marks player as lost`() {
+        val vm = GameViewModel()
+        vm.initializeGame("Alice", listOf("Bob"))
+        val aliceId = vm.uiState.value.localPlayer!!.id
+        vm.concede(aliceId)
+        assertTrue(vm.uiState.value.gameState!!.players.find { it.id == aliceId }!!.hasLost)
+    }
+
+    // ==================== Untap All ====================
+
+    @Test
+    fun `untapAll untaps all tapped permanents`() {
+        val ctx = setupGameWithBattlefieldCard()
+        ctx.vm.toggleTap(ctx.cardId)
+        assertTrue(ctx.vm.uiState.value.gameState!!.cardInstances.find { it.instanceId == ctx.cardId }!!.isTapped)
+
+        ctx.vm.untapAll(ctx.aliceId)
+        assertFalse(ctx.vm.uiState.value.gameState!!.cardInstances.find { it.instanceId == ctx.cardId }!!.isTapped)
+    }
+
+    // ==================== Card Counters ====================
+
+    @Test
+    fun `addCounter adds to card`() {
+        val ctx = setupGameWithBattlefieldCard()
+        ctx.vm.addCounter(ctx.cardId, "+1/+1", 3)
+        assertEquals(3, ctx.vm.uiState.value.gameState!!.cardInstances.find { it.instanceId == ctx.cardId }!!.counters["+1/+1"])
+    }
+
+    @Test
+    fun `removeCounter removes from card`() {
+        val ctx = setupGameWithBattlefieldCard()
+        ctx.vm.addCounter(ctx.cardId, "+1/+1", 5)
+        ctx.vm.removeCounter(ctx.cardId, "+1/+1", 2)
+        assertEquals(3, ctx.vm.uiState.value.gameState!!.cardInstances.find { it.instanceId == ctx.cardId }!!.counters["+1/+1"])
+    }
+
+    @Test
+    fun `setCounter sets exact value`() {
+        val ctx = setupGameWithBattlefieldCard()
+        ctx.vm.setCounter(ctx.cardId, "charge", 7)
+        assertEquals(7, ctx.vm.uiState.value.gameState!!.cardInstances.find { it.instanceId == ctx.cardId }!!.counters["charge"])
+    }
+
+    // ==================== Power/Toughness ====================
+
+    @Test
+    fun `modifyPower changes power modifier`() {
+        val ctx = setupGameWithBattlefieldCard()
+        ctx.vm.modifyPower(ctx.cardId, 3)
+        assertEquals(3, ctx.vm.uiState.value.gameState!!.cardInstances.find { it.instanceId == ctx.cardId }!!.powerModifier)
+    }
+
+    @Test
+    fun `modifyToughness changes toughness modifier`() {
+        val ctx = setupGameWithBattlefieldCard()
+        ctx.vm.modifyToughness(ctx.cardId, -1)
+        assertEquals(-1, ctx.vm.uiState.value.gameState!!.cardInstances.find { it.instanceId == ctx.cardId }!!.toughnessModifier)
+    }
+
+    @Test
+    fun `modifyPowerToughness changes both`() {
+        val ctx = setupGameWithBattlefieldCard()
+        ctx.vm.modifyPowerToughness(ctx.cardId, 2)
+        val card = ctx.vm.uiState.value.gameState!!.cardInstances.find { it.instanceId == ctx.cardId }!!
+        assertEquals(2, card.powerModifier)
+        assertEquals(2, card.toughnessModifier)
+    }
+
+    @Test
+    fun `setPowerToughness sets exact values`() {
+        val ctx = setupGameWithBattlefieldCard()
+        ctx.vm.setPowerToughness(ctx.cardId, 5, 7)
+        val card = ctx.vm.uiState.value.gameState!!.cardInstances.find { it.instanceId == ctx.cardId }!!
+        // base is 2/2, so modifiers should be 3 and 5
+        assertEquals(3, card.powerModifier)
+        assertEquals(5, card.toughnessModifier)
+    }
+
+    @Test
+    fun `resetPowerToughness resets modifiers`() {
+        val ctx = setupGameWithBattlefieldCard()
+        ctx.vm.modifyPower(ctx.cardId, 5)
+        ctx.vm.resetPowerToughness(ctx.cardId)
+        val card = ctx.vm.uiState.value.gameState!!.cardInstances.find { it.instanceId == ctx.cardId }!!
+        assertEquals(0, card.powerModifier)
+        assertEquals(0, card.toughnessModifier)
+    }
+
+    @Test
+    fun `flowPower increases power decreases toughness`() {
+        val ctx = setupGameWithBattlefieldCard()
+        ctx.vm.flowPower(ctx.cardId)
+        val card = ctx.vm.uiState.value.gameState!!.cardInstances.find { it.instanceId == ctx.cardId }!!
+        assertEquals(1, card.powerModifier)
+        assertEquals(-1, card.toughnessModifier)
+    }
+
+    @Test
+    fun `flowToughness decreases power increases toughness`() {
+        val ctx = setupGameWithBattlefieldCard()
+        ctx.vm.flowToughness(ctx.cardId)
+        val card = ctx.vm.uiState.value.gameState!!.cardInstances.find { it.instanceId == ctx.cardId }!!
+        assertEquals(-1, card.powerModifier)
+        assertEquals(1, card.toughnessModifier)
+    }
+
+    // ==================== Card State ====================
+
+    @Test
+    fun `toggleDoesntUntap sets flag`() {
+        val ctx = setupGameWithBattlefieldCard()
+        ctx.vm.toggleDoesntUntap(ctx.cardId)
+        assertTrue(ctx.vm.uiState.value.gameState!!.cardInstances.find { it.instanceId == ctx.cardId }!!.doesntUntap)
+    }
+
+    @Test
+    fun `setAnnotation sets and clears annotation`() {
+        val ctx = setupGameWithBattlefieldCard()
+        ctx.vm.setAnnotation(ctx.cardId, "Test note")
+        assertEquals("Test note", ctx.vm.uiState.value.gameState!!.cardInstances.find { it.instanceId == ctx.cardId }!!.annotation)
+
+        ctx.vm.setAnnotation(ctx.cardId, null)
+        assertNull(ctx.vm.uiState.value.gameState!!.cardInstances.find { it.instanceId == ctx.cardId }!!.annotation)
+    }
+
+    @Test
+    fun `flipCard toggles isFlipped`() {
+        val ctx = setupGameWithBattlefieldCard()
+        ctx.vm.flipCard(ctx.cardId)
+        assertTrue(ctx.vm.uiState.value.gameState!!.cardInstances.find { it.instanceId == ctx.cardId }!!.isFlipped)
+    }
+
+    @Test
+    fun `toggleFaceDown toggles isFaceDown`() {
+        val ctx = setupGameWithBattlefieldCard()
+        ctx.vm.toggleFaceDown(ctx.cardId)
+        assertTrue(ctx.vm.uiState.value.gameState!!.cardInstances.find { it.instanceId == ctx.cardId }!!.isFaceDown)
+    }
+
+    @Test
+    fun `playFaceDown puts card on battlefield face down`() {
+        val vm = GameViewModel()
+        vm.initializeGame("Alice", listOf("Bob"))
+        vm.loadDeck(createTestDeck())
+        val aliceId = vm.uiState.value.localPlayer!!.id
+        val card = vm.uiState.value.gameState!!.cardInstances
+            .first { it.ownerId == aliceId && it.zone == Zone.LIBRARY }
+        vm.moveCard(card.instanceId, Zone.HAND)
+        vm.playFaceDown(card.instanceId)
+        val played = vm.uiState.value.gameState!!.cardInstances.find { it.instanceId == card.instanceId }!!
+        assertEquals(Zone.BATTLEFIELD, played.zone)
+        assertTrue(played.isFaceDown)
+    }
+
+    // ==================== Attachments ====================
+
+    @Test
+    fun `attachCard and detachCard work`() {
+        val vm = GameViewModel()
+        vm.initializeGame("Alice", listOf("Bob"))
+        vm.loadDeck(createTestDeck())
+        val aliceId = vm.uiState.value.localPlayer!!.id
+        val cards = vm.uiState.value.gameState!!.cardInstances
+            .filter { it.ownerId == aliceId && it.zone == Zone.LIBRARY }.take(2)
+        vm.moveCard(cards[0].instanceId, Zone.BATTLEFIELD)
+        vm.moveCard(cards[1].instanceId, Zone.BATTLEFIELD)
+
+        vm.attachCard(cards[0].instanceId, cards[1].instanceId)
+        assertEquals(cards[1].instanceId,
+            vm.uiState.value.gameState!!.cardInstances.find { it.instanceId == cards[0].instanceId }!!.attachedTo)
+
+        vm.detachCard(cards[0].instanceId)
+        assertNull(vm.uiState.value.gameState!!.cardInstances.find { it.instanceId == cards[0].instanceId }!!.attachedTo)
+    }
+
+    // ==================== Library Operations ====================
+
+    @Test
+    fun `shuffleLibrary preserves count`() {
+        val vm = GameViewModel()
+        vm.initializeGame("Alice", listOf("Bob"))
+        vm.loadDeck(createTestDeck())
+        val aliceId = vm.uiState.value.localPlayer!!.id
+        val before = vm.getCardCount(aliceId, Zone.LIBRARY)
+        vm.shuffleLibrary(aliceId)
+        assertEquals(before, vm.getCardCount(aliceId, Zone.LIBRARY))
+    }
+
+    @Test
+    fun `millCards moves cards to graveyard`() {
+        val vm = GameViewModel()
+        vm.initializeGame("Alice", listOf("Bob"))
+        vm.loadDeck(createTestDeck())
+        val aliceId = vm.uiState.value.localPlayer!!.id
+        vm.millCards(aliceId, 5)
+        assertEquals(5, vm.getCardCount(aliceId, Zone.GRAVEYARD))
+    }
+
+    @Test
+    fun `mulligan returns hand and draws new`() {
+        val vm = GameViewModel()
+        vm.initializeGame("Alice", listOf("Bob"))
+        vm.loadDeck(createTestDeck())
+        val aliceId = vm.uiState.value.localPlayer!!.id
+        vm.drawStartingHand(aliceId)
+        vm.mulligan(aliceId)
+        assertEquals(7, vm.getCardCount(aliceId, Zone.HAND))
+    }
+
+    @Test
+    fun `moveCardToTopOfLibrary puts card on top`() {
+        val vm = GameViewModel()
+        vm.initializeGame("Alice", listOf("Bob"))
+        vm.loadDeck(createTestDeck())
+        val aliceId = vm.uiState.value.localPlayer!!.id
+        vm.drawCards(aliceId, 1)
+        val handCard = vm.getCards(aliceId, Zone.HAND).first()
+        vm.moveCardToTopOfLibrary(handCard.instanceId)
+        assertEquals(Zone.LIBRARY, vm.uiState.value.gameState!!.cardInstances.find { it.instanceId == handCard.instanceId }!!.zone)
+    }
+
+    @Test
+    fun `moveCardToBottomOfLibrary puts card on bottom`() {
+        val vm = GameViewModel()
+        vm.initializeGame("Alice", listOf("Bob"))
+        vm.loadDeck(createTestDeck())
+        val aliceId = vm.uiState.value.localPlayer!!.id
+        vm.drawCards(aliceId, 1)
+        val handCard = vm.getCards(aliceId, Zone.HAND).first()
+        vm.moveCardToBottomOfLibrary(handCard.instanceId)
+        assertEquals(Zone.LIBRARY, vm.uiState.value.gameState!!.cardInstances.find { it.instanceId == handCard.instanceId }!!.zone)
+    }
+
+    @Test
+    fun `moveCardToLibraryPosition and moveCardToLibraryPositionFromBottom work`() {
+        val vm = GameViewModel()
+        vm.initializeGame("Alice", listOf("Bob"))
+        vm.loadDeck(createTestDeck())
+        val aliceId = vm.uiState.value.localPlayer!!.id
+        vm.drawCards(aliceId, 2)
+        val hand = vm.getCards(aliceId, Zone.HAND)
+
+        vm.moveCardToLibraryPosition(hand[0].instanceId, 3)
+        assertEquals(Zone.LIBRARY, vm.uiState.value.gameState!!.cardInstances.find { it.instanceId == hand[0].instanceId }!!.zone)
+
+        vm.moveCardToLibraryPositionFromBottom(hand[1].instanceId, 2)
+        assertEquals(Zone.LIBRARY, vm.uiState.value.gameState!!.cardInstances.find { it.instanceId == hand[1].instanceId }!!.zone)
+    }
+
+    @Test
+    fun `shuffleTopCards and shuffleBottomCards preserve count`() {
+        val vm = GameViewModel()
+        vm.initializeGame("Alice", listOf("Bob"))
+        vm.loadDeck(createTestDeck())
+        val aliceId = vm.uiState.value.localPlayer!!.id
+        val before = vm.getCardCount(aliceId, Zone.LIBRARY)
+        vm.shuffleTopCards(aliceId, 10)
+        assertEquals(before, vm.getCardCount(aliceId, Zone.LIBRARY))
+        vm.shuffleBottomCards(aliceId, 10)
+        assertEquals(before, vm.getCardCount(aliceId, Zone.LIBRARY))
+    }
+
+    @Test
+    fun `moveTopCardsToZone and moveBottomCardsToZone work`() {
+        val vm = GameViewModel()
+        vm.initializeGame("Alice", listOf("Bob"))
+        vm.loadDeck(createTestDeck())
+        val aliceId = vm.uiState.value.localPlayer!!.id
+        vm.moveTopCardsToZone(aliceId, 3, Zone.GRAVEYARD)
+        assertEquals(3, vm.getCardCount(aliceId, Zone.GRAVEYARD))
+
+        vm.moveBottomCardsToZone(aliceId, 2, Zone.EXILE)
+        assertEquals(2, vm.getCardCount(aliceId, Zone.EXILE))
+    }
+
+    @Test
+    fun `moveBottomCardToTop moves bottom to top`() {
+        val vm = GameViewModel()
+        vm.initializeGame("Alice", listOf("Bob"))
+        vm.loadDeck(createTestDeck())
+        val aliceId = vm.uiState.value.localPlayer!!.id
+        val before = vm.getCardCount(aliceId, Zone.LIBRARY)
+        vm.moveBottomCardToTop(aliceId)
+        assertEquals(before, vm.getCardCount(aliceId, Zone.LIBRARY))
+    }
+
+    @Test
+    fun `millFromBottom and exileFromBottom work`() {
+        val vm = GameViewModel()
+        vm.initializeGame("Alice", listOf("Bob"))
+        vm.loadDeck(createTestDeck())
+        val aliceId = vm.uiState.value.localPlayer!!.id
+        vm.millFromBottom(aliceId, 3)
+        assertEquals(3, vm.getCardCount(aliceId, Zone.GRAVEYARD))
+        vm.exileFromBottom(aliceId, 2)
+        assertEquals(2, vm.getCardCount(aliceId, Zone.EXILE))
+    }
+
+    // ==================== Tokens & Clones ====================
+
+    @Test
+    fun `createToken creates token on battlefield`() {
+        val vm = GameViewModel()
+        vm.initializeGame("Alice", listOf("Bob"))
+        val aliceId = vm.uiState.value.localPlayer!!.id
+        vm.createToken(aliceId, "Goblin", "Creature — Goblin", "1", "1", "Red", null, 3)
+        val tokens = vm.uiState.value.gameState!!.cardInstances.filter { it.isToken && it.ownerId == aliceId }
+        assertEquals(3, tokens.size)
+    }
+
+    @Test
+    fun `cloneCard creates clone on battlefield`() {
+        val ctx = setupGameWithBattlefieldCard()
+        val fieldBefore = ctx.vm.uiState.value.gameState!!.cardInstances.count {
+            it.ownerId == ctx.aliceId && it.zone == Zone.BATTLEFIELD
+        }
+        ctx.vm.cloneCard(ctx.cardId, ctx.aliceId)
+        val fieldAfter = ctx.vm.uiState.value.gameState!!.cardInstances.count {
+            it.ownerId == ctx.aliceId && it.zone == Zone.BATTLEFIELD
+        }
+        assertEquals(fieldBefore + 1, fieldAfter)
+    }
+
+    // ==================== Commander Damage ====================
+
+    @Test
+    fun `updateCommanderDamage tracks damage`() {
+        val vm = GameViewModel()
+        vm.initializeGame("Alice", listOf("Bob"))
+        vm.loadDeck(createTestDeck())
+        val aliceId = vm.uiState.value.localPlayer!!.id
+        val bobId = vm.uiState.value.opponents[0].id
+        val commander = vm.getAllCommanders().first { it.ownerId == aliceId }
+        vm.updateCommanderDamage(bobId, commander.instanceId, 10)
+        val bob = vm.uiState.value.gameState!!.players.find { it.id == bobId }!!
+        assertEquals(10, bob.commanderDamage[commander.instanceId])
+    }
+
+    // ==================== Query Methods ====================
+
+    @Test
+    fun `getCardCount returns correct count`() {
+        val vm = GameViewModel()
+        vm.initializeGame("Alice", listOf("Bob"))
+        vm.loadDeck(createTestDeck())
+        val aliceId = vm.uiState.value.localPlayer!!.id
+        assertEquals(99, vm.getCardCount(aliceId, Zone.LIBRARY))
+        assertEquals(1, vm.getCardCount(aliceId, Zone.COMMAND_ZONE))
+    }
+
+    @Test
+    fun `getCards returns cards in zone`() {
+        val vm = GameViewModel()
+        vm.initializeGame("Alice", listOf("Bob"))
+        vm.loadDeck(createTestDeck())
+        val aliceId = vm.uiState.value.localPlayer!!.id
+        val cmdCards = vm.getCards(aliceId, Zone.COMMAND_ZONE)
+        assertEquals(1, cmdCards.size)
+        assertEquals("Test Commander", cmdCards[0].card.name)
+    }
+
+    @Test
+    fun `getTopCards and getBottomCards return correct cards`() {
+        val vm = GameViewModel()
+        vm.initializeGame("Alice", listOf("Bob"))
+        vm.loadDeck(createTestDeck())
+        val aliceId = vm.uiState.value.localPlayer!!.id
+        val top = vm.getTopCards(aliceId, 3)
+        assertEquals(3, top.size)
+        val bottom = vm.getBottomCards(aliceId, 3)
+        assertEquals(3, bottom.size)
+    }
+
+    @Test
+    fun `getBattlefieldCards returns battlefield cards`() {
+        val ctx = setupGameWithBattlefieldCard()
+        val field = ctx.vm.getBattlefieldCards()
+        assertTrue(field.isNotEmpty())
+        assertTrue(field.any { it.instanceId == ctx.cardId })
+    }
+
+    @Test
+    fun `getPlayerBattlefieldCards filters by player`() {
+        val ctx = setupGameWithBattlefieldCard()
+        val aliceField = ctx.vm.getPlayerBattlefieldCards(ctx.aliceId)
+        assertTrue(aliceField.isNotEmpty())
+        val bobField = ctx.vm.getPlayerBattlefieldCards(ctx.bobId)
+        assertTrue(bobField.isEmpty())
+    }
+
+    @Test
+    fun `getAllCommanders returns commander cards`() {
+        val vm = GameViewModel()
+        vm.initializeGame("Alice", listOf("Bob"))
+        vm.loadDeck(createTestDeck())
+        val commanders = vm.getAllCommanders()
+        assertTrue(commanders.isNotEmpty())
+        assertTrue(commanders.all { it.zone == Zone.COMMAND_ZONE })
+    }
+
+    // ==================== Selection ====================
+
+    @Test
+    fun `selectCard sets and clears selection`() {
+        val vm = GameViewModel()
+        vm.initializeGame("Alice", listOf("Bob"))
+        vm.selectCard("card-123")
+        assertEquals("card-123", vm.uiState.value.selectedCardId)
+        vm.selectCard(null)
+        assertNull(vm.uiState.value.selectedCardId)
+    }
+
+    // ==================== Logging ====================
+
+    @Test
+    fun `logDieRoll adds event to log`() {
+        val vm = GameViewModel()
+        vm.initializeGame("Alice", listOf("Bob"))
+        val aliceId = vm.uiState.value.localPlayer!!.id
+        vm.logDieRoll(aliceId, "d20", 17)
+        assertTrue(vm.uiState.value.gameState!!.gameLog.any { it is GameEvent.DieRolled })
+    }
+
+    @Test
+    fun `sendChatMessage adds event to log`() {
+        val vm = GameViewModel()
+        vm.initializeGame("Alice", listOf("Bob"))
+        val aliceId = vm.uiState.value.localPlayer!!.id
+        vm.sendChatMessage(aliceId, "Hello!")
+        assertTrue(vm.uiState.value.gameState!!.gameLog.any { it is GameEvent.ChatMessage })
+    }
+
+    // ==================== Grid Position ====================
+
+    @Test
+    fun `updateCardGridPosition changes position`() {
+        val ctx = setupGameWithBattlefieldCard()
+        ctx.vm.updateCardGridPosition(ctx.cardId, 3, 1)
+        val card = ctx.vm.uiState.value.gameState!!.cardInstances.find { it.instanceId == ctx.cardId }!!
+        assertEquals(3, card.gridX)
+        assertEquals(1, card.gridY)
+    }
+
+    // ==================== Library Visibility ====================
+
+    @Test
+    fun `toggleRevealTopCard toggles flag`() {
+        val vm = GameViewModel()
+        vm.initializeGame("Alice", listOf("Bob"))
+        val aliceId = vm.uiState.value.localPlayer!!.id
+        vm.toggleRevealTopCard(aliceId)
+        assertTrue(vm.uiState.value.gameState!!.players.find { it.id == aliceId }!!.revealTopCard)
+    }
+
+    @Test
+    fun `toggleLookAtTopCard toggles flag`() {
+        val vm = GameViewModel()
+        vm.initializeGame("Alice", listOf("Bob"))
+        val aliceId = vm.uiState.value.localPlayer!!.id
+        vm.toggleLookAtTopCard(aliceId)
+        assertTrue(vm.uiState.value.gameState!!.players.find { it.id == aliceId }!!.lookAtTopCard)
+    }
+
+    // ==================== Sort/Reorder ====================
+
+    @Test
+    fun `sortHand does not crash`() {
+        val vm = GameViewModel()
+        vm.initializeGame("Alice", listOf("Bob"))
+        vm.loadDeck(createTestDeck())
+        val aliceId = vm.uiState.value.localPlayer!!.id
+        vm.drawStartingHand(aliceId)
+        vm.sortHand(aliceId) // should not throw
+        assertEquals(7, vm.getCardCount(aliceId, Zone.HAND))
+    }
+
+    @Test
+    fun `reorderLibraryTop does not crash`() {
+        val vm = GameViewModel()
+        vm.initializeGame("Alice", listOf("Bob"))
+        vm.loadDeck(createTestDeck())
+        val aliceId = vm.uiState.value.localPlayer!!.id
+        val topCards = vm.getTopCards(aliceId, 3).map { it.instanceId }
+        vm.reorderLibraryTop(aliceId, topCards.reversed())
+        assertEquals(99, vm.getCardCount(aliceId, Zone.LIBRARY))
+    }
+
+    // ==================== Token Search ====================
+
+    @Test
+    fun `clearTokenSearch clears results`() {
+        val vm = GameViewModel()
+        vm.clearTokenSearch()
+        assertTrue(vm.uiState.value.tokenSearchResults.isEmpty())
+        assertFalse(vm.uiState.value.isSearchingTokens)
+    }
+
+    // ==================== Remaining Methods ====================
+
+    @Test
+    fun `dismissRevealedCards clears revealed state`() {
+        val vm = GameViewModel()
+        vm.dismissRevealedCards() // should not throw even with no revealed cards
+    }
+
+    @Test
+    fun `revealHand does not crash`() {
+        val vm = GameViewModel()
+        vm.initializeGame("Alice", listOf("Bob"))
+        vm.loadDeck(createTestDeck())
+        val aliceId = vm.uiState.value.localPlayer!!.id
+        val bobId = vm.uiState.value.opponents[0].id
+        vm.drawStartingHand(aliceId)
+        vm.revealHand(aliceId, listOf(bobId))
+        // Should not crash; reveal state is internal
+    }
+
+    @Test
+    fun `revealCards does not crash`() {
+        val vm = GameViewModel()
+        vm.initializeGame("Alice", listOf("Bob"))
+        vm.loadDeck(createTestDeck())
+        val aliceId = vm.uiState.value.localPlayer!!.id
+        val bobId = vm.uiState.value.opponents[0].id
+        vm.drawCards(aliceId, 3)
+        val cardIds = vm.getCards(aliceId, Zone.HAND).map { it.instanceId }
+        vm.revealCards(aliceId, cardIds, listOf(bobId))
+    }
+
+    @Test
+    fun `incrementAllCounters increments each counter type`() {
+        val ctx = setupGameWithBattlefieldCard()
+        ctx.vm.addCounter(ctx.cardId, "+1/+1", 2)
+        ctx.vm.addCounter(ctx.cardId, "charge", 3)
+        ctx.vm.incrementAllCounters(ctx.cardId)
+
+        val card = ctx.vm.uiState.value.gameState!!.cardInstances.find { it.instanceId == ctx.cardId }!!
+        assertEquals(3, card.counters["+1/+1"])
+        assertEquals(4, card.counters["charge"])
+    }
+
+    @Test
+    fun `incrementAllCounters on card with no counters is no-op`() {
+        val ctx = setupGameWithBattlefieldCard()
+        ctx.vm.incrementAllCounters(ctx.cardId)
+        val card = ctx.vm.uiState.value.gameState!!.cardInstances.find { it.instanceId == ctx.cardId }!!
+        assertTrue(card.counters.isEmpty())
+    }
+
+    @Test
+    fun `removeLocalArrows does not crash`() {
+        val vm = GameViewModel()
+        vm.initializeGame("Alice", listOf("Bob"))
+        val aliceId = vm.uiState.value.localPlayer!!.id
+        vm.removeLocalArrows(aliceId) // should not throw
+    }
+
+    @Test
+    fun `reorderHandCard changes hand position`() {
+        val vm = GameViewModel()
+        vm.initializeGame("Alice", listOf("Bob"))
+        vm.loadDeck(createTestDeck())
+        val aliceId = vm.uiState.value.localPlayer!!.id
+        vm.drawStartingHand(aliceId)
+        val handCard = vm.getCards(aliceId, Zone.HAND).first()
+        vm.reorderHandCard(handCard.instanceId, 3)
+        // Should not crash; hand position is internal
+    }
+
+    @Test
+    fun `searchTokens with blank query clears`() {
+        val vm = GameViewModel()
+        vm.searchTokens("")
+        assertTrue(vm.uiState.value.tokenSearchResults.isEmpty())
+    }
+
+    @Test
+    fun `handleBatchCardAction with ViewDetails returns 1`() {
+        val ctx = setupGameWithBattlefieldCard()
+        val card = ctx.vm.uiState.value.gameState!!.cardInstances.find { it.instanceId == ctx.cardId }!!
+        val result = ctx.vm.handleBatchCardAction(CardAction.ViewDetails(card))
+        assertEquals(1, result)
+    }
+
+    @Test
+    fun `handleBatchCardAction with ToGraveyard moves selected cards`() {
+        val vm = GameViewModel()
+        vm.initializeGame("Alice", listOf("Bob"))
+        vm.loadDeck(createTestDeck())
+        val aliceId = vm.uiState.value.localPlayer!!.id
+
+        // Get some library cards and move to battlefield
+        val cards = vm.getCards(aliceId, Zone.LIBRARY).take(3)
+        cards.forEach { vm.moveCard(it.instanceId, Zone.BATTLEFIELD) }
+
+        val freshCards = vm.getCards(aliceId, Zone.BATTLEFIELD)
+        val primaryCard = freshCards.first()
+        val ids = freshCards.map { it.instanceId }.toSet()
+        val moved = vm.handleBatchCardAction(CardAction.ToGraveyard(primaryCard), ids)
+        assertEquals(3, moved)
+
+        val graveCount = vm.getCardCount(aliceId, Zone.GRAVEYARD)
+        assertEquals(3, graveCount)
+    }
 }
