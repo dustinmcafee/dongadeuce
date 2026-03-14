@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.0.4-alpha] - 2026-03-14
+
+### Added
+- **587 automated tests** - 480 JVM shared, 29 JVM server, 78 Android instrumented (verified on Pixel 8 Pro)
+- **Android instrumented tests** - Cross-platform serialization (25), network integration with real CIO server + OkHttp client (8), GameEngine on ART runtime (26), AndroidMenuViewModel (19)
+- **Partner commander tests** - Both commanders in command zone, card count with 2 commanders, independent play
+- **CI Android emulator job** - `test-android-instrumented` runs all 78 tests on API 29 emulator
+
+### Fixed
+- **Android test runner** - Added `testInstrumentationRunner = AndroidJUnitRunner` (was using deprecated default, caused process crash)
+- **Deck validation in tests** - Sideboard deck test now has correct 99 mainboard cards
+
 ## [6.0.3-alpha] - 2026-03-14
 
 ### Added
