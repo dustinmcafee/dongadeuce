@@ -44,6 +44,8 @@ dependencies {
 
     // Testing
     testImplementation(kotlin("test"))
+    testImplementation("io.ktor:ktor-server-test-host:2.3.7")
+    testImplementation("io.ktor:ktor-client-websockets:2.3.7")
 }
 
 kotlin {

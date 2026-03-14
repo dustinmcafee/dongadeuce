@@ -126,13 +126,11 @@ class GameRoom(
     /**
      * Start the game (admin only, called via REST or first-player message).
      */
-    fun startGame(): Boolean {
+    suspend fun startGame(): Boolean {
         val result = engine.startGame()
         if (result) {
             val initialState = engine.getCurrentState() ?: return false
-            kotlinx.coroutines.runBlocking {
-                broadcastToAll(GameMessage.GameStarting(initialState))
-            }
+            broadcastToAll(GameMessage.GameStarting(initialState))
         }
         return result
     }
