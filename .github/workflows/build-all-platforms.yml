@@ -20,8 +20,15 @@ jobs:
         distribution: 'temurin'
         cache: gradle
 
-    - name: Run tests
+    - name: Run shared/desktop/android tests
       run: ./gradlew test
+
+    - name: Build shared JAR for server tests
+      run: ./gradlew :shared:jvmJar
+
+    - name: Run server tests
+      working-directory: server
+      run: ../gradlew test
 
     - name: Upload test results
       uses: actions/upload-artifact@v4
@@ -128,6 +135,10 @@ jobs:
 
     - name: Build shared JAR for server
       run: ./gradlew :shared:jvmJar
+
+    - name: Run server tests
+      working-directory: server
+      run: ../gradlew test
 
     - name: Build server shadow JAR
       working-directory: server
