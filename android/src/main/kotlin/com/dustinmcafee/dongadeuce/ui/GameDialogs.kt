@@ -434,9 +434,9 @@ fun AnnotationDialog(
 fun DieRollerDialog(
     playerName: String,
     onDismiss: () -> Unit,
-    onRollLogged: (String, Int, Int) -> Unit
+    onRollLogged: (String, Int, Int, List<Int>) -> Unit
 ) {
-    var lastRoll by remember { mutableStateOf<Pair<String, Int>?>(null) }
+    var lastRoll by remember { mutableStateOf<Triple<String, Int, List<Int>>?>(null) }
     var numberOfDice by remember { mutableStateOf(1) }
     var customSides by remember { mutableStateOf("100") }
 
@@ -471,9 +471,10 @@ fun DieRollerDialog(
                     listOf(4, 6, 8, 10, 12, 20).forEach { sides ->
                         OutlinedButton(
                             onClick = {
-                                val result = (1..numberOfDice).sumOf { Random.nextInt(1, sides + 1) }
-                                lastRoll = "d$sides" to result
-                                onRollLogged("d$sides", result, numberOfDice)
+                                val rolls = (1..numberOfDice).map { Random.nextInt(1, sides + 1) }
+                                val total = rolls.sum()
+                                lastRoll = Triple("d$sides", total, rolls)
+                                onRollLogged("d$sides", total, numberOfDice, rolls)
                             },
                             modifier = Modifier.padding(2.dp)
                         ) {
@@ -503,9 +504,10 @@ fun DieRollerDialog(
                         onClick = {
                             val sides = customSides.toIntOrNull() ?: 100
                             if (sides > 0) {
-                                val result = (1..numberOfDice).sumOf { Random.nextInt(1, sides + 1) }
-                                lastRoll = "d$sides" to result
-                                onRollLogged("d$sides", result, numberOfDice)
+                                val rolls = (1..numberOfDice).map { Random.nextInt(1, sides + 1) }
+                                val total = rolls.sum()
+                                lastRoll = Triple("d$sides", total, rolls)
+                                onRollLogged("d$sides", total, numberOfDice, rolls)
                             }
                         }
                     ) {
@@ -519,8 +521,8 @@ fun DieRollerDialog(
                 Button(
                     onClick = {
                         val result = if (Random.nextBoolean()) 1 else 0
-                        lastRoll = "Coin" to result
-                        onRollLogged("Coin", result, 1)
+                        lastRoll = Triple("Coin", result, listOf(result))
+                        onRollLogged("Coin", result, 1, listOf(result))
                     },
                     modifier = Modifier.fillMaxWidth()
                 ) {
@@ -528,7 +530,7 @@ fun DieRollerDialog(
                 }
 
                 // Last roll result
-                lastRoll?.let { (type, result) ->
+                lastRoll?.let { (type, total, rolls) ->
                     Spacer(modifier = Modifier.height(16.dp))
                     Card(
                         modifier = Modifier.fillMaxWidth(),
@@ -536,16 +538,19 @@ fun DieRollerDialog(
                             containerColor = MaterialTheme.colorScheme.primaryContainer
                         )
                     ) {
-                        Text(
-                            text = if (type == "Coin") {
-                                if (result == 1) "Heads!" else "Tails!"
-                            } else {
-                                "Rolled $type: $result"
-                            },
-                            modifier = Modifier.padding(16.dp),
-                            style = MaterialTheme.typography.headlineMedium,
-                            textAlign = TextAlign.Center
-                        )
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(
+                                text = if (type == "Coin") {
+                                    if (total == 1) "Heads!" else "Tails!"
+                                } else if (rolls.size > 1) {
+                                    "Rolled $type: ${rolls.joinToString(" + ")} = $total"
+                                } else {
+                                    "Rolled $type: $total"
+                                },
+                                style = MaterialTheme.typography.headlineMedium,
+                                textAlign = TextAlign.Center
+                            )
+                        }
                     }
                 }
             }
@@ -648,21 +653,99 @@ fun PlayerCountersDialog(
  */
 @Composable
 fun TokenCreationDialog(
+    viewModel: GameViewModel,
     onDismiss: () -> Unit,
     onCreateToken: (String, String, String, String, String, String?, Int) -> Unit
 ) {
     var tokenName by remember { mutableStateOf("") }
-    var tokenType by remember { mutableStateOf("Creature") }
-    var power by remember { mutableStateOf("1") }
-    var toughness by remember { mutableStateOf("1") }
+    var tokenType by remember { mutableStateOf("Creature Token") }
+    var power by remember { mutableStateOf("") }
+    var toughness by remember { mutableStateOf("") }
     var color by remember { mutableStateOf("Colorless") }
+    var tokenImageUri by remember { mutableStateOf<String?>(null) }
     var quantity by remember { mutableStateOf("1") }
+    var searchQuery by remember { mutableStateOf("") }
+
+    val uiState by viewModel.uiState.collectAsState()
+    val searchResults = uiState.tokenSearchResults
+    val isSearching = uiState.isSearchingTokens
+
+    DisposableEffect(Unit) {
+        onDispose { viewModel.clearTokenSearch() }
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Create Token") },
         text = {
             Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                // Search field
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = {
+                        searchQuery = it
+                        viewModel.searchTokens(it)
+                    },
+                    label = { Text("Search Tokens") },
+                    placeholder = { Text("e.g., Goblin, Soldier, Treasure") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    trailingIcon = {
+                        if (isSearching) CircularProgressIndicator(modifier = Modifier.size(20.dp))
+                    }
+                )
+
+                // Search results
+                if (searchResults.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text("Tap to use:", style = MaterialTheme.typography.labelSmall)
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 180.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        items(searchResults) { card ->
+                            Surface(
+                                color = MaterialTheme.colorScheme.surfaceVariant,
+                                shape = MaterialTheme.shapes.small,
+                                modifier = Modifier.fillMaxWidth().clickable {
+                                    tokenName = card.name
+                                    tokenType = card.type ?: "Creature Token"
+                                    power = card.power ?: ""
+                                    toughness = card.toughness ?: ""
+                                    tokenImageUri = card.imageUri
+                                    color = when {
+                                        card.colors.isEmpty() -> "Colorless"
+                                        card.colors.size > 1 -> "Colorless"
+                                        card.colors.contains("W") -> "White"
+                                        card.colors.contains("U") -> "Blue"
+                                        card.colors.contains("B") -> "Black"
+                                        card.colors.contains("R") -> "Red"
+                                        card.colors.contains("G") -> "Green"
+                                        else -> "Colorless"
+                                    }
+                                    searchQuery = ""
+                                    viewModel.clearTokenSearch()
+                                }
+                            ) {
+                                Column(modifier = Modifier.padding(8.dp)) {
+                                    Text(card.name, style = MaterialTheme.typography.bodyMedium)
+                                    Text(
+                                        "${card.type ?: "Token"}${if (card.power != null && card.toughness != null) " ${card.power}/${card.toughness}" else ""}",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+                Divider()
+                Spacer(modifier = Modifier.height(8.dp))
+
                 OutlinedTextField(
                     value = tokenName,
                     onValueChange = { tokenName = it },
@@ -684,18 +767,16 @@ fun TokenCreationDialog(
                 Row(modifier = Modifier.fillMaxWidth()) {
                     OutlinedTextField(
                         value = power,
-                        onValueChange = { power = it.filter { c -> c.isDigit() } },
+                        onValueChange = { power = it },
                         label = { Text("Power") },
-                        modifier = Modifier.weight(1f),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                        modifier = Modifier.weight(1f)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     OutlinedTextField(
                         value = toughness,
-                        onValueChange = { toughness = it.filter { c -> c.isDigit() } },
+                        onValueChange = { toughness = it },
                         label = { Text("Toughness") },
-                        modifier = Modifier.weight(1f),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                        modifier = Modifier.weight(1f)
                     )
                 }
 
@@ -733,10 +814,10 @@ fun TokenCreationDialog(
                     onCreateToken(
                         tokenName,
                         tokenType,
-                        power,
-                        toughness,
+                        power.ifBlank { "1" },
+                        toughness.ifBlank { "1" },
                         color,
-                        null,
+                        tokenImageUri,
                         quantity.toIntOrNull() ?: 1
                     )
                 }

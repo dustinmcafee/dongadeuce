@@ -36,10 +36,11 @@ fun CommanderSelectionDialog(
     deckData: ParsedDeckData,
     candidates: List<Card>,
     playerIndex: Int?, // null for single deck, index for hotseat
-    onCommanderSelected: (String) -> Unit,
+    onCommanderSelected: (String, String?) -> Unit,
     onDismiss: () -> Unit
 ) {
     var selectedCard by remember { mutableStateOf<Card?>(null) }
+    var selectedPartner by remember { mutableStateOf<Card?>(null) }
     var filterLegendaries by remember { mutableStateOf(true) }
 
     // Filter candidates based on checkbox
@@ -59,13 +60,10 @@ fun CommanderSelectionDialog(
     // Track selected index for keyboard navigation
     var selectedIndex by remember { mutableStateOf(-1) }
 
-    // Sync selectedCard with selectedIndex
+    // Sync selectedCard with selectedIndex (commander slot only for keyboard nav)
     LaunchedEffect(selectedIndex, filteredCandidates) {
-        selectedCard = if (selectedIndex >= 0 && selectedIndex < filteredCandidates.size) {
-            filteredCandidates[selectedIndex]
-        } else {
-            null
-        }
+        val card = if (selectedIndex >= 0 && selectedIndex < filteredCandidates.size) filteredCandidates[selectedIndex] else null
+        if (card != selectedPartner) selectedCard = card
     }
 
     // Focus requester for keyboard input
@@ -95,7 +93,7 @@ fun CommanderSelectionDialog(
                         when (event.key) {
                             Key.Enter, Key.NumPadEnter -> {
                                 if (selectedCard != null) {
-                                    onCommanderSelected(selectedCard!!.name)
+                                    onCommanderSelected(selectedCard!!.name, selectedPartner?.name)
                                     true
                                 } else false
                             }
@@ -206,9 +204,9 @@ fun CommanderSelectionDialog(
                             checked = filterLegendaries,
                             onCheckedChange = {
                                 filterLegendaries = it
-                                // Clear selection if filtered card is no longer visible
-                                if (it && selectedCard != null && !(selectedCard!!.isLegendary && selectedCard!!.canBeCommander)) {
-                                    selectedIndex = -1
+                                if (it) {
+                                    if (selectedCard != null && !(selectedCard!!.isLegendary && selectedCard!!.canBeCommander)) selectedIndex = -1
+                                    if (selectedPartner != null && !(selectedPartner!!.isLegendary && selectedPartner!!.canBeCommander)) selectedPartner = null
                                 }
                             }
                         )
@@ -217,6 +215,14 @@ fun CommanderSelectionDialog(
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
+                    }
+                }
+
+                // Selection summary
+                if (selectedCard != null || selectedPartner != null) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        selectedCard?.let { Text("Commander: ${it.name}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary) }
+                        selectedPartner?.let { Text("Partner: ${it.name}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.tertiary) }
                     }
                 }
 
@@ -250,10 +256,23 @@ fun CommanderSelectionDialog(
                     ) {
                         items(filteredCandidates.size) { index ->
                             val card = filteredCandidates[index]
+                            val selectionState = when (card) {
+                                selectedCard -> 1
+                                selectedPartner -> 2
+                                else -> 0
+                            }
                             CommanderCard(
                                 card = card,
-                                isSelected = selectedIndex == index,
-                                onClick = { selectedIndex = index }
+                                selectionState = selectionState,
+                                onClick = {
+                                    when {
+                                        selectedCard == card -> { selectedIndex = -1; selectedCard = null }
+                                        selectedPartner == card -> selectedPartner = null
+                                        selectedCard == null -> selectedIndex = index
+                                        selectedPartner == null -> selectedPartner = card
+                                        else -> { selectedIndex = index; selectedPartner = null }
+                                    }
+                                }
                             )
                         }
                     }
@@ -270,10 +289,10 @@ fun CommanderSelectionDialog(
                         Text("Cancel")
                     }
                     Button(
-                        onClick = { selectedCard?.let { onCommanderSelected(it.name) } },
+                        onClick = { selectedCard?.let { onCommanderSelected(it.name, selectedPartner?.name) } },
                         enabled = selectedCard != null
                     ) {
-                        Text("Select Commander")
+                        Text(if (selectedPartner != null) "Select (2 Commanders)" else "Select Commander")
                     }
                 }
             }
@@ -284,26 +303,26 @@ fun CommanderSelectionDialog(
 @Composable
 private fun CommanderCard(
     card: Card,
-    isSelected: Boolean,
+    selectionState: Int, // 0=none, 1=commander, 2=partner
     onClick: () -> Unit
 ) {
-    val borderColor = if (isSelected) {
-        MaterialTheme.colorScheme.primary
-    } else {
-        MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+    val borderColor = when (selectionState) {
+        1 -> MaterialTheme.colorScheme.primary
+        2 -> MaterialTheme.colorScheme.tertiary
+        else -> MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
     }
 
-    val backgroundColor = if (isSelected) {
-        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
-    } else {
-        MaterialTheme.colorScheme.surface
+    val backgroundColor = when (selectionState) {
+        1 -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+        2 -> MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.3f)
+        else -> MaterialTheme.colorScheme.surface
     }
 
     Column(
         modifier = Modifier
             .clip(RoundedCornerShape(8.dp))
             .border(
-                width = if (isSelected) 3.dp else 1.dp,
+                width = if (selectionState > 0) 3.dp else 1.dp,
                 color = borderColor,
                 shape = RoundedCornerShape(8.dp)
             )
@@ -347,15 +366,23 @@ private fun CommanderCard(
         Text(
             text = card.name,
             style = MaterialTheme.typography.labelMedium,
-            color = if (isSelected) {
-                MaterialTheme.colorScheme.primary
-            } else {
-                MaterialTheme.colorScheme.onSurfaceVariant
+            color = when (selectionState) {
+                1 -> MaterialTheme.colorScheme.primary
+                2 -> MaterialTheme.colorScheme.tertiary
+                else -> MaterialTheme.colorScheme.onSurfaceVariant
             },
             textAlign = TextAlign.Center,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis
         )
+
+        if (selectionState > 0) {
+            Text(
+                text = if (selectionState == 1) "Commander" else "Partner",
+                style = MaterialTheme.typography.labelSmall,
+                color = if (selectionState == 1) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.tertiary
+            )
+        }
 
         // Card type
         Text(

@@ -356,9 +356,12 @@ fun AndroidGameScreen(
             modifier = Modifier.align(Alignment.CenterStart)
         )
 
-        // Card viewer drawer (slides in from left)
+        // Card viewer drawer (slides in from left) — look up live state so flip/tap updates are reflected
+        val liveCard = focusedCardState.focusedCard?.let { focused ->
+            gameState?.cardInstances?.find { it.instanceId == focused.instanceId } ?: focused
+        }
         CardViewerDrawer(
-            cardInstance = focusedCardState.focusedCard,
+            cardInstance = liveCard,
             drawerState = cardViewerDrawerState
         )
     }
@@ -447,8 +450,8 @@ fun AndroidGameScreen(
         DieRollerDialog(
             playerName = localPlayer?.name ?: "Player",
             onDismiss = { showDieRollerDialog = false },
-            onRollLogged = { dieType, result, numDice ->
-                localPlayer?.let { gameViewModel.logDieRoll(it.id, dieType, result, numDice) }
+            onRollLogged = { dieType, result, numDice, individualResults ->
+                localPlayer?.let { gameViewModel.logDieRoll(it.id, dieType, result, numDice, individualResults) }
             }
         )
     }
@@ -464,6 +467,7 @@ fun AndroidGameScreen(
 
     if (showTokenDialog && activePlayer != null) {
         TokenCreationDialog(
+            viewModel = gameViewModel,
             onDismiss = { showTokenDialog = false },
             onCreateToken = { name, type, power, toughness, color, imageUri, quantity ->
                 gameViewModel.createToken(activePlayer.id, name, type, power, toughness, color, imageUri, quantity)
@@ -1282,7 +1286,11 @@ private fun SmallBattlefieldCard(
                 )
         ) {
             CardImage(
-                imageUrl = if (cardInstance.isFaceDown) null else cardInstance.card.imageUri,
+                imageUrl = when {
+                    cardInstance.isFaceDown -> null
+                    cardInstance.isFlipped -> cardInstance.card.backFaceImageUri ?: "https://cards.scryfall.io/back.png"
+                    else -> cardInstance.card.imageUri
+                },
                 contentDescription = cardInstance.card.name,
                 modifier = Modifier.fillMaxSize()
             )
@@ -1673,7 +1681,11 @@ private fun BattlefieldCard(
                 )
         ) {
             CardImage(
-                imageUrl = if (cardInstance.isFaceDown) null else cardInstance.card.imageUri,
+                imageUrl = when {
+                    cardInstance.isFaceDown -> null
+                    cardInstance.isFlipped -> cardInstance.card.backFaceImageUri ?: "https://cards.scryfall.io/back.png"
+                    else -> cardInstance.card.imageUri
+                },
                 contentDescription = cardInstance.card.name,
                 modifier = Modifier.fillMaxSize()
             )
@@ -1831,7 +1843,11 @@ private fun DraggableBattlefieldCard(
                 )
         ) {
             CardImage(
-                imageUrl = if (cardInstance.isFaceDown) null else cardInstance.card.imageUri,
+                imageUrl = when {
+                    cardInstance.isFaceDown -> null
+                    cardInstance.isFlipped -> cardInstance.card.backFaceImageUri ?: "https://cards.scryfall.io/back.png"
+                    else -> cardInstance.card.imageUri
+                },
                 contentDescription = cardInstance.card.name,
                 modifier = Modifier.fillMaxSize()
             )

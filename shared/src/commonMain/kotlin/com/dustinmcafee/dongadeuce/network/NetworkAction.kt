@@ -420,7 +420,8 @@ sealed class NetworkAction {
         val playerId: String,
         val dieType: String,
         val result: Int,
-        val numberOfDice: Int = 1
+        val numberOfDice: Int = 1,
+        val individualResults: List<Int> = emptyList()
     ) : NetworkAction()
 
     /**

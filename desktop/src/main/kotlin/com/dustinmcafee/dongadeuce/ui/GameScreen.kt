@@ -1014,9 +1014,9 @@ fun GameScreen(
         DieRollerDialog(
             playerName = playerName,
             onDismiss = { showDieRollerDialog = false },
-            onRollLogged = { dieType, result, numberOfDice ->
+            onRollLogged = { dieType, result, numberOfDice, individualResults ->
                 localPlayer?.let {
-                    viewModel.logDieRoll(it.id, dieType, result, numberOfDice)
+                    viewModel.logDieRoll(it.id, dieType, result, numberOfDice, individualResults)
                 }
             }
         )

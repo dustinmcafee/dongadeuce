@@ -1403,7 +1403,8 @@ class GameServer(
                     playerName = targetPlayer.name,
                     dieType = action.dieType,
                     result = action.result,
-                    numberOfDice = action.numberOfDice
+                    numberOfDice = action.numberOfDice,
+                    individualResults = action.individualResults
                 )
                 state.addEvent(event)
             }

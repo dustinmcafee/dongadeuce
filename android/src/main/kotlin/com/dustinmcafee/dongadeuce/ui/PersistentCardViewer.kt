@@ -281,11 +281,10 @@ private fun ImageTabContent(cardInstance: CardInstance) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        // Card image - large
-        val imageUrl = if (cardInstance.isFlipped) {
-            "https://cards.scryfall.io/back.png"
-        } else {
-            cardInstance.card.imageUri
+        // Card image - large: show back face (DFC art or generic card back) when flipped
+        val imageUrl = when {
+            cardInstance.isFlipped -> cardInstance.card.backFaceImageUri ?: "https://cards.scryfall.io/back.png"
+            else -> cardInstance.card.imageUri
         }
 
         CardImage(

@@ -143,8 +143,8 @@ fun MenuScreen(
             deckData = uiState.pendingDeckData!!,
             candidates = uiState.commanderCandidates,
             playerIndex = uiState.pendingDeckPlayerIndex,
-            onCommanderSelected = { commanderName ->
-                viewModel.selectCommander(commanderName)
+            onCommanderSelected = { commanderName, partnerName ->
+                viewModel.selectCommander(commanderName, partnerName)
             },
             onDismiss = { viewModel.cancelCommanderSelection() }
         )

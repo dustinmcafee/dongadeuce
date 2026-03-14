@@ -289,7 +289,7 @@ class MenuViewModel {
      * Select a commander for the pending deck
      * Reuses card data already loaded for commander candidates
      */
-    fun selectCommander(commanderName: String) {
+    fun selectCommander(commanderName: String, partnerName: String? = null) {
         val pendingData = _uiState.value.pendingDeckData ?: return
         val playerIndex = _uiState.value.pendingDeckPlayerIndex
         val loadedCards = _uiState.value.commanderCandidates
@@ -298,12 +298,13 @@ class MenuViewModel {
             _uiState.update { it.copy(isLoading = true, loadingProgress = "Building deck with commander...") }
 
             try {
-                val parsedDeck = pendingData.toDeck(commanderName)
+                val parsedDeck = pendingData.toDeck(commanderName, partnerName)
 
                 // Reuse already-loaded card data from commander candidates
                 val cardDataMap = loadedCards.associateBy { it.name.lowercase() }
 
                 val commanderWithData = cardDataMap[commanderName.lowercase()] ?: parsedDeck.commander
+                val partnerWithData = partnerName?.let { cardDataMap[it.lowercase()] ?: parsedDeck.partnerCommander }
                 val cardsWithData = parsedDeck.cards.map { card ->
                     cardDataMap[card.name.lowercase()] ?: card
                 }
@@ -315,7 +316,8 @@ class MenuViewModel {
                     name = parsedDeck.name,
                     commander = commanderWithData,
                     cards = cardsWithData,
-                    sideboard = sideboardWithData
+                    sideboard = sideboardWithData,
+                    partnerCommander = partnerWithData
                 )
 
                 if (playerIndex != null) {

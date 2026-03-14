@@ -62,7 +62,7 @@ class AndroidMenuViewModel : ViewModel() {
     /**
      * Select a commander for the pending deck
      */
-    fun selectCommander(commanderName: String) = delegate.selectCommander(commanderName)
+    fun selectCommander(commanderName: String, partnerName: String? = null) = delegate.selectCommander(commanderName, partnerName)
 
     /**
      * Cancel commander selection

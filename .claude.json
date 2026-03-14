@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "dongadeuce": {
+      "command": "java",
+      "args": [
+        "-jar",
+        "mcp-server/build/libs/dongadeuce-mcp-server-all.jar"
+      ],
+      "cwd": "/home/dustin/workingdir/apk_source/dongadeuce"
+    }
+  }
+}

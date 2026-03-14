@@ -205,7 +205,8 @@ sealed class GameEvent {
         override val playerName: String,
         val dieType: String,
         val result: Int,
-        val numberOfDice: Int = 1
+        val numberOfDice: Int = 1,
+        val individualResults: List<Int> = emptyList()
     ) : GameEvent()
 
     /**
@@ -306,7 +307,11 @@ fun GameEvent.toDisplayString(): String {
         is GameEvent.CardCloned -> "$playerName created $quantity copy/copies of $cardName"
         is GameEvent.PlayerLost -> "$playerName has lost the game ($reason)"
         is GameEvent.GameStarted -> "Game started with $playerCount players: ${playerNames.joinToString(", ")}"
-        is GameEvent.DieRolled -> if (numberOfDice == 1) "$playerName rolled $dieType: $result" else "$playerName rolled ${numberOfDice}x $dieType: $result"
+        is GameEvent.DieRolled -> when {
+            numberOfDice == 1 -> "$playerName rolled $dieType: $result"
+            individualResults.isNotEmpty() -> "$playerName rolled ${numberOfDice}x $dieType: [${individualResults.joinToString(", ")}] = $result"
+            else -> "$playerName rolled ${numberOfDice}x $dieType: $result"
+        }
         is GameEvent.ControlChanged -> "$playerName gave control of $cardName to $toPlayerName"
         is GameEvent.CardsMilled -> "$playerName milled $cardCount card(s)"
         is GameEvent.LibraryShuffled -> "$playerName shuffled their library"

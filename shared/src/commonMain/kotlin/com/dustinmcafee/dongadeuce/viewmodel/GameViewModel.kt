@@ -2619,10 +2619,10 @@ class GameViewModel(
     /**
      * Log a die roll event
      */
-    fun logDieRoll(playerId: String, dieType: String, result: Int, numberOfDice: Int = 1) {
+    fun logDieRoll(playerId: String, dieType: String, result: Int, numberOfDice: Int = 1, individualResults: List<Int> = emptyList()) {
         // In network mode, send action to server
         if (isNetworkGame) {
-            sendNetworkAction(NetworkAction.LogDieRoll(playerId, dieType, result, numberOfDice))
+            sendNetworkAction(NetworkAction.LogDieRoll(playerId, dieType, result, numberOfDice, individualResults))
             return
         }
 
@@ -2635,7 +2635,8 @@ class GameViewModel(
                 playerName = player.name,
                 dieType = dieType,
                 result = result,
-                numberOfDice = numberOfDice
+                numberOfDice = numberOfDice,
+                individualResults = individualResults
             )
             val updatedGameState = gameState.addEvent(event)
 
