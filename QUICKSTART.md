@@ -35,13 +35,13 @@ Deck format (text file):
 
 ## Game Modes
 
-### Local Hotseat (2-4 Players, Same Device)
+### Local Hotseat (2-6 Players, Same Device)
 1. Select "Local Hotseat" mode
-2. Choose player count (2, 3, or 4)
+2. Choose player count (2-6)
 3. Load a deck for each player
 4. Click "Start Game"
 
-### Network Multiplayer (2-4 Players, Over Network)
+### Network Multiplayer (2-6 Players, Over Network)
 
 **To Host:**
 1. Select "Network" mode

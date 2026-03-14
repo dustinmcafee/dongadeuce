@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.0.1] - 2026-03-13
+
+### Added
+- **MCP server** - New `mcp-server/` module exposing game control tools via Model Context Protocol (initialize game, load deck, move cards, draw, tap, life changes, etc.)
+- **Battlefield mouse wheel scrolling** - Scroll battlefield vertically with mouse wheel; hold Shift to scroll horizontally
+
+### Fixed
+- **Die roller player name** - Die roller now uses `localPlayer` instead of `activePlayer` on both Android and Desktop
+- **Transform/DFC card flip** - Double-faced cards now show their actual back face image when flipped instead of the generic Magic card back
+- **Hidden card overlays** - Owner tag, clone indicator, and "doesn't untap" badge are now hidden when a card is face-down or flipped (non-DFC)
+- **Context menus in zone viewers** - Graveyard and exile dialogs now support full right-click context menus
+- **Card hover focus** - `onCardFocus` properly wired through command zone, library zone, graveyard/exile dialogs, and library search dialog for persistent card viewer
+- **Right-click handling** - Zone cards now only trigger right-click on press events (prevents duplicate triggers)
+- **Join lobby card color** - JoinLobbyScreen lobby card now uses `surfaceVariant` theme color
+
 ## [5.0.0] - 2025-12-02
 
 ### Added

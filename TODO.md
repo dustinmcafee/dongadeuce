@@ -1,10 +1,10 @@
 # Dong-A-Deuce - Development TODO
 
-**Current Version:** v5.0.0
+**Current Version:** v5.0.1
 **Desktop:** 99% complete (fully playable!)
 **Android:** 99% complete (fully playable!)
 **Network Mode:** 100% complete (fully playable!)
-**Last Updated:** 2025-12-02
+**Last Updated:** 2026-03-13
 
 ---
 
@@ -227,6 +227,7 @@ These are nice-to-have features that would improve the experience but aren't req
 
 | Version | Highlights |
 |---------|------------|
+| v5.0.1 | MCP server, DFC flip images, die roller fix, graveyard/exile context menus, battlefield mouse wheel scrolling |
 | v5.0.0 | 2-6 player support (hotseat & network), deck validation (100 cards), network/hotseat feature parity |
 | v4.7.0 | Hand reordering via drag, drag between hand/battlefield, commander dialog keyboard shortcuts, Android card viewer swipes from left |
 | v4.6.0 | Multi-format deck import (Cockatrice .cod, .dec, .dek, .txt, .mwDeck), clipboard paste, commander selection dialog with legendary filter |
