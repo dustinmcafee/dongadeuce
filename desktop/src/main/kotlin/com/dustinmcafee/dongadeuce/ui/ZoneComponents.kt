@@ -44,7 +44,9 @@ fun ZoneCard(
     onRightClick: (() -> Unit)? = null,
     dragDropState: DragDropState? = null,
     onDropCards: ((List<String>) -> Unit)? = null,
-    imageUrl: String? = null  // Optional image to display in the zone (e.g., card back for library)
+    imageUrl: String? = null,  // Optional image to display in the zone (e.g., card back for library)
+    hoverCard: CardInstance? = null,  // Optional card to show in persistent viewer on hover
+    onCardFocus: ((CardInstance) -> Unit)? = null  // Callback when zone is hovered and has a card to show
 ) {
     var isHovering by remember { mutableStateOf(false) }
     var lastClickTime by remember { mutableStateOf(0L) }
@@ -56,6 +58,20 @@ fun ZoneCard(
 
     Card(
         modifier = modifier
+            .then(
+                if (hoverCard != null && onCardFocus != null) {
+                    Modifier.pointerInput(hoverCard.instanceId) {
+                        awaitPointerEventScope {
+                            while (true) {
+                                val event = awaitPointerEvent(PointerEventPass.Final)
+                                if (event.type == PointerEventType.Enter) {
+                                    onCardFocus(hoverCard)
+                                }
+                            }
+                        }
+                    }
+                } else Modifier
+            )
             .onGloballyPositioned { coordinates ->
                 // Register zone bounds for accurate drop detection
                 if (dragDropState != null) {
@@ -80,8 +96,10 @@ fun ZoneCard(
                             while (true) {
                                 val event = awaitPointerEvent()
 
-                                // Handle right-click
-                                if (event.buttons.isSecondaryPressed && onRightClick != null) {
+                                // Handle right-click (on press event)
+                                if (event.type == PointerEventType.Press &&
+                                    event.buttons.isSecondaryPressed && onRightClick != null) {
+                                    event.changes.forEach { it.consume() }
                                     onRightClick()
                                 }
                                 // Handle left-click for double-click detection

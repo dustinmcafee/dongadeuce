@@ -192,36 +192,38 @@ class GameViewModelTest {
         assertEquals(beforeNames, afterNames, "All cards should still be in library")
     }
 
-    @Test
-    fun `updateLife correctly updates player life and loss state`() {
-        val viewModel = GameViewModel()
-        viewModel.initializeGame("Player1", emptyList())
-        val playerId = viewModel.uiState.value.localPlayer?.id ?: return
+    // Disabled: Auto-elimination removed - players must manually concede
+    // @Test
+    // fun `updateLife correctly updates player life and loss state`() {
+    //     val viewModel = GameViewModel()
+    //     viewModel.initializeGame("Player1", emptyList())
+    //     val playerId = viewModel.uiState.value.localPlayer?.id ?: return
+    //
+    //     viewModel.updateLife(playerId, 20)
+    //     assertEquals(20, viewModel.uiState.value.localPlayer?.life)
+    //     assertFalse(viewModel.uiState.value.localPlayer?.hasLost ?: true, "Should not lose at 20 life")
+    //
+    //     viewModel.updateLife(playerId, 0)
+    //     assertEquals(0, viewModel.uiState.value.localPlayer?.life)
+    //     assertTrue(viewModel.uiState.value.localPlayer?.hasLost ?: false, "Should lose at 0 life")
+    // }
 
-        viewModel.updateLife(playerId, 20)
-        assertEquals(20, viewModel.uiState.value.localPlayer?.life)
-        assertFalse(viewModel.uiState.value.localPlayer?.hasLost ?: true, "Should not lose at 20 life")
-
-        viewModel.updateLife(playerId, 0)
-        assertEquals(0, viewModel.uiState.value.localPlayer?.life)
-        assertTrue(viewModel.uiState.value.localPlayer?.hasLost ?: false, "Should lose at 0 life")
-    }
-
-    @Test
-    fun `updateCommanderDamage tracks damage correctly`() {
-        val viewModel = GameViewModel()
-        viewModel.initializeGame("Player1", emptyList())
-        val playerId = viewModel.uiState.value.localPlayer?.id ?: return
-        val commanderId = "cmd-123"
-
-        viewModel.updateCommanderDamage(playerId, commanderId, 10)
-        assertEquals(10, viewModel.uiState.value.localPlayer?.commanderDamage?.get(commanderId))
-        assertFalse(viewModel.uiState.value.localPlayer?.hasLost ?: true, "Should not lose at 10 commander damage")
-
-        viewModel.updateCommanderDamage(playerId, commanderId, 21)
-        assertEquals(21, viewModel.uiState.value.localPlayer?.commanderDamage?.get(commanderId))
-        assertTrue(viewModel.uiState.value.localPlayer?.hasLost ?: false, "Should lose at 21 commander damage")
-    }
+    // Disabled: Auto-elimination removed - players must manually concede
+    // @Test
+    // fun `updateCommanderDamage tracks damage correctly`() {
+    //     val viewModel = GameViewModel()
+    //     viewModel.initializeGame("Player1", emptyList())
+    //     val playerId = viewModel.uiState.value.localPlayer?.id ?: return
+    //     val commanderId = "cmd-123"
+    //
+    //     viewModel.updateCommanderDamage(playerId, commanderId, 10)
+    //     assertEquals(10, viewModel.uiState.value.localPlayer?.commanderDamage?.get(commanderId))
+    //     assertFalse(viewModel.uiState.value.localPlayer?.hasLost ?: true, "Should not lose at 10 commander damage")
+    //
+    //     viewModel.updateCommanderDamage(playerId, commanderId, 21)
+    //     assertEquals(21, viewModel.uiState.value.localPlayer?.commanderDamage?.get(commanderId))
+    //     assertTrue(viewModel.uiState.value.localPlayer?.hasLost ?: false, "Should lose at 21 commander damage")
+    // }
 
     @Test
     fun `mulligan returns hand to library and redraws`() {
@@ -850,16 +852,17 @@ class GameViewModelTest {
         assertEquals(3, viewModel.uiState.value.localPlayer?.getCounter("poison"))
     }
 
-    @Test
-    fun `addPlayerCounter at 10 poison causes loss`() {
-        val viewModel = GameViewModel()
-        viewModel.initializeGame("Player1", emptyList())
-        val playerId = viewModel.uiState.value.localPlayer?.id ?: return
-
-        viewModel.addPlayerCounter(playerId, "poison", 10)
-
-        assertTrue(viewModel.uiState.value.localPlayer?.hasLost ?: false)
-    }
+    // Disabled: Auto-elimination removed - players must manually concede
+    // @Test
+    // fun `addPlayerCounter at 10 poison causes loss`() {
+    //     val viewModel = GameViewModel()
+    //     viewModel.initializeGame("Player1", emptyList())
+    //     val playerId = viewModel.uiState.value.localPlayer?.id ?: return
+    //
+    //     viewModel.addPlayerCounter(playerId, "poison", 10)
+    //
+    //     assertTrue(viewModel.uiState.value.localPlayer?.hasLost ?: false)
+    // }
 
     @Test
     fun `addPlayerCounter accumulates`() {

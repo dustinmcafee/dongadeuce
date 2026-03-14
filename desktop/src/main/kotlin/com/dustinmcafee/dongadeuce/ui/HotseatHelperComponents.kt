@@ -110,7 +110,8 @@ fun CommandZoneDisplay(
     allPlayers: List<Player>,
     dragDropState: DragDropState?,
     onDropCards: ((List<String>) -> Unit)?,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onCardFocus: ((CardInstance) -> Unit)? = null
 ) {
     var isHovering by remember { mutableStateOf(false) }
 
@@ -205,7 +206,8 @@ fun CommandZoneDisplay(
                             cardInstance = commander,
                             isActivePlayer = isActivePlayer,
                             onCardAction = onCardAction,
-                            allPlayers = allPlayers
+                            allPlayers = allPlayers,
+                            onCardFocus = onCardFocus
                         )
                     }
                 }
@@ -222,7 +224,8 @@ private fun CommanderCardDisplay(
     cardInstance: CardInstance,
     isActivePlayer: Boolean,
     onCardAction: (CardAction) -> Unit,
-    allPlayers: List<Player>
+    allPlayers: List<Player>,
+    onCardFocus: ((CardInstance) -> Unit)? = null
 ) {
     CardWithContextMenu(
         cardInstance = cardInstance,
@@ -233,6 +236,20 @@ private fun CommanderCardDisplay(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(60.dp)
+                .then(
+                    if (onCardFocus != null) {
+                        Modifier.pointerInput(cardInstance.instanceId) {
+                            awaitPointerEventScope {
+                                while (true) {
+                                    val event = awaitPointerEvent(PointerEventPass.Final)
+                                    if (event.type == PointerEventType.Enter) {
+                                        onCardFocus(cardInstance)
+                                    }
+                                }
+                            }
+                        }
+                    } else Modifier
+                )
                 .then(
                     if (isActivePlayer) {
                         Modifier.clickable {

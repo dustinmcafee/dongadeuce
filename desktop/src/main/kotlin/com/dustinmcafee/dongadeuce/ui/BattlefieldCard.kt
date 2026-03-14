@@ -156,10 +156,10 @@ fun BattlefieldCard(
             Box(modifier = Modifier.fillMaxSize()) {
                 // Card image as background
                 // For transform cards: show back face image when flipped
-                // For non-transform cards: isFlipped has no visual effect (use face-down for hidden cards)
-                val imageUrl = if (cardInstance.isFlipped && cardInstance.card.backFaceImageUri != null) {
-                    // Transform card - show back face
-                    cardInstance.card.backFaceImageUri
+                // For non-transform cards: show standard Magic card back when flipped
+                val imageUrl = if (cardInstance.isFlipped) {
+                    // Show back face for DFCs, or standard card back for regular cards
+                    cardInstance.card.backFaceImageUri ?: "https://cards.scryfall.io/back.png"
                 } else {
                     cardInstance.card.imageUri
                 }
@@ -170,20 +170,25 @@ fun BattlefieldCard(
                     modifier = Modifier.fillMaxSize()
                 )
 
-                // Overlay for counters and controller info (always show)
+                // Determine if the card is hidden (flipped non-DFC or face-down)
+                // Hidden cards don't show identity info like name, P/T, type, but DO show counters
+                val isHidden = cardInstance.isFaceDown ||
+                    (cardInstance.isFlipped && cardInstance.card.backFaceImageUri == null)
+
+                // Overlay for counters and controller info
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(4.dp),
                     verticalArrangement = Arrangement.SpaceBetween
                 ) {
-                    // Owner tag and counters (top) - always visible
+                    // Owner tag and counters (top)
                     Column(
                         horizontalAlignment = Alignment.Start,
                         verticalArrangement = Arrangement.spacedBy(2.dp)
                     ) {
-                        // Owner tag (only show if controller != owner)
-                        if (showOwnerTag) {
+                        // Owner tag (only show if controller != owner and card is not hidden)
+                        if (showOwnerTag && !isHidden) {
                             Surface(
                                 color = Color.Blue.copy(alpha = 0.8f),
                                 shape = RoundedCornerShape(4.dp)
@@ -224,8 +229,8 @@ fun BattlefieldCard(
                             }
                         }
 
-                        // "Doesn't Untap" indicator
-                        if (cardInstance.doesntUntap) {
+                        // "Doesn't Untap" indicator (hide when card is hidden)
+                        if (cardInstance.doesntUntap && !isHidden) {
                             Surface(
                                 color = Color.Magenta.copy(alpha = 0.8f),
                                 shape = RoundedCornerShape(4.dp)
@@ -239,7 +244,7 @@ fun BattlefieldCard(
                             }
                         }
 
-                        // Annotation indicator
+                        // Annotation indicator (player notes - keep visible even when hidden)
                         if (!cardInstance.annotation.isNullOrBlank()) {
                             Surface(
                                 color = Color.Yellow.copy(alpha = 0.8f),
@@ -255,8 +260,8 @@ fun BattlefieldCard(
                             }
                         }
 
-                        // Clone indicator
-                        if (cardInstance.isClone) {
+                        // Clone indicator (hide when card is hidden)
+                        if (cardInstance.isClone && !isHidden) {
                             Surface(
                                 color = Color.Cyan.copy(alpha = 0.8f),
                                 shape = RoundedCornerShape(4.dp)

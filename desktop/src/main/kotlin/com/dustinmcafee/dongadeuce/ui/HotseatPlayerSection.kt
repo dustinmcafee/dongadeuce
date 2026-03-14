@@ -133,7 +133,8 @@ fun HotseatPlayerSection(
                     },
                     onShowLibraryOperationsDialog = { showLibraryOperationsDialog = true },
                     onShowTokenCreationDialog = { showTokenCreationDialog = true },
-                    modifier = Modifier.width(150.dp).fillMaxHeight().padding(4.dp)
+                    modifier = Modifier.width(150.dp).fillMaxHeight().padding(4.dp),
+                    onCardFocus = onCardFocus
                 )
 
                 // Battlefield cards
@@ -268,7 +269,8 @@ private fun PlayerInfoSidebar(
     onShowExileDialog: () -> Unit,
     onShowLibraryOperationsDialog: () -> Unit,
     onShowTokenCreationDialog: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onCardFocus: ((CardInstance) -> Unit)? = null
 ) {
     // Determine the image to show for library: revealed card, looked-at card, or card back
     val libraryImageUrl = when {
@@ -362,11 +364,18 @@ private fun PlayerInfoSidebar(
                         dragDropState?.endDrag()
                     }
                 } else null,
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier.fillMaxSize(),
+                onCardFocus = onCardFocus
             )
         }
 
         // Library - weight 2
+        // Determine if top card should be shown in persistent viewer on hover
+        val libraryHoverCard = when {
+            player.revealTopCard && topCard != null -> topCard
+            player.lookAtTopCard && isLocalPlayer && topCard != null -> topCard
+            else -> null
+        }
         ZoneCard(
             "Library",
             Zone.LIBRARY,
@@ -385,7 +394,9 @@ private fun PlayerInfoSidebar(
                     dragDropState?.endDrag()
                 }
             } else null,
-            imageUrl = libraryImageUrl
+            imageUrl = libraryImageUrl,
+            hoverCard = libraryHoverCard,
+            onCardFocus = onCardFocus
         )
 
         // Graveyard - weight 1.5

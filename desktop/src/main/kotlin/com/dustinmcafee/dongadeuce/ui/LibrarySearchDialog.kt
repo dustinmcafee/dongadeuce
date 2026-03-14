@@ -55,7 +55,8 @@ fun LibrarySearchDialog(
     onToTop: (CardInstance) -> Unit,
     onToBottom: (CardInstance) -> Unit = {},
     onShuffle: () -> Unit,
-    onViewDetails: (CardInstance) -> Unit = {}
+    onViewDetails: (CardInstance) -> Unit = {},
+    onCardFocus: ((CardInstance) -> Unit)? = null
 ) {
     var searchQuery by remember { mutableStateOf("") }
 
@@ -201,7 +202,8 @@ fun LibrarySearchDialog(
                                                             onToBattlefield = onToBattlefield,
                                                             onToTop = onToTop,
                                                             onToBottom = onToBottom,
-                                                            onViewDetails = onViewDetails
+                                                            onViewDetails = onViewDetails,
+                                                            onCardFocus = onCardFocus
                                                         )
                                                     }
                                                 }
@@ -268,7 +270,8 @@ private fun LibraryCardItem(
     onToBattlefield: (CardInstance) -> Unit,
     onToTop: (CardInstance) -> Unit,
     onToBottom: (CardInstance) -> Unit,
-    onViewDetails: (CardInstance) -> Unit
+    onViewDetails: (CardInstance) -> Unit,
+    onCardFocus: ((CardInstance) -> Unit)? = null
 ) {
     var showContextMenu by remember { mutableStateOf(false) }
     var contextMenuOffset by remember { mutableStateOf(Offset.Zero) }
@@ -278,6 +281,20 @@ private fun LibraryCardItem(
         Card(
             modifier = Modifier
                 .fillMaxWidth()
+                .then(
+                    if (onCardFocus != null) {
+                        Modifier.pointerInput(cardInstance.instanceId) {
+                            awaitPointerEventScope {
+                                while (true) {
+                                    val event = awaitPointerEvent(PointerEventPass.Final)
+                                    if (event.type == PointerEventType.Enter) {
+                                        onCardFocus(cardInstance)
+                                    }
+                                }
+                            }
+                        }
+                    } else Modifier
+                )
                 .pointerInput(cardInstance.instanceId) {
                     awaitPointerEventScope {
                         while (true) {

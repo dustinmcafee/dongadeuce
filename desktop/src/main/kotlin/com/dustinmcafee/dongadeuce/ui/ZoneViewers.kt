@@ -8,6 +8,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.*
 import androidx.compose.ui.unit.dp
 import com.dustinmcafee.dongadeuce.models.CardInstance
 import com.dustinmcafee.dongadeuce.models.Zone
@@ -20,7 +21,8 @@ fun GraveyardDialog(
     onReturnToHand: (CardInstance) -> Unit,
     onReturnToBattlefield: (CardInstance) -> Unit,
     onAction: (com.dustinmcafee.dongadeuce.models.CardAction) -> Unit = {},
-    allPlayers: List<com.dustinmcafee.dongadeuce.models.Player> = emptyList()
+    allPlayers: List<com.dustinmcafee.dongadeuce.models.Player> = emptyList(),
+    onCardFocus: ((CardInstance) -> Unit)? = null
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -43,7 +45,8 @@ fun GraveyardDialog(
                             onReturnToBattlefield = { onReturnToBattlefield(it) },
                             showBattlefieldAction = true,
                             onAction = onAction,
-                            allPlayers = allPlayers
+                            allPlayers = allPlayers,
+                            onCardFocus = onCardFocus
                         )
                     }
                 }
@@ -65,7 +68,8 @@ fun ExileDialog(
     onReturnToHand: (CardInstance) -> Unit,
     onReturnToBattlefield: (CardInstance) -> Unit,
     onAction: (com.dustinmcafee.dongadeuce.models.CardAction) -> Unit = {},
-    allPlayers: List<com.dustinmcafee.dongadeuce.models.Player> = emptyList()
+    allPlayers: List<com.dustinmcafee.dongadeuce.models.Player> = emptyList(),
+    onCardFocus: ((CardInstance) -> Unit)? = null
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -88,7 +92,8 @@ fun ExileDialog(
                             onReturnToBattlefield = { onReturnToBattlefield(it) },
                             showBattlefieldAction = true,
                             onAction = onAction,
-                            allPlayers = allPlayers
+                            allPlayers = allPlayers,
+                            onCardFocus = onCardFocus
                         )
                     }
                 }
@@ -254,7 +259,8 @@ private fun ZoneCard(
     onReturnToBattlefield: (CardInstance) -> Unit,
     showBattlefieldAction: Boolean,
     onAction: (com.dustinmcafee.dongadeuce.models.CardAction) -> Unit = {},
-    allPlayers: List<com.dustinmcafee.dongadeuce.models.Player> = emptyList()
+    allPlayers: List<com.dustinmcafee.dongadeuce.models.Player> = emptyList(),
+    onCardFocus: ((CardInstance) -> Unit)? = null
 ) {
     CardWithContextMenu(
         cardInstance = cardInstance,
@@ -262,7 +268,22 @@ private fun ZoneCard(
         allPlayers = allPlayers
     ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(
+                if (onCardFocus != null) {
+                    Modifier.pointerInput(cardInstance.instanceId) {
+                        awaitPointerEventScope {
+                            while (true) {
+                                val event = awaitPointerEvent(PointerEventPass.Final)
+                                if (event.type == PointerEventType.Enter) {
+                                    onCardFocus(cardInstance)
+                                }
+                            }
+                        }
+                    }
+                } else Modifier
+            ),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.secondaryContainer
         )

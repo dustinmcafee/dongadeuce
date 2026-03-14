@@ -1024,7 +1024,7 @@ class GameViewModel(
             val player = gameState.players.find { it.id == playerId } ?: return@update currentState
 
             var updatedGameState = gameState.updatePlayer(playerId) { p ->
-                p.setLife(0)
+                p.copy(life = 0, hasLost = true)
             }
 
             // Log player lost event
@@ -2791,13 +2791,14 @@ class GameViewModel(
 
         if (authorizedPlayerId == null) return 0
 
-        // Determine which cards to act on
+        // Determine which cards to act on - always use fresh data from gameState
         val cardsToAct = if (selectedCardIds.contains(primaryCard.instanceId) && selectedCardIds.size > 1) {
             // Multi-card action: get all selected cards
             gameState.cardInstances.filter { it.instanceId in selectedCardIds }
         } else {
-            // Single card action
-            listOf(primaryCard)
+            // Single card action - fetch fresh card data from gameState to avoid stale data
+            val freshCard = gameState.cardInstances.find { it.instanceId == primaryCard.instanceId }
+            if (freshCard != null) listOf(freshCard) else listOf(primaryCard)
         }
 
         // Filter to only cards owned/controlled by authorized player and perform action

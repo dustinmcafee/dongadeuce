@@ -1,11 +1,15 @@
+@file:OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class)
+
 package com.dustinmcafee.dongadeuce.ui
 
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.ui.draw.clipToBounds
+import kotlinx.coroutines.launch
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -14,7 +18,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.*
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.graphics.graphicsLayer
@@ -192,6 +196,7 @@ fun DraggableBattlefieldGrid(
     // Scroll states for battlefield (both directions)
     val horizontalScrollState = rememberScrollState()
     val verticalScrollState = rememberScrollState()
+    val coroutineScope = rememberCoroutineScope()
 
     Box(
         modifier = modifier
@@ -202,6 +207,41 @@ fun DraggableBattlefieldGrid(
             }
             .fillMaxSize()
             .clipToBounds()
+            // Handle mouse wheel scrolling explicitly - use Initial pass to catch before other handlers
+            .pointerInput(Unit) {
+                awaitPointerEventScope {
+                    while (true) {
+                        val event = awaitPointerEvent(androidx.compose.ui.input.pointer.PointerEventPass.Initial)
+                        if (event.type == PointerEventType.Scroll) {
+                            val scrollDelta = event.changes.firstOrNull()?.scrollDelta ?: Offset.Zero
+                            val scrollMultiplier = 40f
+
+                            // Check if Shift is held to convert vertical scroll to horizontal
+                            val isShiftPressed = event.keyboardModifiers.isShiftPressed
+
+                            if (isShiftPressed || scrollDelta.x != 0f) {
+                                // Horizontal scrolling: use X delta or Y delta when Shift is held
+                                val horizontalAmount = if (scrollDelta.x != 0f) {
+                                    scrollDelta.x * scrollMultiplier
+                                } else {
+                                    scrollDelta.y * scrollMultiplier
+                                }
+                                coroutineScope.launch {
+                                    horizontalScrollState.scrollBy(horizontalAmount)
+                                }
+                            } else {
+                                // Normal vertical scrolling
+                                coroutineScope.launch {
+                                    verticalScrollState.scrollBy(scrollDelta.y * scrollMultiplier)
+                                }
+                            }
+
+                            // Consume the scroll event to prevent propagation
+                            event.changes.forEach { it.consume() }
+                        }
+                    }
+                }
+            }
             .verticalScroll(verticalScrollState)
             .horizontalScroll(horizontalScrollState)
     ) {
