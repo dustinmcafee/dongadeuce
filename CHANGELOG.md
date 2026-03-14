@@ -7,15 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [6.0.1-alpha] - 2026-03-14
+## [6.0.2-alpha] - 2026-03-14
 
 ### Added
-- **387 automated tests** - 130 GameEngine unit tests, 8 P2P integration tests (real WebSocket), 6 dedicated server integration tests (real Netty+game codes), 13 LobbyManager tests, 28 cross-platform serialization tests, plus existing model/parser tests
+- **446 automated tests** - 130 GameEngine, 15 P2P integration (real WebSocket), 9 dedicated server integration (real Netty+game codes), 13 LobbyManager, 7 REST API, 23 MenuViewModel, 19 GameViewModel, 28 cross-platform serialization, plus existing model/parser tests
 - **CI runs all tests** - Both shared module and server module tests run in CI before any build
+- **REST API tests** - Health, create/list/delete games, capacity limit
+- **ViewModel tests** - MenuViewModel state management, GameViewModel hotseat and network mode
 
 ### Fixed
 - **Server module compilation** - Fixed missing WebSocket import in `Main.kt`
 - **GameRoom.startGame()** - Changed from `runBlocking` to suspend function to avoid nested coroutine issues
+- **4-player P2P bug** - maxPlayers=4 was too restrictive when all slots are client connections
+
+## [6.0.1-alpha] - 2026-03-14
+
+### Added
+- **387 automated tests** - Initial test suite for GameEngine and integration tests
 
 ## [6.0.0-alpha] - 2026-03-14
 
