@@ -2044,4 +2044,213 @@ class GameEngineTest {
         val counter = state.players.find { it.id == p1 }!!.getCounter("energy")
         assertTrue(counter >= 0, "Player counter should not go below 0")
     }
+
+    // ==================== Grid Position Stack Limit ====================
+
+    @Test
+    fun `grid position rejects more than 3 cards at same position`() {
+        val (engine, p1, _) = createStartedEngine()
+        val state = engine.getCurrentState()!!
+        val handCards = state.cardInstances.filter { it.ownerId == p1 && it.zone == Zone.HAND }.take(4)
+
+        // Play 4 cards to battlefield
+        handCards.forEach {
+            engine.executeAction(NetworkAction.MoveCard(it.instanceId, Zone.BATTLEFIELD), p1)
+        }
+
+        // Move first 3 to same grid position (0,0)
+        engine.executeAction(NetworkAction.UpdateCardGridPosition(handCards[0].instanceId, 0, 0), p1)
+        engine.executeAction(NetworkAction.UpdateCardGridPosition(handCards[1].instanceId, 0, 0), p1)
+        engine.executeAction(NetworkAction.UpdateCardGridPosition(handCards[2].instanceId, 0, 0), p1)
+
+        // 4th card should be rejected (stays at its original position)
+        engine.executeAction(NetworkAction.UpdateCardGridPosition(handCards[3].instanceId, 0, 0), p1)
+
+        val after = engine.getCurrentState()!!
+        val atTarget = after.cardInstances.filter {
+            it.ownerId == p1 && it.zone == Zone.BATTLEFIELD && it.gridX == 0 && it.gridY == 0
+        }
+        assertTrue(atTarget.size <= 3, "Should not allow more than 3 cards at same grid position")
+    }
+
+    // ==================== GiveControlTo Validation ====================
+
+    @Test
+    fun `cannot give control of card you dont control`() {
+        val (engine, p1, p2) = createStartedEngine()
+        val state = engine.getCurrentState()!!
+        val p1Card = state.cardInstances.first { it.ownerId == p1 && it.zone == Zone.HAND }
+
+        engine.executeAction(NetworkAction.MoveCard(p1Card.instanceId, Zone.BATTLEFIELD), p1)
+
+        // p2 tries to give away p1's card
+        val result = engine.executeAction(NetworkAction.GiveControlTo(p1Card.instanceId, p1), p2)
+        assertFalse(result.success)
+        assertEquals("You don't control this card", result.reason)
+    }
+
+    // ==================== Counters Reset on Zone Change ====================
+
+    @Test
+    fun `counters reset when card moves off battlefield`() {
+        val (engine, p1, _) = createStartedEngine()
+        val state = engine.getCurrentState()!!
+        val card = state.cardInstances.first { it.ownerId == p1 && it.zone == Zone.HAND }
+
+        engine.executeAction(NetworkAction.MoveCard(card.instanceId, Zone.BATTLEFIELD), p1)
+        engine.executeAction(NetworkAction.AddCardCounter(card.instanceId, "+1/+1", 5), p1)
+        engine.executeAction(NetworkAction.AddCardCounter(card.instanceId, "charge", 3), p1)
+        engine.executeAction(NetworkAction.ModifyPower(card.instanceId, 2), p1)
+        engine.executeAction(NetworkAction.ToggleTap(card.instanceId), p1)
+
+        // Verify state is set
+        val mid = engine.getCurrentState()!!
+        val onField = mid.cardInstances.find { it.instanceId == card.instanceId }!!
+        assertEquals(5, onField.counters["+1/+1"])
+        assertEquals(3, onField.counters["charge"])
+        assertEquals(2, onField.powerModifier)
+        assertTrue(onField.isTapped)
+
+        // Move to hand
+        engine.executeAction(NetworkAction.MoveCard(card.instanceId, Zone.HAND), p1)
+
+        val after = engine.getCurrentState()!!
+        val inHand = after.cardInstances.find { it.instanceId == card.instanceId }!!
+        assertTrue(inHand.counters.isEmpty(), "Counters should reset")
+        assertEquals(0, inHand.powerModifier, "Power modifier should reset")
+        assertEquals(0, inHand.toughnessModifier, "Toughness modifier should reset")
+        assertFalse(inHand.isTapped, "Tapped should reset")
+        assertFalse(inHand.doesntUntap, "doesntUntap should reset")
+        assertNull(inHand.attachedTo, "attachedTo should reset")
+    }
+
+    // ==================== Attachment Clears on Zone Change ====================
+
+    @Test
+    fun `attachment clears when attached card leaves battlefield`() {
+        val (engine, p1, _) = createStartedEngine()
+        val state = engine.getCurrentState()!!
+        val cards = state.cardInstances.filter { it.ownerId == p1 && it.zone == Zone.HAND }.take(2)
+
+        engine.executeAction(NetworkAction.MoveCard(cards[0].instanceId, Zone.BATTLEFIELD), p1)
+        engine.executeAction(NetworkAction.MoveCard(cards[1].instanceId, Zone.BATTLEFIELD), p1)
+        engine.executeAction(NetworkAction.AttachCard(cards[0].instanceId, cards[1].instanceId), p1)
+
+        // Move the attached card to graveyard
+        engine.executeAction(NetworkAction.MoveCard(cards[0].instanceId, Zone.GRAVEYARD), p1)
+
+        val after = engine.getCurrentState()!!
+        val inGrave = after.cardInstances.find { it.instanceId == cards[0].instanceId }!!
+        assertNull(inGrave.attachedTo, "Attachment should clear when leaving battlefield")
+    }
+
+    // ==================== Reveal + Look Interaction Edge Cases ====================
+
+    @Test
+    fun `reveal enables look, but disabling reveal keeps look`() {
+        val (engine, p1, _) = createStartedEngine()
+
+        // Enable reveal (also enables look)
+        engine.executeAction(NetworkAction.ToggleRevealTopCard(p1), p1)
+        val s1 = engine.getCurrentState()!!.players.find { it.id == p1 }!!
+        assertTrue(s1.revealTopCard)
+        assertTrue(s1.lookAtTopCard)
+
+        // Disable reveal — look should stay on
+        engine.executeAction(NetworkAction.ToggleRevealTopCard(p1), p1)
+        val s2 = engine.getCurrentState()!!.players.find { it.id == p1 }!!
+        assertFalse(s2.revealTopCard)
+        // lookAtTopCard persists independently when reveal is turned off
+        // (reveal on sets look=true, reveal off doesn't touch look)
+        assertTrue(s2.lookAtTopCard)
+    }
+
+    // ==================== Multiple draws on same turn ====================
+
+    @Test
+    fun `drawing multiple cards decrements library correctly`() {
+        val (engine, p1, _) = createStartedEngine()
+        val libBefore = engine.getCurrentState()!!.cardInstances.count {
+            it.ownerId == p1 && it.zone == Zone.LIBRARY
+        }
+
+        repeat(10) {
+            engine.executeAction(NetworkAction.DrawCard(p1), p1)
+        }
+
+        val after = engine.getCurrentState()!!
+        val libAfter = after.cardInstances.count { it.ownerId == p1 && it.zone == Zone.LIBRARY }
+        val handAfter = after.cardInstances.count { it.ownerId == p1 && it.zone == Zone.HAND }
+
+        assertEquals(libBefore - 10, libAfter)
+        assertEquals(GameConstants.STARTING_HAND_SIZE + 10, handAfter) // 7 starting + 10 drawn
+    }
+
+    // ==================== Token moving between battlefield zones ====================
+
+    @Test
+    fun `token stays on battlefield when moved to battlefield`() {
+        val (engine, p1, _) = createStartedEngine()
+
+        engine.executeAction(
+            NetworkAction.CreateToken(p1, "Angel", "Creature — Angel", "4", "4", "White", null, 1),
+            p1
+        )
+
+        val state = engine.getCurrentState()!!
+        val token = state.cardInstances.find { it.isToken && it.ownerId == p1 }!!
+
+        // Moving token to battlefield again (same zone) should keep it
+        engine.executeAction(NetworkAction.MoveCard(token.instanceId, Zone.BATTLEFIELD), p1)
+
+        val after = engine.getCurrentState()!!
+        val tokenAfter = after.cardInstances.find { it.instanceId == token.instanceId }
+        assertNotNull(tokenAfter, "Token should survive battlefield→battlefield move")
+    }
+
+    // ==================== Commander from command zone to battlefield and back ====================
+
+    @Test
+    fun `commander can move between command zone and battlefield`() {
+        val (engine, p1, _) = createStartedEngine()
+        val state = engine.getCurrentState()!!
+        val commander = state.cardInstances.first {
+            it.ownerId == p1 && it.zone == Zone.COMMAND_ZONE
+        }
+
+        // Play commander
+        engine.executeAction(NetworkAction.MoveCard(commander.instanceId, Zone.BATTLEFIELD), p1)
+        assertEquals(Zone.BATTLEFIELD,
+            engine.getCurrentState()!!.cardInstances.find { it.instanceId == commander.instanceId }!!.zone)
+
+        // Return to command zone
+        engine.executeAction(NetworkAction.MoveCard(commander.instanceId, Zone.COMMAND_ZONE), p1)
+        assertEquals(Zone.COMMAND_ZONE,
+            engine.getCurrentState()!!.cardInstances.find { it.instanceId == commander.instanceId }!!.zone)
+    }
+
+    // ==================== Game log accumulation ====================
+
+    @Test
+    fun `game log preserves events across multiple actions`() {
+        val (engine, p1, _) = createStartedEngine()
+
+        engine.executeAction(NetworkAction.DrawCard(p1), p1)
+        engine.executeAction(NetworkAction.UpdateLife(p1, 38), p1)
+        engine.executeAction(NetworkAction.NextPhase, p1)
+        engine.executeAction(NetworkAction.NextPhase, p1)
+        engine.executeAction(NetworkAction.NextPhase, p1)
+
+        val state = engine.getCurrentState()!!
+        // At minimum: GameStarted + starting hand draws + our 5 actions
+        assertTrue(state.gameLog.size >= 6, "Log should accumulate: ${state.gameLog.size} events")
+
+        // Verify order — last 5 should be our actions
+        val last5 = state.gameLog.takeLast(5)
+        assertTrue(last5[0] is GameEvent.CardDrawn)
+        assertTrue(last5[1] is GameEvent.LifeChanged)
+        assertTrue(last5[2] is GameEvent.PhaseChanged)
+        assertTrue(last5[3] is GameEvent.PhaseChanged)
+        assertTrue(last5[4] is GameEvent.PhaseChanged)
+    }
 }
