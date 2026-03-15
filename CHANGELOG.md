@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.0.6-beta] - 2026-03-15
+
+### Added
+- **APK signing in CI** - GitHub Actions now signs release APKs with a release keystore
+- **Keystore gitignore** - `.jks` and `.keystore` files excluded from version control
+
 ## [6.0.5-beta] - 2026-03-15
 
 ### Added

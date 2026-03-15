@@ -17,7 +17,7 @@ application {
 
 dependencies {
     // Pre-built shared module JAR (Kotlin 1.9.21, binary compatible with 2.x)
-    implementation(files("../shared/build/libs/shared-jvm-6.0.5-beta.jar"))
+    implementation(files("../shared/build/libs/shared-jvm-6.0.6-beta.jar"))
 
     // Ktor server
     implementation("io.ktor:ktor-server-core:2.3.7")

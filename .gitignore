@@ -30,6 +30,10 @@ out/
 # Local configuration
 local.properties
 
+# Signing keystores
+*.jks
+*.keystore
+
 # Compose Desktop
 desktop/build/
 shared/build/
