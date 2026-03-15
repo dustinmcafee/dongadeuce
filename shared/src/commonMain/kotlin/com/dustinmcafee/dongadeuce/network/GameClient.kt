@@ -119,28 +119,25 @@ class GameClient {
                 // TLS with TOFU
                 val fingerprint = resolveTrustedFingerprint(host, port, tofuVerifier, trustedServersStore)
                 if (fingerprint == null) {
-                    // User rejected or probe failed — error already set
                     return false
                 }
 
-                client = HttpClient(createTlsHttpClientEngine(fingerprint)) {
-                    install(WebSockets)
-                }
-
-                client?.wss(host = host, port = port, path = path) {
-                    session = this
-                    _connectionState.value = ConnectionState.Connecting
-
-                    send(Frame.Text(json.encodeToString<GameMessage>(
-                        GameMessage.PlayerJoin(playerName, deck)
-                    )))
-
-                    for (frame in incoming) {
-                        when (frame) {
-                            is Frame.Text -> handleMessage(frame.readText())
-                            is Frame.Close -> { handleDisconnect("Connection closed by server"); break }
-                            else -> {}
-                        }
+                try {
+                    connectWss(host, port, path, fingerprint, playerName, deck)
+                } catch (e: Exception) {
+                    val msg = e.message ?: ""
+                    if (msg.contains("fingerprint mismatch", ignoreCase = true) ||
+                        msg.contains("SSL", ignoreCase = true) ||
+                        msg.contains("certificate", ignoreCase = true)) {
+                        // Server cert changed (likely regenerated after expiry).
+                        // Clear old trust and retry TOFU.
+                        trustedServersStore?.removeServer(host, port)
+                        _connectionState.value = ConnectionState.Connecting
+                        val newFingerprint = resolveTrustedFingerprint(host, port, tofuVerifier, trustedServersStore)
+                        if (newFingerprint == null) return false
+                        connectWss(host, port, path, newFingerprint, playerName, deck)
+                    } else {
+                        throw e
                     }
                 }
             } else {
@@ -173,6 +170,36 @@ class GameClient {
         }
 
         return _connectionState.value is ConnectionState.Connected
+    }
+
+    /**
+     * Connect via wss:// with a pinned fingerprint.
+     */
+    private suspend fun connectWss(
+        host: String, port: Int, path: String,
+        fingerprint: String, playerName: String, deck: Deck
+    ) {
+        client?.close()
+        client = HttpClient(createTlsHttpClientEngine(fingerprint)) {
+            install(WebSockets)
+        }
+
+        client?.wss(host = host, port = port, path = path) {
+            session = this
+            _connectionState.value = ConnectionState.Connecting
+
+            send(Frame.Text(json.encodeToString<GameMessage>(
+                GameMessage.PlayerJoin(playerName, deck)
+            )))
+
+            for (frame in incoming) {
+                when (frame) {
+                    is Frame.Text -> handleMessage(frame.readText())
+                    is Frame.Close -> { handleDisconnect("Connection closed by server"); break }
+                    else -> {}
+                }
+            }
+        }
     }
 
     /**
