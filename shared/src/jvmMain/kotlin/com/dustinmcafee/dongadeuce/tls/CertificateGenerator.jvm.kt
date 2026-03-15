@@ -5,10 +5,15 @@ import java.io.File
 import java.security.KeyStore
 import java.security.MessageDigest
 import java.security.cert.X509Certificate
+import java.util.Date
+
+private const val RENEWAL_THRESHOLD_DAYS = 30L
+private const val VALIDITY_DAYS = 3650L // 10 years
 
 /**
  * Generates a self-signed certificate and stores it in a JKS keystore,
- * or loads an existing one. Uses Ktor's certificate utilities.
+ * or loads an existing one. If the existing cert is expired or expiring
+ * within 30 days, the keystore is regenerated.
  */
 fun generateOrLoadCertificate(
     keystorePath: String,
@@ -18,11 +23,28 @@ fun generateOrLoadCertificate(
 ): CertificateInfo {
     val keystoreFile = File(keystorePath)
 
+    // Check if existing cert needs renewal
+    if (keystoreFile.exists()) {
+        val needsRenewal = try {
+            val ks = KeyStore.getInstance("JKS")
+            keystoreFile.inputStream().use { ks.load(it, keystorePassword.toCharArray()) }
+            val cert = ks.getCertificate(keyAlias) as? X509Certificate
+            cert == null || isCertExpiringSoon(cert)
+        } catch (_: Exception) {
+            true // Corrupted keystore — regenerate
+        }
+
+        if (needsRenewal) {
+            keystoreFile.delete()
+        }
+    }
+
     if (!keystoreFile.exists()) {
         keystoreFile.parentFile?.mkdirs()
         val keyStore = buildKeyStore {
             certificate(keyAlias) {
                 password = privateKeyPassword
+                daysValid = VALIDITY_DAYS
                 domains = listOf("localhost", "0.0.0.0")
             }
         }
@@ -41,6 +63,15 @@ fun generateOrLoadCertificate(
         privateKeyPassword = privateKeyPassword,
         fingerprint = fingerprint
     )
+}
+
+/**
+ * Check if a certificate is expired or expiring within the renewal threshold.
+ */
+fun isCertExpiringSoon(cert: X509Certificate): Boolean {
+    val thresholdMs = RENEWAL_THRESHOLD_DAYS * 24 * 60 * 60 * 1000
+    val expiryDate = cert.notAfter
+    return expiryDate.time - System.currentTimeMillis() < thresholdMs
 }
 
 /**

@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.0.8-beta] - 2026-03-15
+
+### Added
+- **Certificate auto-renewal** - Server detects expired or soon-expiring certs (within 30 days) and regenerates automatically on startup
+- **Client cert change recovery** - When a server's cert changes (after renewal), client clears stale trust and re-triggers TOFU prompt instead of failing silently
+- **10-year certificate validity** - Self-signed certs now valid for 3650 days (was Ktor default of 3 days)
+
 ## [6.0.7-beta] - 2026-03-15
 
 ### Added

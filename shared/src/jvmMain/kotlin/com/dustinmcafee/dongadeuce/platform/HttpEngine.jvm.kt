@@ -16,6 +16,10 @@ actual fun createHttpClientEngine(): HttpClientEngine = CIO.create()
 actual fun createTlsHttpClientEngine(trustedFingerprint: String?): HttpClientEngine {
     return CIO.create {
         https {
+            // Set serverName to match the cert's SAN ("localhost") to satisfy
+            // any hostname verification. We use TOFU fingerprint pinning, not
+            // hostname-based trust, so this is safe.
+            serverName = "localhost"
             trustManager = object : X509TrustManager {
                 override fun checkClientTrusted(chain: Array<out X509Certificate>?, authType: String?) {}
                 override fun getAcceptedIssuers(): Array<X509Certificate> = arrayOf()

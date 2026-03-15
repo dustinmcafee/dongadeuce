@@ -11,6 +11,7 @@ import com.dustinmcafee.dongadeuce.models.Deck
 import com.dustinmcafee.dongadeuce.models.GameState
 import com.dustinmcafee.dongadeuce.network.*
 import com.dustinmcafee.dongadeuce.platform.createHttpClientEngine
+import com.dustinmcafee.dongadeuce.platform.createTlsHttpClientEngine
 import com.dustinmcafee.dongadeuce.platform.ioDispatcher
 import com.dustinmcafee.dongadeuce.settings.UserSettings
 import com.dustinmcafee.dongadeuce.tls.TofuVerifier
@@ -1061,13 +1062,16 @@ class MenuViewModel {
         val state = _uiState.value
         val address = state.serverAddress
         val port = state.serverPort
+        val useTls = state.tlsEnabled
 
         _uiState.update { it.copy(isLoading = true, error = null) }
 
         viewModelScope.launch {
             try {
-                val client = HttpClient(createHttpClientEngine())
-                val response = client.post("http://$address:$port/api/games")
+                val engine = if (useTls) createTlsHttpClientEngine(null) else createHttpClientEngine()
+                val scheme = if (useTls) "https" else "http"
+                val client = HttpClient(engine)
+                val response = client.post("$scheme://$address:$port/api/games")
                 client.close()
 
                 if (response.status == HttpStatusCode.Created) {
