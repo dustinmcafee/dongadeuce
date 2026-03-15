@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.0.9-beta] - 2026-03-15
+
+### Fixed
+- **Android TLS server engine** - Switched from CIO to Netty for TLS connections (CIO's TLS implementation can't handle WebSocket handshakes)
+- **Desktop TLS hostname verification** - Set CIO client `serverName` to match cert SAN for non-localhost connections
+- **Create Game over TLS** - `createGameOnServer()` now uses HTTPS when TLS is enabled
+
 ## [6.0.8-beta] - 2026-03-15
 
 ### Added

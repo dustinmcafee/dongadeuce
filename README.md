@@ -169,7 +169,7 @@ cd dongadeuce
 ./gradlew desktop:packageDeb
 ```
 
-## Current Status (v6.0.8-beta)
+## Current Status (v6.0.9-beta)
 
 **Desktop:** 99% Complete - Fully Playable! ✅
 **Android:** 99% Complete - Fully Playable! ✅
