@@ -1,13 +1,60 @@
 package com.dustinmcafee.dongadeuce.platform
 
+import com.dustinmcafee.dongadeuce.tls.computeFingerprint
 import io.ktor.client.engine.*
 import io.ktor.client.engine.cio.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.net.HttpURLConnection
 import java.net.URL
+import java.security.MessageDigest
+import java.security.cert.X509Certificate
+import javax.net.ssl.*
 
 actual fun createHttpClientEngine(): HttpClientEngine = CIO.create()
+
+actual fun createTlsHttpClientEngine(trustedFingerprint: String?): HttpClientEngine {
+    return CIO.create {
+        https {
+            trustManager = object : X509TrustManager {
+                override fun checkClientTrusted(chain: Array<out X509Certificate>?, authType: String?) {}
+                override fun getAcceptedIssuers(): Array<X509Certificate> = arrayOf()
+                override fun checkServerTrusted(chain: Array<out X509Certificate>?, authType: String?) {
+                    if (trustedFingerprint == null) return // Accept any (for TOFU probe)
+                    val serverCert = chain?.firstOrNull()
+                        ?: throw SSLException("No server certificate")
+                    val serverFingerprint = computeFingerprint(serverCert)
+                    if (serverFingerprint != trustedFingerprint) {
+                        throw SSLException(
+                            "Certificate fingerprint mismatch. Expected: $trustedFingerprint, Got: $serverFingerprint"
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+actual suspend fun probeCertificateFingerprint(host: String, port: Int): String? {
+    return withContext(Dispatchers.IO) {
+        try {
+            val sslContext = SSLContext.getInstance("TLS")
+            sslContext.init(null, arrayOf(object : X509TrustManager {
+                override fun checkClientTrusted(chain: Array<out X509Certificate>?, authType: String?) {}
+                override fun getAcceptedIssuers(): Array<X509Certificate> = arrayOf()
+                override fun checkServerTrusted(chain: Array<out X509Certificate>?, authType: String?) {}
+            }), null)
+            val socket = sslContext.socketFactory.createSocket(host, port) as SSLSocket
+            socket.startHandshake()
+            val cert = socket.session.peerCertificates[0] as X509Certificate
+            val fp = computeFingerprint(cert)
+            socket.close()
+            fp
+        } catch (e: Exception) {
+            null
+        }
+    }
+}
 
 actual suspend fun streamingDownload(
     url: String,

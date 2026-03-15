@@ -11,6 +11,20 @@ import io.ktor.client.engine.*
 expect fun createHttpClientEngine(): HttpClientEngine
 
 /**
+ * Creates a platform-specific HTTP client engine with custom TLS trust.
+ * Used for TOFU connections to servers with self-signed certificates.
+ *
+ * @param trustedFingerprint SHA-256 fingerprint to validate, or null to accept any cert (for probing).
+ */
+expect fun createTlsHttpClientEngine(trustedFingerprint: String? = null): HttpClientEngine
+
+/**
+ * Probes a TLS server to retrieve its certificate's SHA-256 fingerprint.
+ * Used during the TOFU flow before the user has accepted the cert.
+ */
+expect suspend fun probeCertificateFingerprint(host: String, port: Int): String?
+
+/**
  * Downloads a large file using platform-specific streaming that bypasses Ktor's buffering.
  * This is necessary for very large files (500MB+) that would cause OOM with Ktor's internal buffers.
  *

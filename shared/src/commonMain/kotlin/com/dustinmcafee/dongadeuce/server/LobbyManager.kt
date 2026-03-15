@@ -12,7 +12,8 @@ data class ServerConfig(
     val maxGames: Int = 100,
     val maxPlayersPerGame: Int = 6,
     val gameCodeLength: Int = 6,
-    val idleTimeoutMinutes: Long = 60
+    val idleTimeoutMinutes: Long = 60,
+    val tlsEnabled: Boolean = false
 ) {
     companion object
 }

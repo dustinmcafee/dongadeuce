@@ -13,10 +13,14 @@ import com.dustinmcafee.dongadeuce.network.*
 import com.dustinmcafee.dongadeuce.platform.createHttpClientEngine
 import com.dustinmcafee.dongadeuce.platform.ioDispatcher
 import com.dustinmcafee.dongadeuce.settings.UserSettings
+import com.dustinmcafee.dongadeuce.tls.TofuVerifier
+import com.dustinmcafee.dongadeuce.tls.TrustDecision
+import com.dustinmcafee.dongadeuce.tls.TrustedServersStore
 import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -72,7 +76,17 @@ data class MenuUiState(
     // Commander selection state
     val pendingDeckData: ParsedDeckData? = null, // Deck waiting for commander selection
     val pendingDeckPlayerIndex: Int? = null, // Player index for hotseat (null for single deck)
-    val commanderCandidates: List<Card> = emptyList() // Cards that can be selected as commander
+    val commanderCandidates: List<Card> = emptyList(), // Cards that can be selected as commander
+    // TLS
+    val tlsEnabled: Boolean = false,
+    val serverFingerprint: String? = null, // Shown when hosting with TLS
+    val tofuPrompt: TofuPromptData? = null // Shown when connecting to untrusted server
+)
+
+data class TofuPromptData(
+    val host: String,
+    val port: Int,
+    val fingerprint: String
 )
 
 sealed class Screen {
@@ -876,8 +890,14 @@ class MenuViewModel {
         }
 
         // Connect to server
+        val useTls = _uiState.value.tlsEnabled
         viewModelScope.launch {
-            val success = gameClient?.connect(host, port, playerName, deck, gameCode) ?: false
+            val success = gameClient?.connect(
+                host, port, playerName, deck, gameCode,
+                useTls = useTls,
+                tofuVerifier = if (useTls) tofuVerifier else null,
+                trustedServersStore = if (useTls) trustedServersStore else null
+            ) ?: false
             if (!success) {
                 _uiState.update {
                     it.copy(
@@ -920,7 +940,9 @@ class MenuViewModel {
                 serverUrl = null,
                 gameCode = null,
                 availableGames = emptyList(),
-                error = null
+                error = null,
+                serverFingerprint = null,
+                tofuPrompt = null
             )
         }
     }
@@ -991,6 +1013,43 @@ class MenuViewModel {
      */
     fun setGameCode(code: String?) {
         _uiState.update { it.copy(gameCode = code) }
+    }
+
+    /**
+     * Toggle TLS encryption for connections.
+     */
+    fun setTlsEnabled(enabled: Boolean) {
+        _uiState.update { it.copy(tlsEnabled = enabled) }
+    }
+
+    // TOFU deferred — suspends GameClient.connect() until user responds
+    private var tofuResponseDeferred: CompletableDeferred<TrustDecision>? = null
+
+    private val trustedServersStore = TrustedServersStore()
+
+    private val tofuVerifier: TofuVerifier = { host, port, fingerprint ->
+        val result = CompletableDeferred<TrustDecision>()
+        tofuResponseDeferred = result
+        _uiState.update { it.copy(tofuPrompt = TofuPromptData(host, port, fingerprint)) }
+        result.await()
+    }
+
+    /**
+     * Accept the TOFU fingerprint prompt.
+     */
+    fun acceptTofu() {
+        tofuResponseDeferred?.complete(TrustDecision.ACCEPT)
+        tofuResponseDeferred = null
+        _uiState.update { it.copy(tofuPrompt = null) }
+    }
+
+    /**
+     * Reject the TOFU fingerprint prompt.
+     */
+    fun rejectTofu() {
+        tofuResponseDeferred?.complete(TrustDecision.REJECT)
+        tofuResponseDeferred = null
+        _uiState.update { it.copy(tofuPrompt = null) }
     }
 
     /**

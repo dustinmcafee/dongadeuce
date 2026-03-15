@@ -41,7 +41,7 @@ class ServerNotificationManager(private val context: Context) {
     /**
      * Build the foreground notification for the server service.
      */
-    fun buildNotification(port: Int, gameCount: Int): Notification {
+    fun buildNotification(port: Int, gameCount: Int, tlsLabel: String? = null): Notification {
         // Tap notification to open app
         val openIntent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
@@ -62,7 +62,7 @@ class ServerNotificationManager(private val context: Context) {
 
         return NotificationCompat.Builder(context, CHANNEL_ID)
             .setContentTitle("DongADeuce Server")
-            .setContentText("Port $port — $gameCount active game${if (gameCount != 1) "s" else ""}")
+            .setContentText("Port $port${if (tlsLabel != null) " ($tlsLabel)" else ""} — $gameCount active game${if (gameCount != 1) "s" else ""}")
             .setSmallIcon(R.mipmap.ic_launcher)
             .setOngoing(true)
             .setContentIntent(openPendingIntent)

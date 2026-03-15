@@ -19,8 +19,9 @@ class ServerRestartWorker(
         val port = prefs.getInt("server_port", 9090)
         val maxGames = prefs.getInt("server_max_games", 100)
         val maxPlayers = prefs.getInt("server_max_players", 6)
+        val tlsEnabled = prefs.getBoolean("server_tls_enabled", false)
 
-        DedicatedServerService.startServer(applicationContext, port, maxGames, maxPlayers)
+        DedicatedServerService.startServer(applicationContext, port, maxGames, maxPlayers, tlsEnabled)
 
         return Result.success()
     }

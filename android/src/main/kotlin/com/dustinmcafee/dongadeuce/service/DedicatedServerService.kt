@@ -9,10 +9,10 @@ import android.content.SharedPreferences
 import android.net.ConnectivityManager
 import android.net.LinkProperties
 import android.os.IBinder
-import com.dustinmcafee.dongadeuce.server.GameInfo
 import com.dustinmcafee.dongadeuce.server.LobbyManager
 import com.dustinmcafee.dongadeuce.server.ServerConfig
 import com.dustinmcafee.dongadeuce.platform.createServer
+import com.dustinmcafee.dongadeuce.tls.generateOrLoadCertificate
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.response.*
@@ -53,25 +53,31 @@ class DedicatedServerService : Service() {
         private val _serverIpAddress = MutableStateFlow("")
         val serverIpAddress: StateFlow<String> = _serverIpAddress.asStateFlow()
 
+        private val _serverFingerprint = MutableStateFlow<String?>(null)
+        val serverFingerprint: StateFlow<String?> = _serverFingerprint.asStateFlow()
+
         private const val PREFS_NAME = "dongadeuce_server"
         private const val KEY_RUNNING = "server_running"
         private const val KEY_PORT = "server_port"
         private const val KEY_MAX_GAMES = "server_max_games"
         private const val KEY_MAX_PLAYERS = "server_max_players"
+        private const val KEY_TLS_ENABLED = "server_tls_enabled"
 
-        fun startServer(context: Context, port: Int, maxGames: Int, maxPlayers: Int) {
+        fun startServer(context: Context, port: Int, maxGames: Int, maxPlayers: Int, tlsEnabled: Boolean = false) {
             val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             prefs.edit()
                 .putBoolean(KEY_RUNNING, true)
                 .putInt(KEY_PORT, port)
                 .putInt(KEY_MAX_GAMES, maxGames)
                 .putInt(KEY_MAX_PLAYERS, maxPlayers)
+                .putBoolean(KEY_TLS_ENABLED, tlsEnabled)
                 .apply()
 
             val intent = Intent(context, DedicatedServerService::class.java).apply {
                 putExtra(KEY_PORT, port)
                 putExtra(KEY_MAX_GAMES, maxGames)
                 putExtra(KEY_MAX_PLAYERS, maxPlayers)
+                putExtra(KEY_TLS_ENABLED, tlsEnabled)
             }
             context.startForegroundService(intent)
         }
@@ -92,9 +98,10 @@ class DedicatedServerService : Service() {
         val port = intent?.getIntExtra(KEY_PORT, 9090) ?: 9090
         val maxGames = intent?.getIntExtra(KEY_MAX_GAMES, 100) ?: 100
         val maxPlayers = intent?.getIntExtra(KEY_MAX_PLAYERS, 6) ?: 6
+        val tlsEnabled = intent?.getBooleanExtra(KEY_TLS_ENABLED, false) ?: false
 
         notificationManager = ServerNotificationManager(this)
-        val notification = notificationManager!!.buildNotification(port, 0)
+        val notification = notificationManager!!.buildNotification(port, 0, if (tlsEnabled) "TLS" else null)
         startForeground(ServerNotificationManager.NOTIFICATION_ID, notification)
 
         // Register stop receiver
@@ -109,16 +116,17 @@ class DedicatedServerService : Service() {
             RECEIVER_NOT_EXPORTED
         )
 
-        startDedicatedServer(port, maxGames, maxPlayers)
+        startDedicatedServer(port, maxGames, maxPlayers, tlsEnabled)
 
         return START_STICKY
     }
 
-    private fun startDedicatedServer(port: Int, maxGames: Int, maxPlayers: Int) {
+    private fun startDedicatedServer(port: Int, maxGames: Int, maxPlayers: Int, tlsEnabled: Boolean = false) {
         val config = ServerConfig(
             port = port,
             maxGames = maxGames,
-            maxPlayersPerGame = maxPlayers
+            maxPlayersPerGame = maxPlayers,
+            tlsEnabled = tlsEnabled
         )
         val manager = LobbyManager(config)
         lobbyManager = manager
@@ -126,7 +134,17 @@ class DedicatedServerService : Service() {
         val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
         serviceScope = scope
 
-        val srv = createServer(port) {
+        val tlsConfig = if (tlsEnabled) {
+            val keystorePath = java.io.File(filesDir, "server.jks").absolutePath
+            val certInfo = generateOrLoadCertificate(keystorePath = keystorePath)
+            _serverFingerprint.value = certInfo.fingerprint
+            certInfo.toServerTlsConfig()
+        } else {
+            _serverFingerprint.value = null
+            null
+        }
+
+        val srv = createServer(port, tlsConfig = tlsConfig, module = {
             install(WebSockets) {
                 pingPeriodMillis = 15000
                 timeoutMillis = 30000
@@ -216,7 +234,7 @@ class DedicatedServerService : Service() {
                     }
                 }
             }
-        }
+        })
 
         server = srv
         srv.start()
@@ -264,6 +282,7 @@ class DedicatedServerService : Service() {
         _isRunning.value = false
         _activeGameCount.value = 0
         _serverIpAddress.value = ""
+        _serverFingerprint.value = null
     }
 }
 

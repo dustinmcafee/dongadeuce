@@ -3,7 +3,12 @@ package com.dustinmcafee.dongadeuce.network
 import com.dustinmcafee.dongadeuce.models.Deck
 import com.dustinmcafee.dongadeuce.models.GameState
 import com.dustinmcafee.dongadeuce.platform.createHttpClientEngine
+import com.dustinmcafee.dongadeuce.platform.createTlsHttpClientEngine
 import com.dustinmcafee.dongadeuce.platform.ioDispatcher
+import com.dustinmcafee.dongadeuce.platform.probeCertificateFingerprint
+import com.dustinmcafee.dongadeuce.tls.TofuVerifier
+import com.dustinmcafee.dongadeuce.tls.TrustDecision
+import com.dustinmcafee.dongadeuce.tls.TrustedServersStore
 import io.ktor.client.*
 import io.ktor.client.plugins.websocket.*
 import io.ktor.websocket.*
@@ -59,6 +64,9 @@ class GameClient {
     private var lastPort: Int? = null
     private var lastPlayerName: String? = null
     private var lastDeck: Deck? = null
+    private var lastUseTls: Boolean = false
+    private var lastTofuVerifier: TofuVerifier? = null
+    private var lastTrustedServersStore: TrustedServersStore? = null
 
     // JSON serializer
     private val json = Json {
@@ -72,8 +80,20 @@ class GameClient {
     /**
      * Connect to a game server.
      * @param gameCode If set, connects to /game/{code} (dedicated server mode). If null, connects to /game (P2P mode).
+     * @param useTls If true, connects via wss:// with TOFU certificate verification.
+     * @param tofuVerifier Callback to prompt user to accept/reject an unknown certificate.
+     * @param trustedServersStore Persistent store of trusted server fingerprints.
      */
-    suspend fun connect(host: String, port: Int, playerName: String, deck: Deck, gameCode: String? = null): Boolean {
+    suspend fun connect(
+        host: String,
+        port: Int,
+        playerName: String,
+        deck: Deck,
+        gameCode: String? = null,
+        useTls: Boolean = false,
+        tofuVerifier: TofuVerifier? = null,
+        trustedServersStore: TrustedServersStore? = null
+    ): Boolean {
         if (_connectionState.value is ConnectionState.Connected ||
             _connectionState.value is ConnectionState.Connecting) {
             return false
@@ -88,34 +108,61 @@ class GameClient {
         lastPlayerName = playerName
         lastDeck = deck
         lastGameCode = gameCode
+        lastUseTls = useTls
+        lastTofuVerifier = tofuVerifier
+        lastTrustedServersStore = trustedServersStore
 
         val path = if (gameCode != null) "/game/$gameCode" else "/game"
 
         try {
-            client = HttpClient(createHttpClientEngine()) {
-                install(WebSockets)
-            }
+            if (useTls) {
+                // TLS with TOFU
+                val fingerprint = resolveTrustedFingerprint(host, port, tofuVerifier, trustedServersStore)
+                if (fingerprint == null) {
+                    // User rejected or probe failed — error already set
+                    return false
+                }
 
-            client?.webSocket(host = host, port = port, path = path) {
-                session = this
-                _connectionState.value = ConnectionState.Connecting
+                client = HttpClient(createTlsHttpClientEngine(fingerprint)) {
+                    install(WebSockets)
+                }
 
-                // Send join request
-                send(Frame.Text(json.encodeToString<GameMessage>(
-                    GameMessage.PlayerJoin(playerName, deck)
-                )))
+                client?.wss(host = host, port = port, path = path) {
+                    session = this
+                    _connectionState.value = ConnectionState.Connecting
 
-                // Listen for messages directly in this coroutine
-                for (frame in incoming) {
-                    when (frame) {
-                        is Frame.Text -> {
-                            handleMessage(frame.readText())
+                    send(Frame.Text(json.encodeToString<GameMessage>(
+                        GameMessage.PlayerJoin(playerName, deck)
+                    )))
+
+                    for (frame in incoming) {
+                        when (frame) {
+                            is Frame.Text -> handleMessage(frame.readText())
+                            is Frame.Close -> { handleDisconnect("Connection closed by server"); break }
+                            else -> {}
                         }
-                        is Frame.Close -> {
-                            handleDisconnect("Connection closed by server")
-                            break
+                    }
+                }
+            } else {
+                // Plain WebSocket
+                client = HttpClient(createHttpClientEngine()) {
+                    install(WebSockets)
+                }
+
+                client?.webSocket(host = host, port = port, path = path) {
+                    session = this
+                    _connectionState.value = ConnectionState.Connecting
+
+                    send(Frame.Text(json.encodeToString<GameMessage>(
+                        GameMessage.PlayerJoin(playerName, deck)
+                    )))
+
+                    for (frame in incoming) {
+                        when (frame) {
+                            is Frame.Text -> handleMessage(frame.readText())
+                            is Frame.Close -> { handleDisconnect("Connection closed by server"); break }
+                            else -> {}
                         }
-                        else -> {}
                     }
                 }
             }
@@ -126,6 +173,44 @@ class GameClient {
         }
 
         return _connectionState.value is ConnectionState.Connected
+    }
+
+    /**
+     * Resolve the trusted fingerprint for a TLS connection.
+     * Checks the trust store first, then probes and asks the user via TOFU.
+     */
+    private suspend fun resolveTrustedFingerprint(
+        host: String,
+        port: Int,
+        tofuVerifier: TofuVerifier?,
+        trustedServersStore: TrustedServersStore?
+    ): String? {
+        // Check if already trusted
+        val knownFingerprint = trustedServersStore?.getTrustedFingerprint(host, port)
+        if (knownFingerprint != null) return knownFingerprint
+
+        // Probe server to get certificate fingerprint
+        val probeFingerprint = probeCertificateFingerprint(host, port)
+        if (probeFingerprint == null) {
+            _connectionState.value = ConnectionState.Error("Could not retrieve server certificate")
+            _error.value = "Could not retrieve server certificate from $host:$port"
+            return null
+        }
+
+        // Ask user via TOFU verifier
+        val decision = tofuVerifier?.invoke(host, port, probeFingerprint) ?: TrustDecision.REJECT
+
+        return when (decision) {
+            TrustDecision.ACCEPT -> {
+                trustedServersStore?.trustServer(host, port, probeFingerprint)
+                probeFingerprint
+            }
+            TrustDecision.REJECT -> {
+                _connectionState.value = ConnectionState.Error("Certificate rejected")
+                _error.value = "Server certificate rejected by user"
+                null
+            }
+        }
     }
 
     /**
@@ -184,23 +269,16 @@ class GameClient {
                 }
             }
 
-            is GameMessage.PlayerLeft -> {
-                // Player left notification - lobby state will be updated separately
-            }
+            is GameMessage.PlayerLeft -> {}
 
-            is GameMessage.Chat -> {
-                // Chat messages are included in game state updates
-            }
+            is GameMessage.Chat -> {}
 
             is GameMessage.GameCreated -> {
-                // Dedicated server: game room created with code
                 _playerId.value = message.playerId
                 _connectionState.value = ConnectionState.Connected(message.playerId)
             }
 
-            is GameMessage.Pong -> {
-                // Heartbeat response
-            }
+            is GameMessage.Pong -> {}
 
             is GameMessage.Error -> {
                 _error.value = "${message.code}: ${message.message}"
@@ -210,9 +288,7 @@ class GameClient {
                 }
             }
 
-            else -> {
-                // Ignore other message types
-            }
+            else -> {}
         }
     }
 
@@ -319,7 +395,7 @@ class GameClient {
         val name = lastPlayerName ?: return false
         val deck = lastDeck ?: return false
 
-        return connect(host, port, name, deck, lastGameCode)
+        return connect(host, port, name, deck, lastGameCode, lastUseTls, lastTofuVerifier, lastTrustedServersStore)
     }
 
     /**

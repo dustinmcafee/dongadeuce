@@ -43,6 +43,7 @@ kotlin {
         jvmMain.dependencies {
             implementation("io.ktor:ktor-client-cio:$ktorVersion")
             implementation("io.ktor:ktor-server-netty:$ktorVersion")
+            implementation("io.ktor:ktor-network-tls-certificates:$ktorVersion")
         }
 
         jvmTest.dependencies {
@@ -52,6 +53,7 @@ kotlin {
         androidMain.dependencies {
             implementation("io.ktor:ktor-client-okhttp:$ktorVersion")
             implementation("io.ktor:ktor-server-cio:$ktorVersion")
+            implementation("io.ktor:ktor-network-tls-certificates:$ktorVersion")
             implementation("androidx.datastore:datastore-preferences:1.0.0")
         }
     }

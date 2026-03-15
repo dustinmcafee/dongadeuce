@@ -46,6 +46,7 @@ class AndroidMenuViewModel : ViewModel() {
     val dedicatedServerPort: StateFlow<Int> = DedicatedServerService.serverPort
     val dedicatedServerGameCount: StateFlow<Int> = DedicatedServerService.activeGameCount
     val dedicatedServerIpAddress: StateFlow<String> = DedicatedServerService.serverIpAddress
+    val dedicatedServerFingerprint: StateFlow<String?> = DedicatedServerService.serverFingerprint
 
     // Delegate all methods to shared MenuViewModel
     fun setPlayerName(name: String) = delegate.setPlayerName(name)
@@ -172,11 +173,15 @@ class AndroidMenuViewModel : ViewModel() {
      */
     fun createGameOnServer(onCodeReceived: (String) -> Unit = {}) = delegate.createGameOnServer(onCodeReceived)
 
+    fun setTlsEnabled(enabled: Boolean) = delegate.setTlsEnabled(enabled)
+    fun acceptTofu() = delegate.acceptTofu()
+    fun rejectTofu() = delegate.rejectTofu()
+
     /**
      * Start the dedicated server foreground service
      */
-    fun startDedicatedServer(context: Context, port: Int, maxGames: Int, maxPlayers: Int) {
-        DedicatedServerService.startServer(context, port, maxGames, maxPlayers)
+    fun startDedicatedServer(context: Context, port: Int, maxGames: Int, maxPlayers: Int, tlsEnabled: Boolean = false) {
+        DedicatedServerService.startServer(context, port, maxGames, maxPlayers, tlsEnabled)
     }
 
     /**

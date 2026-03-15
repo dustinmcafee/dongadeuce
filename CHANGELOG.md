@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.0.7-beta] - 2026-03-15
+
+### Added
+- **Self-signed TLS with TOFU** - Servers auto-generate a self-signed certificate on first start; clients verify via trust-on-first-use (SSH-style fingerprint prompt)
+- **TLS on both server platforms** - JVM (Netty) and Android (CIO) dedicated servers support `sslConnector` with auto-generated JKS keystores
+- **TLS on both client platforms** - Desktop and Android clients support `wss://` with custom `TrustManager` pinned to accepted fingerprints
+- **Trusted servers store** - Accepted fingerprints persist to `trusted_servers.json`, subsequent connections skip the TOFU prompt
+- **TLS UI controls** - "Encrypt connection" checkbox on Join screens, TLS toggle on Android Dedicated Server screen, fingerprint display when server is running with TLS
+- **Certificate probing** - Raw `SSLSocket` probe extracts server cert fingerprint before user accepts
+
 ## [6.0.6-beta] - 2026-03-15
 
 ### Added

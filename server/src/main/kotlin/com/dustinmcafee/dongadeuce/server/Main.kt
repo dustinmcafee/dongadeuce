@@ -1,5 +1,7 @@
 package com.dustinmcafee.dongadeuce.server
 
+import com.dustinmcafee.dongadeuce.tls.ServerTlsConfig
+import com.dustinmcafee.dongadeuce.tls.generateOrLoadCertificate
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.*
@@ -13,6 +15,7 @@ import io.ktor.websocket.*
 import kotlinx.coroutines.*
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import java.security.KeyStore
 import java.time.Duration
 
 /**
@@ -23,7 +26,8 @@ fun ServerConfig.Companion.fromEnv(): ServerConfig {
         port = System.getenv("PORT")?.toIntOrNull() ?: 9090,
         maxGames = System.getenv("MAX_GAMES")?.toIntOrNull() ?: 100,
         maxPlayersPerGame = System.getenv("MAX_PLAYERS")?.toIntOrNull() ?: 6,
-        idleTimeoutMinutes = System.getenv("IDLE_TIMEOUT_MINUTES")?.toLongOrNull() ?: 60
+        idleTimeoutMinutes = System.getenv("IDLE_TIMEOUT_MINUTES")?.toLongOrNull() ?: 60,
+        tlsEnabled = System.getenv("TLS_ENABLED")?.toBooleanStrictOrNull() ?: false
     )
 }
 
@@ -37,8 +41,18 @@ fun main() {
     val config = ServerConfig.fromEnv()
     val lobbyManager = LobbyManager(config)
 
-    println("Starting DongADeuce Server on port ${config.port}...")
+    val protocol = if (config.tlsEnabled) "wss" else "ws"
+    println("Starting DongADeuce Server on port ${config.port} ($protocol)...")
     println("Max games: ${config.maxGames}, Max players per game: ${config.maxPlayersPerGame}")
+
+    // Generate or load TLS certificate if enabled
+    val tlsConfig = if (config.tlsEnabled) {
+        val keystorePath = System.getenv("TLS_KEYSTORE_PATH") ?: "./server.jks"
+        val certInfo = generateOrLoadCertificate(keystorePath = keystorePath)
+        println("TLS enabled. Certificate fingerprint:")
+        println("  ${certInfo.fingerprint}")
+        certInfo.toServerTlsConfig()
+    } else null
 
     // Periodic cleanup of idle rooms
     val cleanupScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
@@ -49,7 +63,7 @@ fun main() {
         }
     }
 
-    embeddedServer(Netty, port = config.port) {
+    val serverModule: Application.() -> Unit = {
         install(WebSockets) {
             pingPeriod = Duration.ofSeconds(15)
             timeout = Duration.ofSeconds(30)
@@ -66,11 +80,6 @@ fun main() {
         }
 
         routing {
-            // ==================== REST API ====================
-
-            /**
-             * GET /api/health - Health check
-             */
             get("/api/health") {
                 call.respond(HealthResponse(
                     status = "ok",
@@ -78,9 +87,6 @@ fun main() {
                 ))
             }
 
-            /**
-             * GET /api/games - List open games
-             */
             get("/api/games") {
                 val games = lobbyManager.listOpenGames().map { info ->
                     GameResponse(
@@ -92,9 +98,6 @@ fun main() {
                 call.respond(GamesListResponse(games = games))
             }
 
-            /**
-             * POST /api/games - Create a new game room
-             */
             post("/api/games") {
                 val room = lobbyManager.createGame()
                 if (room == null) {
@@ -104,9 +107,6 @@ fun main() {
                 call.respond(HttpStatusCode.Created, GameCreatedResponse(code = room.code))
             }
 
-            /**
-             * DELETE /api/games/{code} - Remove a game room
-             */
             delete("/api/games/{code}") {
                 val code = call.parameters["code"] ?: run {
                     call.respond(HttpStatusCode.BadRequest, ErrorResponse("Missing game code"))
@@ -116,11 +116,6 @@ fun main() {
                 call.respond(HttpStatusCode.OK, mapOf("status" to "removed"))
             }
 
-            // ==================== WebSocket Endpoints ====================
-
-            /**
-             * WS /game/{code} - Join a specific game room
-             */
             webSocket("/game/{code}") {
                 val code = call.parameters["code"]
                 if (code == null) {
@@ -136,13 +131,33 @@ fun main() {
 
                 room.handleConnection(this)
 
-                // Clean up empty rooms after disconnect
                 if (room.isEmpty()) {
                     lobbyManager.removeGame(code)
                 }
             }
         }
-    }.start(wait = true)
+    }
+
+    if (tlsConfig != null) {
+        val keystoreFile = java.io.File(tlsConfig.keystorePath)
+        val keyStore = KeyStore.getInstance("JKS")
+        keystoreFile.inputStream().use { keyStore.load(it, tlsConfig.keystorePassword.toCharArray()) }
+
+        val environment = applicationEngineEnvironment {
+            module(serverModule)
+            sslConnector(
+                keyStore = keyStore,
+                keyAlias = tlsConfig.keyAlias,
+                keyStorePassword = { tlsConfig.keystorePassword.toCharArray() },
+                privateKeyPassword = { tlsConfig.privateKeyPassword.toCharArray() }
+            ) {
+                port = config.port
+            }
+        }
+        embeddedServer(Netty, environment).start(wait = true)
+    } else {
+        embeddedServer(Netty, port = config.port, module = serverModule).start(wait = true)
+    }
 
     cleanupScope.cancel()
 }

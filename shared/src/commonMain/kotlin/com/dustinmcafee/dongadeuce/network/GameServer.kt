@@ -2,6 +2,7 @@ package com.dustinmcafee.dongadeuce.network
 
 import com.dustinmcafee.dongadeuce.models.*
 import com.dustinmcafee.dongadeuce.platform.*
+import com.dustinmcafee.dongadeuce.tls.ServerTlsConfig
 import io.ktor.server.application.*
 import io.ktor.server.routing.*
 import io.ktor.server.websocket.*
@@ -22,7 +23,8 @@ import kotlinx.serialization.json.Json
  */
 class GameServer(
     private val port: Int = 8080,
-    private val maxPlayers: Int = 6
+    private val maxPlayers: Int = 6,
+    private val tlsConfig: ServerTlsConfig? = null
 ) {
     private var server: ServerWrapper? = null
     private val scope = CoroutineScope(SupervisorJob() + ioDispatcher)
@@ -54,7 +56,7 @@ class GameServer(
      * All players (including the P2P host) connect via WebSocket as clients.
      */
     fun start(): String {
-        server = createServer(port) {
+        server = createServer(port, tlsConfig = tlsConfig, module = {
             install(WebSockets) {
                 pingPeriodMillis = 15000
                 timeoutMillis = 30000
@@ -67,11 +69,14 @@ class GameServer(
                     handleConnection(this)
                 }
             }
-        }
+        })
         server?.start(wait = false)
 
-        return "ws://localhost:$port/game"
+        val scheme = if (tlsConfig != null) "wss" else "ws"
+        return "$scheme://localhost:$port/game"
     }
+
+    fun getFingerprint(): String? = server?.certificateFingerprint
 
     /**
      * Stop the server

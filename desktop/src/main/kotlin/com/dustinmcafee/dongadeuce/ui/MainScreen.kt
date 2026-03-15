@@ -62,6 +62,38 @@ fun MainScreen(
         }
     }
 
+    // TOFU certificate verification dialog
+    if (uiState.tofuPrompt != null) {
+        val prompt = uiState.tofuPrompt!!
+        AlertDialog(
+            onDismissRequest = { menuViewModel.rejectTofu() },
+            title = { Text("Unknown Server Certificate") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Connecting to ${prompt.host}:${prompt.port}")
+                    Text("The server presented a certificate you haven't seen before.")
+                    Text("Fingerprint (SHA-256):", style = MaterialTheme.typography.labelMedium)
+                    Text(
+                        prompt.fingerprint,
+                        style = MaterialTheme.typography.bodySmall,
+                        fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
+                    )
+                    Text("Verify this matches the fingerprint shown on the server.")
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { menuViewModel.acceptTofu() }) {
+                    Text("Trust")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { menuViewModel.rejectTofu() }) {
+                    Text("Reject")
+                }
+            }
+        )
+    }
+
     // Show error snackbar if there's an error
     if (uiState.error != null) {
         AlertDialog(
@@ -747,6 +779,18 @@ fun JoinLobbyScreen(viewModel: MenuViewModel) {
                     ) {
                         Text("Create New Game")
                     }
+                }
+
+                // TLS toggle
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Checkbox(
+                        checked = uiState.tlsEnabled,
+                        onCheckedChange = { viewModel.setTlsEnabled(it) }
+                    )
+                    Text("Encrypt connection (TLS)", style = MaterialTheme.typography.bodyMedium)
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))

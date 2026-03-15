@@ -68,6 +68,38 @@ fun MainScreen(viewModel: AndroidMenuViewModel = viewModel()) {
         AndroidScreen.DedicatedServer -> DedicatedServerScreen(viewModel = viewModel)
     }
 
+    // TOFU certificate verification dialog
+    if (uiState.tofuPrompt != null) {
+        val prompt = uiState.tofuPrompt!!
+        AlertDialog(
+            onDismissRequest = { viewModel.rejectTofu() },
+            title = { Text("Unknown Server Certificate") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Connecting to ${prompt.host}:${prompt.port}")
+                    Text("The server presented a certificate you haven't seen before.")
+                    Text("Fingerprint (SHA-256):", style = MaterialTheme.typography.labelMedium)
+                    Text(
+                        prompt.fingerprint,
+                        style = MaterialTheme.typography.bodySmall,
+                        fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
+                    )
+                    Text("Verify this matches the fingerprint shown on the server.")
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { viewModel.acceptTofu() }) {
+                    Text("Trust")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.rejectTofu() }) {
+                    Text("Reject")
+                }
+            }
+        )
+    }
+
     // Error dialog
     if (uiState.error != null) {
         AlertDialog(
@@ -751,6 +783,18 @@ fun JoinLobbyScreen(
                 }
             }
 
+            // TLS toggle
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Checkbox(
+                    checked = uiState.tlsEnabled,
+                    onCheckedChange = { viewModel.setTlsEnabled(it) }
+                )
+                Text("Encrypt connection (TLS)", style = MaterialTheme.typography.bodyMedium)
+            }
+
             Spacer(modifier = Modifier.weight(1f))
 
             Button(
@@ -865,9 +909,12 @@ fun DedicatedServerScreen(viewModel: AndroidMenuViewModel) {
     val gameCount by viewModel.dedicatedServerGameCount.collectAsState()
     val ipAddress by viewModel.dedicatedServerIpAddress.collectAsState()
 
+    val fingerprint by viewModel.dedicatedServerFingerprint.collectAsState()
+
     var port by remember { mutableStateOf("9090") }
     var maxGames by remember { mutableStateOf("100") }
     var maxPlayers by remember { mutableStateOf("6") }
+    var tlsEnabled by remember { mutableStateOf(false) }
 
     // Notification permission launcher (API 33+)
     val notificationPermissionLauncher = rememberLauncherForActivityResult(
@@ -878,7 +925,8 @@ fun DedicatedServerScreen(viewModel: AndroidMenuViewModel) {
                 context,
                 port.toIntOrNull() ?: 9090,
                 maxGames.toIntOrNull() ?: 100,
-                maxPlayers.toIntOrNull() ?: 6
+                maxPlayers.toIntOrNull() ?: 6,
+                tlsEnabled
             )
         }
     }
@@ -920,9 +968,19 @@ fun DedicatedServerScreen(viewModel: AndroidMenuViewModel) {
                     Text("IP: $ipAddress", style = MaterialTheme.typography.bodyMedium)
                     Text("Port: $serverPort", style = MaterialTheme.typography.bodyMedium)
                     Text("Active Games: $gameCount", style = MaterialTheme.typography.bodyMedium)
+                    if (fingerprint != null) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text("TLS Fingerprint:", style = MaterialTheme.typography.labelSmall)
+                        Text(
+                            fingerprint ?: "",
+                            style = MaterialTheme.typography.bodySmall,
+                            fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
+                        )
+                    }
                     Spacer(modifier = Modifier.height(4.dp))
+                    val scheme = if (fingerprint != null) "wss" else "ws"
                     Text(
-                        "Connect via: ws://$ipAddress:$serverPort/game/{code}",
+                        "Connect via: $scheme://$ipAddress:$serverPort/game/{code}",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -967,6 +1025,17 @@ fun DedicatedServerScreen(viewModel: AndroidMenuViewModel) {
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Checkbox(
+                            checked = tlsEnabled,
+                            onCheckedChange = { tlsEnabled = it }
+                        )
+                        Text("Enable TLS encryption", style = MaterialTheme.typography.bodyMedium)
+                    }
                 }
             }
         }

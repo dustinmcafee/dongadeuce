@@ -17,13 +17,14 @@ application {
 
 dependencies {
     // Pre-built shared module JAR (Kotlin 1.9.21, binary compatible with 2.x)
-    implementation(files("../shared/build/libs/shared-jvm-6.0.6-beta.jar"))
+    implementation(files("../shared/build/libs/shared-jvm-6.0.7-beta.jar"))
 
     // Ktor server
     implementation("io.ktor:ktor-server-core:2.3.7")
     implementation("io.ktor:ktor-server-netty:2.3.7")
     implementation("io.ktor:ktor-server-websockets:2.3.7")
     implementation("io.ktor:ktor-server-content-negotiation:2.3.7")
+    implementation("io.ktor:ktor-network-tls-certificates:2.3.7")
     implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.7")
 
     // Ktor client (needed at runtime for shared module's HttpEngine)
