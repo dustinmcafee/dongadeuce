@@ -1,12 +1,16 @@
 package com.dustinmcafee.dongadeuce.viewmodel
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.dustinmcafee.dongadeuce.network.GameClient
 import com.dustinmcafee.dongadeuce.network.GameServer
+import com.dustinmcafee.dongadeuce.service.DedicatedServerService
 import com.dustinmcafee.dongadeuce.viewmodel.ServerMode
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
 /**
  * Android-specific wrapper around the shared MenuViewModel.
@@ -25,6 +29,23 @@ class AndroidMenuViewModel : ViewModel() {
     // Track current screen for Android navigation
     private val _currentScreen = MutableStateFlow<AndroidScreen>(AndroidScreen.Menu)
     val currentScreen: StateFlow<AndroidScreen> = _currentScreen.asStateFlow()
+
+    init {
+        // Observe shared state screen transitions (for async game start in dedicated server mode)
+        viewModelScope.launch {
+            delegate.uiState.collect { state ->
+                if (state.currentScreen == Screen.Game && _currentScreen.value != AndroidScreen.Game) {
+                    _currentScreen.value = AndroidScreen.Game
+                }
+            }
+        }
+    }
+
+    // Dedicated server state (from service companion)
+    val dedicatedServerRunning: StateFlow<Boolean> = DedicatedServerService.isRunning
+    val dedicatedServerPort: StateFlow<Int> = DedicatedServerService.serverPort
+    val dedicatedServerGameCount: StateFlow<Int> = DedicatedServerService.activeGameCount
+    val dedicatedServerIpAddress: StateFlow<String> = DedicatedServerService.serverIpAddress
 
     // Delegate all methods to shared MenuViewModel
     fun setPlayerName(name: String) = delegate.setPlayerName(name)
@@ -87,6 +108,13 @@ class AndroidMenuViewModel : ViewModel() {
     }
 
     /**
+     * Navigate to dedicated server screen
+     */
+    fun navigateToDedicatedServer() {
+        _currentScreen.value = AndroidScreen.DedicatedServer
+    }
+
+    /**
      * Connect to a hosted game
      */
     fun connectToGame() {
@@ -106,7 +134,9 @@ class AndroidMenuViewModel : ViewModel() {
      */
     fun startNetworkGame(): Boolean {
         val started = delegate.startNetworkGame()
-        if (started) {
+        // In P2P mode, game starts synchronously — switch screen immediately
+        // In dedicated mode, screen transition happens via the init collector when GameStarting arrives
+        if (started && delegate.uiState.value.serverMode != ServerMode.DEDICATED) {
             _currentScreen.value = AndroidScreen.Game
         }
         return started
@@ -138,6 +168,25 @@ class AndroidMenuViewModel : ViewModel() {
     fun setGameCode(code: String?) = delegate.setGameCode(code)
 
     /**
+     * Create a new game room on a dedicated server via REST API
+     */
+    fun createGameOnServer(onCodeReceived: (String) -> Unit = {}) = delegate.createGameOnServer(onCodeReceived)
+
+    /**
+     * Start the dedicated server foreground service
+     */
+    fun startDedicatedServer(context: Context, port: Int, maxGames: Int, maxPlayers: Int) {
+        DedicatedServerService.startServer(context, port, maxGames, maxPlayers)
+    }
+
+    /**
+     * Stop the dedicated server foreground service
+     */
+    fun stopDedicatedServer(context: Context) {
+        DedicatedServerService.stopServer(context)
+    }
+
+    /**
      * Return to main menu
      */
     fun returnToMenu() {
@@ -160,4 +209,5 @@ sealed class AndroidScreen {
     object HostLobby : AndroidScreen()
     object JoinLobby : AndroidScreen()
     object Game : AndroidScreen()
+    object DedicatedServer : AndroidScreen()
 }

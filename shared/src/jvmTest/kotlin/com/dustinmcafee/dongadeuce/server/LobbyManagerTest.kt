@@ -14,7 +14,7 @@ class LobbyManagerTest {
     )
 
     @Test
-    fun `createGame returns room with unique code`() {
+    fun `createGame returns room with unique code`() = runBlocking {
         val manager = LobbyManager(defaultConfig())
         val room = manager.createGame()
 
@@ -24,7 +24,7 @@ class LobbyManagerTest {
     }
 
     @Test
-    fun `createGame generates unique codes`() {
+    fun `createGame generates unique codes`() = runBlocking {
         val manager = LobbyManager(defaultConfig())
         val codes = (1..10).map { manager.createGame()!!.code }.toSet()
 
@@ -32,7 +32,7 @@ class LobbyManagerTest {
     }
 
     @Test
-    fun `createGame returns null when at max capacity`() {
+    fun `createGame returns null when at max capacity`() = runBlocking {
         val config = defaultConfig().copy(maxGames = 2)
         val manager = LobbyManager(config)
 
@@ -42,7 +42,7 @@ class LobbyManagerTest {
     }
 
     @Test
-    fun `getRoom finds existing room`() {
+    fun `getRoom finds existing room`() = runBlocking {
         val manager = LobbyManager(defaultConfig())
         val room = manager.createGame()!!
 
@@ -52,7 +52,7 @@ class LobbyManagerTest {
     }
 
     @Test
-    fun `getRoom is case insensitive`() {
+    fun `getRoom is case insensitive`() = runBlocking {
         val manager = LobbyManager(defaultConfig())
         val room = manager.createGame()!!
 
@@ -61,13 +61,13 @@ class LobbyManagerTest {
     }
 
     @Test
-    fun `getRoom returns null for nonexistent code`() {
+    fun `getRoom returns null for nonexistent code`() = runBlocking {
         val manager = LobbyManager(defaultConfig())
         assertNull(manager.getRoom("ZZZZZ1"))
     }
 
     @Test
-    fun `listOpenGames shows unstarted games`() {
+    fun `listOpenGames shows unstarted games`() = runBlocking {
         val manager = LobbyManager(defaultConfig())
         manager.createGame()
         manager.createGame()
@@ -77,7 +77,7 @@ class LobbyManagerTest {
     }
 
     @Test
-    fun `listOpenGames excludes started games`() {
+    fun `listOpenGames excludes started games`() = runBlocking {
         val manager = LobbyManager(defaultConfig())
         val room = manager.createGame()!!
 
@@ -99,7 +99,7 @@ class LobbyManagerTest {
     }
 
     @Test
-    fun `getRoomCount tracks active rooms`() {
+    fun `getRoomCount tracks active rooms`() = runBlocking {
         val manager = LobbyManager(defaultConfig())
         assertEquals(0, manager.getRoomCount())
 
@@ -111,7 +111,7 @@ class LobbyManagerTest {
     }
 
     @Test
-    fun `game codes use only unambiguous characters`() {
+    fun `game codes use only unambiguous characters`() = runBlocking {
         val config = defaultConfig().copy(maxGames = 100)
         val manager = LobbyManager(config)
         val ambiguous = setOf('I', 'O', '0', '1') // Should be excluded
@@ -141,7 +141,7 @@ class LobbyManagerTest {
     }
 
     @Test
-    fun `GameInfo contains correct data`() {
+    fun `GameInfo contains correct data`() = runBlocking {
         val manager = LobbyManager(defaultConfig())
         val room = manager.createGame()!!
 

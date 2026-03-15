@@ -1,8 +1,11 @@
 package com.dustinmcafee.dongadeuce
 
+import android.Manifest
 import android.content.ClipboardManager
 import android.content.Context
+import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -22,6 +25,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.dustinmcafee.dongadeuce.network.ConnectionState
 import com.dustinmcafee.dongadeuce.ui.theme.DongAdeuceTheme
@@ -29,7 +33,7 @@ import com.dustinmcafee.dongadeuce.viewmodel.AndroidMenuViewModel
 import com.dustinmcafee.dongadeuce.viewmodel.AndroidScreen
 import com.dustinmcafee.dongadeuce.viewmodel.MenuUiState
 import com.dustinmcafee.dongadeuce.viewmodel.Screen
-import java.io.BufferedReader
+import com.dustinmcafee.dongadeuce.viewmodel.ServerMode
 import java.io.InputStreamReader
 
 /**
@@ -61,6 +65,7 @@ fun MainScreen(viewModel: AndroidMenuViewModel = viewModel()) {
         AndroidScreen.HostLobby -> HostLobbyScreen(viewModel = viewModel, uiState = uiState)
         AndroidScreen.JoinLobby -> JoinLobbyScreen(viewModel = viewModel, uiState = uiState)
         AndroidScreen.Game -> GameScreen(viewModel = viewModel, uiState = uiState)
+        AndroidScreen.DedicatedServer -> DedicatedServerScreen(viewModel = viewModel)
     }
 
     // Error dialog
@@ -433,6 +438,13 @@ fun MenuScreen(
                     Text("Join Game")
                 }
 
+                OutlinedButton(
+                    onClick = { viewModel.navigateToDedicatedServer() },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Host Dedicated Server")
+                }
+
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     modifier = Modifier.fillMaxWidth()
@@ -637,6 +649,7 @@ fun HostLobbyScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun JoinLobbyScreen(
     viewModel: AndroidMenuViewModel,
@@ -644,11 +657,20 @@ fun JoinLobbyScreen(
 ) {
     var serverAddress by remember { mutableStateOf(uiState.serverAddress) }
     var serverPort by remember { mutableStateOf(uiState.serverPort.toString()) }
+    var gameCode by remember { mutableStateOf(uiState.gameCode ?: "") }
+    val isDedicated = uiState.serverMode == ServerMode.DEDICATED
 
     val isConnected = uiState.connectionState is ConnectionState.Connected
     val currentPlayerId = (uiState.connectionState as? ConnectionState.Connected)?.playerId
     val currentPlayer = uiState.lobbyState?.players?.find { it.id == currentPlayerId }
     val isReady = currentPlayer?.isReady ?: false
+
+    // Sync game code from viewmodel (e.g. after Create Game)
+    LaunchedEffect(uiState.gameCode) {
+        if (uiState.gameCode != null && uiState.gameCode != gameCode) {
+            gameCode = uiState.gameCode!!
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -662,6 +684,24 @@ fun JoinLobbyScreen(
         Spacer(modifier = Modifier.height(16.dp))
 
         if (!isConnected) {
+            // Server mode toggle
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FilterChip(
+                    selected = !isDedicated,
+                    onClick = {
+                        viewModel.setServerMode(ServerMode.LAN)
+                        viewModel.setGameCode(null)
+                        gameCode = ""
+                    },
+                    label = { Text("LAN / P2P") }
+                )
+                FilterChip(
+                    selected = isDedicated,
+                    onClick = { viewModel.setServerMode(ServerMode.DEDICATED) },
+                    label = { Text("Dedicated Server") }
+                )
+            }
+
             // Connection form
             OutlinedTextField(
                 value = serverAddress,
@@ -681,16 +721,42 @@ fun JoinLobbyScreen(
                     serverPort.toIntOrNull()?.let { viewModel.setServerPort(it) }
                 },
                 label = { Text("Port") },
-                placeholder = { Text("8080") },
+                placeholder = { Text(if (isDedicated) "9090" else "8080") },
                 modifier = Modifier.fillMaxWidth()
             )
+
+            // Game code field + create button (dedicated server only)
+            if (isDedicated) {
+                OutlinedTextField(
+                    value = gameCode,
+                    onValueChange = {
+                        gameCode = it.uppercase()
+                        viewModel.setGameCode(it.uppercase().ifBlank { null })
+                    },
+                    label = { Text("Game Code") },
+                    placeholder = { Text("e.g. ABC123") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                OutlinedButton(
+                    onClick = {
+                        viewModel.createGameOnServer { code ->
+                            gameCode = code
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !uiState.isLoading
+                ) {
+                    Text("Create New Game")
+                }
+            }
 
             Spacer(modifier = Modifier.weight(1f))
 
             Button(
                 onClick = { viewModel.connectToGame() },
                 modifier = Modifier.fillMaxWidth(),
-                enabled = !uiState.isLoading
+                enabled = !uiState.isLoading && (!isDedicated || gameCode.isNotBlank())
             ) {
                 if (uiState.isLoading) {
                     CircularProgressIndicator(
@@ -748,11 +814,26 @@ fun JoinLobbyScreen(
 
             Spacer(modifier = Modifier.weight(1f))
 
-            Button(
-                onClick = { viewModel.setReady(!isReady) },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(if (isReady) "Not Ready" else "Ready!")
+            // Check if current player is admin (first player / game creator)
+            val isAdmin = uiState.lobbyState?.players?.find { it.id == currentPlayerId }?.isAdmin ?: false
+            val allNonAdminReady = uiState.lobbyState?.players?.filter { !it.isAdmin }?.all { it.isReady } ?: false
+            val enoughPlayers = (uiState.lobbyState?.players?.size ?: 0) >= 2
+
+            if (isAdmin && isDedicated) {
+                Button(
+                    onClick = { viewModel.startNetworkGame() },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = enoughPlayers && allNonAdminReady
+                ) {
+                    Text("Start Game")
+                }
+            } else {
+                Button(
+                    onClick = { viewModel.setReady(!isReady) },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(if (isReady) "Not Ready" else "Ready!")
+                }
             }
 
             OutlinedButton(
@@ -763,10 +844,171 @@ fun JoinLobbyScreen(
             }
 
             Text(
-                if (isReady) "Waiting for host to start the game..." else "Click 'Ready!' when you're ready to play",
+                when {
+                    isAdmin && !enoughPlayers -> "Need at least 2 players to start"
+                    isAdmin && !allNonAdminReady -> "Waiting for all players to be ready..."
+                    isReady -> "Waiting for host to start the game..."
+                    else -> "Click 'Ready!' when you're ready to play"
+                },
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+        }
+    }
+}
+
+@Composable
+fun DedicatedServerScreen(viewModel: AndroidMenuViewModel) {
+    val context = LocalContext.current
+    val isRunning by viewModel.dedicatedServerRunning.collectAsState()
+    val serverPort by viewModel.dedicatedServerPort.collectAsState()
+    val gameCount by viewModel.dedicatedServerGameCount.collectAsState()
+    val ipAddress by viewModel.dedicatedServerIpAddress.collectAsState()
+
+    var port by remember { mutableStateOf("9090") }
+    var maxGames by remember { mutableStateOf("100") }
+    var maxPlayers by remember { mutableStateOf("6") }
+
+    // Notification permission launcher (API 33+)
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) {
+            viewModel.startDedicatedServer(
+                context,
+                port.toIntOrNull() ?: 9090,
+                maxGames.toIntOrNull() ?: 100,
+                maxPlayers.toIntOrNull() ?: 6
+            )
+        }
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(24.dp)
+            .verticalScroll(rememberScrollState()),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Text("Dedicated Server", style = MaterialTheme.typography.headlineMedium)
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // Status card
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(
+                containerColor = if (isRunning)
+                    MaterialTheme.colorScheme.primaryContainer
+                else
+                    MaterialTheme.colorScheme.surfaceVariant
+            )
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    if (isRunning) "Server Running" else "Server Stopped",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+
+                if (isRunning) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text("IP: $ipAddress", style = MaterialTheme.typography.bodyMedium)
+                    Text("Port: $serverPort", style = MaterialTheme.typography.bodyMedium)
+                    Text("Active Games: $gameCount", style = MaterialTheme.typography.bodyMedium)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        "Connect via: ws://$ipAddress:$serverPort/game/{code}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+
+        // Configuration (only when not running)
+        if (!isRunning) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                )
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text("Configuration", style = MaterialTheme.typography.labelLarge)
+
+                    OutlinedTextField(
+                        value = port,
+                        onValueChange = { port = it.filter { c -> c.isDigit() } },
+                        label = { Text("Port") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    OutlinedTextField(
+                        value = maxGames,
+                        onValueChange = { maxGames = it.filter { c -> c.isDigit() } },
+                        label = { Text("Max Games") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    OutlinedTextField(
+                        value = maxPlayers,
+                        onValueChange = { maxPlayers = it.filter { c -> c.isDigit() } },
+                        label = { Text("Max Players Per Game") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.weight(1f))
+
+        // Start/Stop button
+        Button(
+            onClick = {
+                if (isRunning) {
+                    viewModel.stopDedicatedServer(context)
+                } else {
+                    // Check notification permission on API 33+
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                        ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS)
+                        != PackageManager.PERMISSION_GRANTED
+                    ) {
+                        notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                    } else {
+                        viewModel.startDedicatedServer(
+                            context,
+                            port.toIntOrNull() ?: 9090,
+                            maxGames.toIntOrNull() ?: 100,
+                            maxPlayers.toIntOrNull() ?: 6
+                        )
+                    }
+                }
+            },
+            modifier = Modifier.fillMaxWidth(),
+            colors = if (isRunning)
+                ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+            else
+                ButtonDefaults.buttonColors()
+        ) {
+            Text(if (isRunning) "Stop Server" else "Start Server")
+        }
+
+        OutlinedButton(
+            onClick = { viewModel.returnToMenu() },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Back to Menu")
         }
     }
 }

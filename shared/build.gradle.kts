@@ -28,6 +28,9 @@ kotlin {
             implementation("io.ktor:ktor-client-websockets:$ktorVersion")
             implementation("io.ktor:ktor-client-content-negotiation:$ktorVersion")
             implementation("io.ktor:ktor-serialization-kotlinx-json:$ktorVersion")
+            implementation("io.ktor:ktor-server-core:$ktorVersion")
+            implementation("io.ktor:ktor-server-websockets:$ktorVersion")
+            implementation("io.ktor:ktor-server-content-negotiation:$ktorVersion")
             implementation(compose.runtime)
             implementation(compose.foundation)
             implementation(compose.ui)
@@ -39,9 +42,7 @@ kotlin {
 
         jvmMain.dependencies {
             implementation("io.ktor:ktor-client-cio:$ktorVersion")
-            implementation("io.ktor:ktor-server-core:$ktorVersion")
             implementation("io.ktor:ktor-server-netty:$ktorVersion")
-            implementation("io.ktor:ktor-server-websockets:$ktorVersion")
         }
 
         jvmTest.dependencies {
@@ -50,9 +51,7 @@ kotlin {
 
         androidMain.dependencies {
             implementation("io.ktor:ktor-client-okhttp:$ktorVersion")
-            implementation("io.ktor:ktor-server-core:$ktorVersion")
             implementation("io.ktor:ktor-server-cio:$ktorVersion")
-            implementation("io.ktor:ktor-server-websockets:$ktorVersion")
             implementation("androidx.datastore:datastore-preferences:1.0.0")
         }
     }

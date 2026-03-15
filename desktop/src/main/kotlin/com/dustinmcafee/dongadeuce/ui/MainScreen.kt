@@ -15,6 +15,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.dustinmcafee.dongadeuce.viewmodel.MenuViewModel
 import com.dustinmcafee.dongadeuce.viewmodel.Screen
+import com.dustinmcafee.dongadeuce.viewmodel.ServerMode
 import java.awt.Toolkit
 import java.awt.datatransfer.DataFlavor
 import java.io.File
@@ -552,7 +553,7 @@ fun HostLobbyScreen(viewModel: MenuViewModel) {
     val lobbyState = uiState.lobbyState
 
     Box(
-        modifier = Modifier.fillMaxSize().padding(32.dp),
+        modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).padding(32.dp),
         contentAlignment = Alignment.Center
     ) {
         Column(
@@ -652,11 +653,14 @@ fun HostLobbyScreen(viewModel: MenuViewModel) {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun JoinLobbyScreen(viewModel: MenuViewModel) {
     val uiState by viewModel.uiState.collectAsState()
     var serverAddress by remember { mutableStateOf("localhost") }
     var serverPort by remember { mutableStateOf("8080") }
+    var gameCode by remember { mutableStateOf("") }
+    val isDedicated = uiState.serverMode == ServerMode.DEDICATED
     val lobbyState = uiState.lobbyState
     val isConnected = uiState.connectionState is com.dustinmcafee.dongadeuce.network.ConnectionState.Connected
 
@@ -666,7 +670,7 @@ fun JoinLobbyScreen(viewModel: MenuViewModel) {
     val isReady = currentPlayer?.isReady ?: false
 
     Box(
-        modifier = Modifier.fillMaxSize().padding(32.dp),
+        modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).padding(32.dp),
         contentAlignment = Alignment.Center
     ) {
         Column(
@@ -678,6 +682,23 @@ fun JoinLobbyScreen(viewModel: MenuViewModel) {
             Spacer(modifier = Modifier.height(16.dp))
 
             if (!isConnected) {
+                // Server mode toggle
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilterChip(
+                        selected = !isDedicated,
+                        onClick = {
+                            viewModel.setServerMode(ServerMode.LAN)
+                            viewModel.setGameCode(null)
+                        },
+                        label = { Text("LAN / P2P") }
+                    )
+                    FilterChip(
+                        selected = isDedicated,
+                        onClick = { viewModel.setServerMode(ServerMode.DEDICATED) },
+                        label = { Text("Dedicated Server") }
+                    )
+                }
+
                 // Connection form
                 OutlinedTextField(
                     value = serverAddress,
@@ -699,16 +720,41 @@ fun JoinLobbyScreen(viewModel: MenuViewModel) {
                         }
                     },
                     label = { Text("Port") },
-                    placeholder = { Text("8080") },
+                    placeholder = { Text(if (isDedicated) "9090" else "8080") },
                     modifier = Modifier.width(300.dp)
                 )
+
+                // Game code field (dedicated server only)
+                if (isDedicated) {
+                    OutlinedTextField(
+                        value = gameCode,
+                        onValueChange = {
+                            gameCode = it.uppercase()
+                            viewModel.setGameCode(it.uppercase().ifBlank { null })
+                        },
+                        label = { Text("Game Code") },
+                        placeholder = { Text("e.g. ABC123") },
+                        modifier = Modifier.width(300.dp)
+                    )
+
+                    OutlinedButton(
+                        onClick = {
+                            viewModel.createGameOnServer { code ->
+                                gameCode = code
+                            }
+                        },
+                        enabled = !uiState.isLoading
+                    ) {
+                        Text("Create New Game")
+                    }
+                }
 
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                     Button(
                         onClick = { viewModel.connectToGame() },
-                        enabled = !uiState.isLoading
+                        enabled = !uiState.isLoading && (!isDedicated || gameCode.isNotBlank())
                     ) {
                         if (uiState.isLoading) {
                             CircularProgressIndicator(
@@ -761,11 +807,25 @@ fun JoinLobbyScreen(viewModel: MenuViewModel) {
 
                 Spacer(modifier = Modifier.height(16.dp))
 
+                // Check if current player is admin (first player / game creator)
+                val isAdmin = lobbyState?.players?.find { it.id == currentPlayerId }?.isAdmin ?: false
+                val allNonAdminReady = lobbyState?.players?.filter { !it.isAdmin }?.all { it.isReady } ?: false
+                val enoughPlayers = (lobbyState?.players?.size ?: 0) >= 2
+
                 Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    Button(
-                        onClick = { viewModel.setReady(!isReady) }
-                    ) {
-                        Text(if (isReady) "Not Ready" else "Ready!")
+                    if (isAdmin && isDedicated) {
+                        Button(
+                            onClick = { viewModel.startNetworkGame() },
+                            enabled = enoughPlayers && allNonAdminReady
+                        ) {
+                            Text("Start Game")
+                        }
+                    } else {
+                        Button(
+                            onClick = { viewModel.setReady(!isReady) }
+                        ) {
+                            Text(if (isReady) "Not Ready" else "Ready!")
+                        }
                     }
 
                     OutlinedButton(onClick = { viewModel.returnToMenu() }) {
@@ -774,7 +834,12 @@ fun JoinLobbyScreen(viewModel: MenuViewModel) {
                 }
 
                 Text(
-                    if (isReady) "Waiting for host to start the game..." else "Click 'Ready!' when you're ready to play",
+                    when {
+                        isAdmin && !enoughPlayers -> "Need at least 2 players to start"
+                        isAdmin && !allNonAdminReady -> "Waiting for all players to be ready..."
+                        isReady -> "Waiting for host to start the game..."
+                        else -> "Click 'Ready!' when you're ready to play"
+                    },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

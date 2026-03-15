@@ -93,6 +93,14 @@ sealed class GameMessage {
     ) : GameMessage()
 
     /**
+     * Client -> Server: Admin requests game to start (dedicated server mode)
+     */
+    @Serializable
+    data class StartGame(
+        val playerId: String
+    ) : GameMessage()
+
+    /**
      * Host -> All: Game is starting with initial state
      */
     @Serializable

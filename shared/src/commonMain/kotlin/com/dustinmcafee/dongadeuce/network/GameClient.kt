@@ -248,6 +248,21 @@ class GameClient {
     }
 
     /**
+     * Request game start (admin only, dedicated server mode)
+     */
+    suspend fun requestStartGame() {
+        val id = _playerId.value ?: return
+        val currentSession = session ?: return
+
+        try {
+            val message = GameMessage.StartGame(id)
+            currentSession.send(Frame.Text(json.encodeToString<GameMessage>(message)))
+        } catch (e: Exception) {
+            _error.value = "Failed to start game: ${e.message}"
+        }
+    }
+
+    /**
      * Send a game action to the host
      */
     suspend fun sendAction(action: NetworkAction) {

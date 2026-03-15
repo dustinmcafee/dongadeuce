@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.0.5-beta] - 2026-03-15
+
+### Added
+- **Android Dedicated Server Mode** - Run the game server as a foreground service on any Android device
+  - Foreground service with persistent notification and stop action
+  - Boot restart via WorkManager (survives device reboots)
+  - Configurable port, max games, max players per game
+  - Device LAN IP display for easy client connection
+- **Server classes moved to shared module** - `GameRoom`, `LobbyManager`, `ServerConfig` now in `shared/src/commonMain/` so both JVM server and Android can use them
+- **Create Game from client** - "Create New Game" button in Join screen calls `POST /api/games` to create rooms on dedicated servers
+- **StartGame protocol message** - Admin player can start games on dedicated server via WebSocket (previously required server-side call)
+- **Dedicated Server mode in Join UI** - LAN/P2P vs Dedicated Server toggle with game code field on both Desktop and Android
+
+### Fixed
+- **Desktop lobby screens white background** - `HostLobbyScreen` and `JoinLobbyScreen` now apply dark theme background
+- **Mixed-type map serialization crash** - Android server REST endpoints use `buildJsonObject` instead of maps with mixed value types
+
 ## [6.0.4-alpha] - 2026-03-14
 
 ### Added

@@ -16,6 +16,18 @@ import kotlinx.serialization.json.Json
 import java.time.Duration
 
 /**
+ * JVM-specific: Load ServerConfig from environment variables.
+ */
+fun ServerConfig.Companion.fromEnv(): ServerConfig {
+    return ServerConfig(
+        port = System.getenv("PORT")?.toIntOrNull() ?: 9090,
+        maxGames = System.getenv("MAX_GAMES")?.toIntOrNull() ?: 100,
+        maxPlayersPerGame = System.getenv("MAX_PLAYERS")?.toIntOrNull() ?: 6,
+        idleTimeoutMinutes = System.getenv("IDLE_TIMEOUT_MINUTES")?.toLongOrNull() ?: 60
+    )
+}
+
+/**
  * DongADeuce Dedicated Game Server
  *
  * Provides REST API for game management and WebSocket endpoints for gameplay.

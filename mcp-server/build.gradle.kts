@@ -17,7 +17,7 @@ application {
 
 dependencies {
     // Pre-built shared module JAR (Kotlin 1.9.21, binary compatible with 2.x)
-    implementation(files("../shared/build/libs/shared-jvm-6.0.4-alpha.jar"))
+    implementation(files("../shared/build/libs/shared-jvm-6.0.5-beta.jar"))
 
     // MCP Kotlin SDK (server)
     implementation("io.modelcontextprotocol:kotlin-sdk:0.4.0")

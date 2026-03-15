@@ -1,7 +1,7 @@
 package com.dustinmcafee.dongadeuce.server
 
-import com.dustinmcafee.dongadeuce.models.Deck
 import com.dustinmcafee.dongadeuce.network.*
+import com.dustinmcafee.dongadeuce.platform.currentTimeMillis
 import io.ktor.websocket.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -24,8 +24,8 @@ class GameRoom(
     private val mutex = Mutex()
 
     // Track creation time for idle cleanup
-    val createdAt: Long = System.currentTimeMillis()
-    var lastActivityAt: Long = System.currentTimeMillis()
+    val createdAt: Long = currentTimeMillis()
+    var lastActivityAt: Long = currentTimeMillis()
         private set
 
     private val json = Json {
@@ -38,13 +38,13 @@ class GameRoom(
      */
     suspend fun handleConnection(session: WebSocketSession) {
         var playerId: String? = null
-        lastActivityAt = System.currentTimeMillis()
+        lastActivityAt = currentTimeMillis()
 
         try {
             for (frame in session.incoming) {
                 when (frame) {
                     is Frame.Text -> {
-                        lastActivityAt = System.currentTimeMillis()
+                        lastActivityAt = currentTimeMillis()
                         val text = frame.readText()
                         val message = try {
                             json.decodeFromString<GameMessage>(text)
@@ -86,6 +86,12 @@ class GameRoom(
                                 if (playerId != null) {
                                     engine.setPlayerReady(playerId, message.isReady)
                                     broadcastToAll(engine.lobbyState.value)
+                                }
+                            }
+
+                            is GameMessage.StartGame -> {
+                                if (playerId != null && playerId == engine.getAdminId() && !engine.isGameStarted()) {
+                                    startGame()
                                 }
                             }
 

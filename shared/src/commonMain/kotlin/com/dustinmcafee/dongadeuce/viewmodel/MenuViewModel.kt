@@ -10,8 +10,13 @@ import com.dustinmcafee.dongadeuce.models.Card
 import com.dustinmcafee.dongadeuce.models.Deck
 import com.dustinmcafee.dongadeuce.models.GameState
 import com.dustinmcafee.dongadeuce.network.*
+import com.dustinmcafee.dongadeuce.platform.createHttpClientEngine
 import com.dustinmcafee.dongadeuce.platform.ioDispatcher
 import com.dustinmcafee.dongadeuce.settings.UserSettings
+import io.ktor.client.*
+import io.ktor.client.request.*
+import io.ktor.client.statement.*
+import io.ktor.http.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,6 +24,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 
 /**
  * UI state for the menu/lobby screen
@@ -918,10 +926,21 @@ class MenuViewModel {
     }
 
     /**
-     * Start network game (host only)
+     * Start network game (host or admin on dedicated server)
      */
     fun startNetworkGame(): Boolean {
-        return gameServer?.startGame() ?: false
+        // P2P mode: start via local server
+        if (gameServer != null) {
+            return gameServer?.startGame() ?: false
+        }
+        // Dedicated server mode: send StartGame via client
+        if (_uiState.value.serverMode == ServerMode.DEDICATED && gameClient != null) {
+            viewModelScope.launch {
+                gameClient?.requestStartGame()
+            }
+            return true
+        }
+        return false
     }
 
     /**
@@ -972,6 +991,44 @@ class MenuViewModel {
      */
     fun setGameCode(code: String?) {
         _uiState.update { it.copy(gameCode = code) }
+    }
+
+    /**
+     * Create a new game room on a dedicated server via REST API.
+     * On success, sets the game code so the user can connect.
+     * @param onCodeReceived callback with the game code for UI updates
+     */
+    fun createGameOnServer(onCodeReceived: (String) -> Unit = {}) {
+        val state = _uiState.value
+        val address = state.serverAddress
+        val port = state.serverPort
+
+        _uiState.update { it.copy(isLoading = true, error = null) }
+
+        viewModelScope.launch {
+            try {
+                val client = HttpClient(createHttpClientEngine())
+                val response = client.post("http://$address:$port/api/games")
+                client.close()
+
+                if (response.status == HttpStatusCode.Created) {
+                    val body = response.bodyAsText()
+                    val json = Json { ignoreUnknownKeys = true }
+                    val code = json.parseToJsonElement(body).jsonObject["code"]?.jsonPrimitive?.content
+                    if (code != null) {
+                        _uiState.update { it.copy(gameCode = code, isLoading = false) }
+                        onCodeReceived(code)
+                    } else {
+                        _uiState.update { it.copy(isLoading = false, error = "Server returned no game code") }
+                    }
+                } else {
+                    val body = response.bodyAsText()
+                    _uiState.update { it.copy(isLoading = false, error = "Failed to create game: $body") }
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isLoading = false, error = "Failed to reach server: ${e.message}") }
+            }
+        }
     }
 
     /**

@@ -12,8 +12,8 @@ android {
         applicationId = "com.dustinmcafee.dongadeuce"
         minSdk = 29
         targetSdk = 34
-        versionCode = 24
-        versionName = "6.0.4-alpha"
+        versionCode = 25
+        versionName = "6.0.5-beta"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -74,6 +74,16 @@ dependencies {
 
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+
+    // WorkManager for boot restart
+    implementation("androidx.work:work-runtime-ktx:2.9.0")
+
+    // Ktor server (for dedicated server service)
+    implementation("io.ktor:ktor-server-core:2.3.7")
+    implementation("io.ktor:ktor-server-cio:2.3.7")
+    implementation("io.ktor:ktor-server-websockets:2.3.7")
+    implementation("io.ktor:ktor-server-content-negotiation:2.3.7")
+    implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.7")
 
     // Image loading
     implementation("io.coil-kt:coil-compose:2.5.0")

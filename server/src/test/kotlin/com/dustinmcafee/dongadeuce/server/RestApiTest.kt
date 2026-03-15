@@ -9,6 +9,7 @@ import io.ktor.server.plugins.contentnegotiation.ContentNegotiation as ServerCN
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.server.testing.*
+import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import kotlin.test.*
 
@@ -83,8 +84,10 @@ class RestApiTest {
     fun `health endpoint shows active game count`() = testApplication {
         val config = ServerConfig(maxGames = 10)
         val lobbyManager = LobbyManager(config)
-        lobbyManager.createGame()
-        lobbyManager.createGame()
+        runBlocking {
+            lobbyManager.createGame()
+            lobbyManager.createGame()
+        }
         configureApp(lobbyManager)
 
         val response = client.get("/api/health")
@@ -103,14 +106,14 @@ class RestApiTest {
 
         val body = response.bodyAsText()
         assertTrue(body.contains("\"code\""))
-        assertEquals(1, lobbyManager.getRoomCount())
+        runBlocking { assertEquals(1, lobbyManager.getRoomCount()) }
     }
 
     @Test
     fun `create game returns 503 when full`() = testApplication {
         val config = ServerConfig(maxGames = 1)
         val lobbyManager = LobbyManager(config)
-        lobbyManager.createGame() // fill it
+        runBlocking { lobbyManager.createGame() } // fill it
         configureApp(lobbyManager)
 
         val response = client.post("/api/games")
@@ -134,7 +137,7 @@ class RestApiTest {
     fun `list games returns created games`() = testApplication {
         val config = ServerConfig(maxGames = 10)
         val lobbyManager = LobbyManager(config)
-        val room = lobbyManager.createGame()!!
+        val room = runBlocking { lobbyManager.createGame()!! }
         configureApp(lobbyManager)
 
         val response = client.get("/api/games")
@@ -146,12 +149,12 @@ class RestApiTest {
     fun `delete game removes room`() = testApplication {
         val config = ServerConfig(maxGames = 10)
         val lobbyManager = LobbyManager(config)
-        val room = lobbyManager.createGame()!!
+        val room = runBlocking { lobbyManager.createGame()!! }
         configureApp(lobbyManager)
 
-        assertEquals(1, lobbyManager.getRoomCount())
+        runBlocking { assertEquals(1, lobbyManager.getRoomCount()) }
         val response = client.delete("/api/games/${room.code}")
         assertEquals(HttpStatusCode.OK, response.status)
-        assertEquals(0, lobbyManager.getRoomCount())
+        runBlocking { assertEquals(0, lobbyManager.getRoomCount()) }
     }
 }

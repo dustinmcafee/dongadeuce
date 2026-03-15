@@ -27,8 +27,6 @@ import kotlin.test.*
  * End-to-end integration tests for the dedicated server.
  * Spins up a real Ktor Netty server with LobbyManager + GameRoom routing,
  * connects real WebSocket clients by game code, and validates full gameplay.
- *
- * Uses the same startServer() helper from Main.kt's routing pattern.
  */
 class DedicatedServerIntegrationTest {
 
