@@ -34,7 +34,7 @@ actual fun createServer(
     if (tlsConfig != null) {
         // Use Netty for TLS — CIO's TLS implementation is unreliable for WebSockets
         val keystoreFile = File(tlsConfig.keystorePath)
-        val keyStore = KeyStore.getInstance("JKS")
+        val keyStore = KeyStore.getInstance("PKCS12")
         keystoreFile.inputStream().use { keyStore.load(it, tlsConfig.keystorePassword.toCharArray()) }
 
         val cert = keyStore.getCertificate(tlsConfig.keyAlias) as X509Certificate

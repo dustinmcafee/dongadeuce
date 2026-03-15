@@ -67,6 +67,9 @@ fun MainScreen(
         val prompt = uiState.tofuPrompt!!
         AlertDialog(
             onDismissRequest = { menuViewModel.rejectTofu() },
+            containerColor = MaterialTheme.colorScheme.surface,
+            titleContentColor = MaterialTheme.colorScheme.onSurface,
+            textContentColor = MaterialTheme.colorScheme.onSurface,
             title = { Text("Unknown Server Certificate") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -94,10 +97,13 @@ fun MainScreen(
         )
     }
 
-    // Show error snackbar if there's an error
+    // Show error dialog
     if (uiState.error != null) {
         AlertDialog(
             onDismissRequest = { menuViewModel.clearError() },
+            containerColor = MaterialTheme.colorScheme.surface,
+            titleContentColor = MaterialTheme.colorScheme.onSurface,
+            textContentColor = MaterialTheme.colorScheme.onSurface,
             title = { Text("Error") },
             text = { Text(uiState.error ?: "") },
             confirmButton = {

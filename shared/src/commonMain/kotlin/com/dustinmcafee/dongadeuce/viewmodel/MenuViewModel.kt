@@ -899,7 +899,8 @@ class MenuViewModel {
                 tofuVerifier = if (useTls) tofuVerifier else null,
                 trustedServersStore = if (useTls) trustedServersStore else null
             ) ?: false
-            if (!success) {
+            if (!success && _uiState.value.currentScreen != Screen.Menu) {
+                // Only show error if we're still on the connect screen (not user-initiated disconnect)
                 _uiState.update {
                     it.copy(
                         isLoading = false,
@@ -1068,7 +1069,13 @@ class MenuViewModel {
 
         viewModelScope.launch {
             try {
-                val engine = if (useTls) createTlsHttpClientEngine(null) else createHttpClientEngine()
+                val engine = if (useTls) {
+                    // Use trusted fingerprint if we have one, otherwise trust-all for initial create
+                    val fp = trustedServersStore.getTrustedFingerprint(address, port)
+                    createTlsHttpClientEngine(fp)
+                } else {
+                    createHttpClientEngine()
+                }
                 val scheme = if (useTls) "https" else "http"
                 val client = HttpClient(engine)
                 val response = client.post("$scheme://$address:$port/api/games")

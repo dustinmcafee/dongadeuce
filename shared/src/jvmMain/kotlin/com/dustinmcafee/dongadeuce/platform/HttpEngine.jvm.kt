@@ -3,28 +3,25 @@ package com.dustinmcafee.dongadeuce.platform
 import com.dustinmcafee.dongadeuce.tls.computeFingerprint
 import io.ktor.client.engine.*
 import io.ktor.client.engine.cio.*
+import io.ktor.client.engine.okhttp.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.net.HttpURLConnection
 import java.net.URL
-import java.security.MessageDigest
 import java.security.cert.X509Certificate
 import javax.net.ssl.*
 
 actual fun createHttpClientEngine(): HttpClientEngine = CIO.create()
 
 actual fun createTlsHttpClientEngine(trustedFingerprint: String?): HttpClientEngine {
-    return CIO.create {
-        https {
-            // Set serverName to match the cert's SAN ("localhost") to satisfy
-            // any hostname verification. We use TOFU fingerprint pinning, not
-            // hostname-based trust, so this is safe.
-            serverName = "localhost"
-            trustManager = object : X509TrustManager {
+    // Use OkHttp for TLS — CIO has hostname verification issues with self-signed certs
+    return OkHttp.create {
+        config {
+            val trustManager = object : X509TrustManager {
                 override fun checkClientTrusted(chain: Array<out X509Certificate>?, authType: String?) {}
                 override fun getAcceptedIssuers(): Array<X509Certificate> = arrayOf()
                 override fun checkServerTrusted(chain: Array<out X509Certificate>?, authType: String?) {
-                    if (trustedFingerprint == null) return // Accept any (for TOFU probe)
+                    if (trustedFingerprint == null) return
                     val serverCert = chain?.firstOrNull()
                         ?: throw SSLException("No server certificate")
                     val serverFingerprint = computeFingerprint(serverCert)
@@ -35,6 +32,10 @@ actual fun createTlsHttpClientEngine(trustedFingerprint: String?): HttpClientEng
                     }
                 }
             }
+            val sslContext = SSLContext.getInstance("TLS")
+            sslContext.init(null, arrayOf(trustManager), null)
+            sslSocketFactory(sslContext.socketFactory, trustManager)
+            hostnameVerifier { _, _ -> true }
         }
     }
 }
@@ -42,18 +43,33 @@ actual fun createTlsHttpClientEngine(trustedFingerprint: String?): HttpClientEng
 actual suspend fun probeCertificateFingerprint(host: String, port: Int): String? {
     return withContext(Dispatchers.IO) {
         try {
-            val sslContext = SSLContext.getInstance("TLS")
-            sslContext.init(null, arrayOf(object : X509TrustManager {
+            var capturedFingerprint: String? = null
+            val capturingTrustManager = object : X509TrustManager {
                 override fun checkClientTrusted(chain: Array<out X509Certificate>?, authType: String?) {}
                 override fun getAcceptedIssuers(): Array<X509Certificate> = arrayOf()
-                override fun checkServerTrusted(chain: Array<out X509Certificate>?, authType: String?) {}
-            }), null)
-            val socket = sslContext.socketFactory.createSocket(host, port) as SSLSocket
-            socket.startHandshake()
-            val cert = socket.session.peerCertificates[0] as X509Certificate
-            val fp = computeFingerprint(cert)
-            socket.close()
-            fp
+                override fun checkServerTrusted(chain: Array<out X509Certificate>?, authType: String?) {
+                    val cert = chain?.firstOrNull() ?: return
+                    capturedFingerprint = computeFingerprint(cert)
+                }
+            }
+            val sslContext = SSLContext.getInstance("TLS")
+            sslContext.init(null, arrayOf(capturingTrustManager), null)
+
+            val okHttpClient = okhttp3.OkHttpClient.Builder()
+                .sslSocketFactory(sslContext.socketFactory, capturingTrustManager)
+                .hostnameVerifier { _, _ -> true }
+                .connectTimeout(10, java.util.concurrent.TimeUnit.SECONDS)
+                .readTimeout(10, java.util.concurrent.TimeUnit.SECONDS)
+                .build()
+
+            val request = okhttp3.Request.Builder()
+                .url("https://$host:$port/api/health")
+                .build()
+            val response = okHttpClient.newCall(request).execute()
+            response.close()
+            okHttpClient.connectionPool.evictAll()
+
+            capturedFingerprint
         } catch (e: Exception) {
             null
         }

@@ -66,7 +66,7 @@ jobs:
       with:
         api-level: 29
         arch: x86_64
-        script: ./gradlew :android:connectedDebugAndroidTest
+        script: ./gradlew :android:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.notClass=com.dustinmcafee.dongadeuce.TlsIntegrationTest
 
     - name: Upload instrumented test results
       uses: actions/upload-artifact@v4

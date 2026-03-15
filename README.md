@@ -48,6 +48,7 @@ A lightweight, cross-platform MTG Commander game client built with Kotlin and Co
 - **Commander-focused**: Designed specifically for EDH/Commander format
 - **Hotseat Multiplayer**: 2-6 players on the same device
 - **Network Multiplayer**: Host or join games over LAN, or connect to a dedicated server (2-6 players)
+- **Dedicated Server**: Run on Android (foreground service) or JVM, with self-signed TLS encryption (TOFU)
 - **Multi-format Deck Import**: Load decks from Cockatrice (.cod), .dec, .dek, .txt, .mwDeck formats
 - **Clipboard Paste**: Paste deck lists directly from clipboard on desktop and Android
 - **Commander Selection**: Interactive dialog when importing decks without explicit commander
@@ -101,15 +102,16 @@ dongadeuce/
 ├── shared/              # Shared game logic and models (Kotlin Multiplatform)
 │   ├── models/         # Card, Deck, GameState, Player, Zone
 │   ├── network/        # GameEngine, GameServer, GameClient, protocol
+│   ├── server/         # GameRoom, LobbyManager, ServerConfig (shared by JVM + Android)
+│   ├── tls/            # TLS config, cert generation, trusted servers store
 │   ├── settings/       # User settings persistence
 │   └── game/           # Game logic, deck parser
 ├── desktop/            # Compose Desktop UI
 │   ├── ui/             # UI components (game screen, zones, cards)
 │   ├── viewmodel/      # ViewModels with StateFlow (MVVM architecture)
 │   └── utils/          # Image cache, utilities
-├── android/            # Android app
+├── android/            # Android app + dedicated server foreground service
 ├── server/             # Dedicated game server (standalone JVM app)
-│   └── src/            # LobbyManager, GameRoom, Main, ServerConfig
 ├── mcp-server/         # MCP server for AI integration
 └── resources/          # Icons and assets
 ```
@@ -124,11 +126,14 @@ The game supports two network modes that share the same core components:
 
 - **LAN / P2P Mode**: One player runs an embedded Ktor server; all players (including host) connect via GameClient
 - **Dedicated Server Mode**: A standalone server manages multiple game rooms; players connect by game code
+- **Android Dedicated Server**: Runs as a foreground service with persistent notification, survives app close and device reboots via WorkManager
+- **Self-Signed TLS (TOFU)**: Server auto-generates RSA 2048 cert on first start; clients verify via SSH-style fingerprint prompt, with auto-renewal
 
 Shared components (zero duplication):
 - **GameEngine**: All game logic — validation, execution, state management
 - **GameClient**: All players use this to connect (even the P2P host connects to localhost)
 - **GameMessage protocol**: Identical for both modes
+- **GameRoom / LobbyManager**: Shared by JVM and Android dedicated servers
 
 ### MVVM Layers
 
@@ -169,7 +174,7 @@ cd dongadeuce
 ./gradlew desktop:packageDeb
 ```
 
-## Current Status (v6.0.9-beta)
+## Current Status (v6.1.0-beta)
 
 **Desktop:** 99% Complete - Fully Playable! ✅
 **Android:** 99% Complete - Fully Playable! ✅
@@ -212,8 +217,12 @@ cd dongadeuce
 - **Turn Passing** - Automatic player advancement
 
 **Network Multiplayer:**
-- **Host/Join Games** - WebSocket-based networking over local network
+- **Host/Join Games** - WebSocket-based networking over local network or internet
+- **Dedicated Server** - Run on Android (foreground service) or PC (standalone JVM jar)
+- **Self-Signed TLS** - Auto-generated certs with SSH-style trust-on-first-use (TOFU)
+- **Certificate Auto-Renewal** - 10-year validity, auto-regenerates 30 days before expiry
 - **Lobby System** - Player ready status, host can kick players
+- **Create Game via REST** - Clients create game rooms on dedicated servers via API
 - **Real-time Sync** - Full game state synchronization
 - **35+ Network Actions** - All game actions supported over network
 - **Disconnect Handling** - Game pauses on player disconnect
@@ -230,12 +239,14 @@ cd dongadeuce
 
 **Technical:**
 - MVVM architecture with StateFlow (100% compliant)
-- Ktor WebSocket server and client
+- Ktor WebSocket server (Netty for TLS, CIO for plain) and client (OkHttp for TLS, CIO for plain)
+- Self-signed TLS with Bouncy Castle cert generation (Android) and Ktor TLS certificates (JVM)
 - Scryfall API integration
 - Bulk card cache with progress UI
 - Multi-format deck parser (Cockatrice, .dec, .dek, .txt, .mwDeck)
 - Sideboard support with deck loading
-- 223+ passing unit tests
+- 590+ passing tests (480 JVM shared, 29 JVM server, 86 Android instrumented including 8 TLS)
+- CI/CD with GitHub Actions (APK signing, test automation)
 - Comprehensive input validation
 - Cross-platform packaging (Windows, macOS, Linux, Android)
 
@@ -258,16 +269,18 @@ cd dongadeuce
 
 ### Completion Status
 - **Desktop:** ~99% complete (fully playable)
-- **Android:** ~95% complete (fully playable)
-- **Network Mode:** ~96% complete (fully playable)
+- **Android:** ~99% complete (fully playable)
+- **Network Mode:** 100% complete (P2P + Dedicated Server + TLS)
 
 ## Tech Stack
 
-- **Kotlin**: Primary language
-- **Compose Multiplatform**: Cross-platform UI framework
-- **Ktor**: Networking (server + client)
+- **Kotlin**: Primary language (Kotlin Multiplatform)
+- **Compose Multiplatform**: Cross-platform UI framework (Desktop + Android)
+- **Ktor**: Networking — Netty server (TLS), CIO server (plain), OkHttp client (TLS), CIO client (plain)
+- **Bouncy Castle**: Self-signed certificate generation on Android (bcprov + bcpkix)
 - **kotlinx.serialization**: JSON serialization for network protocol
-- **Scryfall API**: Card data and images (planned)
+- **Scryfall API**: Card data and images with offline bulk cache
+- **WorkManager**: Android server auto-restart after device reboot
 
 ## Game Zones
 
@@ -279,6 +292,40 @@ The UI includes all Commander zones:
 - **Graveyard**: Discarded/destroyed cards
 - **Exile**: Exiled cards
 - **Stack**: Spells/abilities being resolved (not visible yet)
+
+## Running a Dedicated Server
+
+### On Android
+1. Open DongADeuce on your Android device
+2. Tap "Host Dedicated Server" from the main menu
+3. Configure port, max games, max players
+4. Check "Enable TLS encryption" for internet-facing servers
+5. Tap "Start Server"
+6. Share the displayed IP address and fingerprint with players
+
+The server runs as a foreground service — it stays alive when you close the app and auto-restarts after device reboots.
+
+### On PC (JVM)
+```bash
+cd server
+../gradlew shadowJar
+java -jar build/libs/dongadeuce-server-*-all.jar
+```
+
+Environment variables:
+- `PORT` — Server port (default: 9090)
+- `MAX_GAMES` — Max concurrent game rooms (default: 100)
+- `MAX_PLAYERS` — Max players per game (default: 6)
+- `TLS_ENABLED` — Set to `true` to enable TLS
+- `TLS_KEYSTORE_PATH` — Path to keystore file (default: `./server.jks`, auto-generated)
+
+### Connecting as a Client
+1. In the Join screen, select "Dedicated Server" mode
+2. Enter the server address and port
+3. Check "Encrypt connection (TLS)" if the server has TLS enabled
+4. Click "Create New Game" to create a room, or enter an existing game code
+5. Click "Connect"
+6. On first TLS connection, verify the fingerprint matches what the server displays
 
 ## Next Steps
 

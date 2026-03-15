@@ -164,8 +164,11 @@ class GameClient {
                 }
             }
         } catch (e: Exception) {
-            _connectionState.value = ConnectionState.Error("Failed to connect: ${e.message}")
-            _error.value = "Failed to connect: ${e.message}"
+            // Don't show error if user already disconnected
+            if (_connectionState.value !is ConnectionState.Disconnected) {
+                _connectionState.value = ConnectionState.Error("Failed to connect: ${e.message}")
+                _error.value = "Failed to connect: ${e.message}"
+            }
             return false
         }
 
@@ -323,6 +326,8 @@ class GameClient {
      * Handle disconnect
      */
     private fun handleDisconnect(reason: String) {
+        // Don't set error state if we're already disconnected (user-initiated)
+        if (_connectionState.value is ConnectionState.Disconnected) return
         _connectionState.value = ConnectionState.Error(reason)
         session = null
     }

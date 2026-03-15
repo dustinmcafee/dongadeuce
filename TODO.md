@@ -1,9 +1,9 @@
 # Dong-A-Deuce - Development TODO
 
-**Current Version:** v6.0.9-beta
+**Current Version:** v6.1.0-beta
 **Desktop:** 99% complete (fully playable!)
 **Android:** 99% complete (fully playable!)
-**Network Mode:** 100% complete (P2P + Dedicated Server)
+**Network Mode:** 100% complete (P2P + Dedicated Server + TLS)
 **Last Updated:** 2026-03-15
 
 ---
@@ -131,6 +131,10 @@ These are nice-to-have features that would improve the experience but aren't req
 - [x] Dedicated server mode with game rooms and codes
 - [x] GameEngine extraction (shared by P2P and dedicated server)
 - [x] Host connects as client (unified code path)
+- [x] Android dedicated server (foreground service, survives reboots)
+- [x] Self-signed TLS with trust-on-first-use (TOFU)
+- [x] Certificate auto-renewal (30-day threshold, 10-year validity)
+- [x] 8 TLS instrumented tests (cert generation, TOFU flow, LAN IP)
 - [ ] Authentication (player accounts)
 - [ ] Matchmaking (auto-pair players)
 - [ ] Server-side game persistence (reconnect to ongoing games)
@@ -205,6 +209,9 @@ These are nice-to-have features that would improve the experience but aren't req
 - Real-time state synchronization
 - Chat messages
 - Action validation
+- Dedicated Server (Android foreground service + JVM standalone)
+- Self-signed TLS with trust-on-first-use (wss://)
+- Certificate auto-renewal
 
 ### Keyboard Shortcuts (120+)
 - Game phases (F5-F10)
@@ -237,6 +244,9 @@ These are nice-to-have features that would improve the experience but aren't req
 
 | Version | Highlights |
 |---------|------------|
+| v6.1.0 | Self-signed TLS with TOFU, cert auto-renewal, Android dedicated server with Netty TLS, 8 TLS instrumented tests |
+| v6.0.5 | Android dedicated server mode (foreground service, boot restart, WorkManager), dedicated server UI |
+| v6.0.4 | 587 automated tests, Android instrumented tests verified on Pixel 8 Pro |
 | v5.0.1 | MCP server, DFC flip images, die roller fix, graveyard/exile context menus, battlefield mouse wheel scrolling |
 | v5.0.0 | 2-6 player support (hotseat & network), deck validation (100 cards), network/hotseat feature parity |
 | v4.7.0 | Hand reordering via drag, drag between hand/battlefield, commander dialog keyboard shortcuts, Android card viewer swipes from left |

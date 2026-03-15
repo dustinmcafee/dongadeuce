@@ -41,18 +41,36 @@ actual fun createTlsHttpClientEngine(trustedFingerprint: String?): HttpClientEng
 actual suspend fun probeCertificateFingerprint(host: String, port: Int): String? {
     return withContext(Dispatchers.IO) {
         try {
-            val sslContext = SSLContext.getInstance("TLS")
-            sslContext.init(null, arrayOf(object : X509TrustManager {
+            // Use OkHttp to make a simple HTTPS request — it handles TLS reliably on Android.
+            // The custom TrustManager captures the cert fingerprint during handshake.
+            var capturedFingerprint: String? = null
+            val capturingTrustManager = object : X509TrustManager {
                 override fun checkClientTrusted(chain: Array<out X509Certificate>?, authType: String?) {}
                 override fun getAcceptedIssuers(): Array<X509Certificate> = arrayOf()
-                override fun checkServerTrusted(chain: Array<out X509Certificate>?, authType: String?) {}
-            }), null)
-            val socket = sslContext.socketFactory.createSocket(host, port) as SSLSocket
-            socket.startHandshake()
-            val cert = socket.session.peerCertificates[0] as X509Certificate
-            val fp = computeFingerprint(cert)
-            socket.close()
-            fp
+                override fun checkServerTrusted(chain: Array<out X509Certificate>?, authType: String?) {
+                    val cert = chain?.firstOrNull() ?: return
+                    capturedFingerprint = computeFingerprint(cert)
+                }
+            }
+            val sslContext = SSLContext.getInstance("TLS")
+            sslContext.init(null, arrayOf(capturingTrustManager), null)
+
+            val okHttpClient = okhttp3.OkHttpClient.Builder()
+                .sslSocketFactory(sslContext.socketFactory, capturingTrustManager)
+                .hostnameVerifier { _, _ -> true }
+                .connectTimeout(10, java.util.concurrent.TimeUnit.SECONDS)
+                .readTimeout(10, java.util.concurrent.TimeUnit.SECONDS)
+                .build()
+
+            // Make a simple GET to trigger the TLS handshake
+            val request = okhttp3.Request.Builder()
+                .url("https://$host:$port/api/health")
+                .build()
+            val response = okHttpClient.newCall(request).execute()
+            response.close()
+            okHttpClient.connectionPool.evictAll()
+
+            capturedFingerprint
         } catch (e: Exception) {
             null
         }

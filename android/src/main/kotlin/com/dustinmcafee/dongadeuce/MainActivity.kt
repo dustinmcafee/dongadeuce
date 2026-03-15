@@ -1059,7 +1059,8 @@ fun DedicatedServerScreen(viewModel: AndroidMenuViewModel) {
                             context,
                             port.toIntOrNull() ?: 9090,
                             maxGames.toIntOrNull() ?: 100,
-                            maxPlayers.toIntOrNull() ?: 6
+                            maxPlayers.toIntOrNull() ?: 6,
+                            tlsEnabled
                         )
                     }
                 }

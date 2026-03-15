@@ -7,12 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [6.0.9-beta] - 2026-03-15
+## [6.1.0-beta] - 2026-03-15
+
+### Added
+- **Self-signed TLS with TOFU** - Servers auto-generate a self-signed certificate on first start; clients verify via trust-on-first-use (SSH-style fingerprint prompt)
+- **TLS on both server platforms** - JVM (Netty) and Android (Netty for TLS, CIO for plain) dedicated servers support encrypted WebSocket connections (wss://)
+- **TLS on both client platforms** - Desktop (OkHttp) and Android (OkHttp) clients support wss:// with custom TrustManager pinned to accepted fingerprints
+- **Trusted servers store** - Accepted fingerprints persist to `trusted_servers.json`, subsequent connections skip the TOFU prompt
+- **Certificate auto-renewal** - Server detects expired/expiring certs (30-day threshold) and regenerates on startup; client clears stale trust and re-prompts
+- **TLS UI controls** - "Encrypt connection" checkbox on Join screens, TLS toggle on Android Dedicated Server screen, fingerprint display when server is running with TLS
+- **Android cert generation via Bouncy Castle** - Android doesn't support JKS keystores; uses Bouncy Castle to generate RSA 2048 self-signed certs stored as PKCS12
+- **8 TLS instrumented tests** - Cert generation, TOFU accept/reject, trusted server skip, LAN IP connection, plain-reject
+- **CI exclusion for TLS tests** - TLS tests require real devices and are excluded from GitHub Actions emulator runs
+- **APK signing in CI** - GitHub Actions signs release APKs with release keystore via secrets
 
 ### Fixed
-- **Android TLS server engine** - Switched from CIO to Netty for TLS connections (CIO's TLS implementation can't handle WebSocket handshakes)
-- **Desktop TLS hostname verification** - Set CIO client `serverName` to match cert SAN for non-localhost connections
-- **Create Game over TLS** - `createGameOnServer()` now uses HTTPS when TLS is enabled
+- **Android TLS server engine** - CIO can't handle TLS WebSocket handshakes; switched to Netty for TLS connections
+- **Desktop TLS client engine** - CIO has hostname verification issues with self-signed certs; switched to OkHttp for TLS connections
+- **Android cert generation** - `KeyStore.getInstance("JKS")` unavailable on Android; uses Bouncy Castle + PKCS12 instead
+- **Spurious disconnect errors** - "Failed to connect" no longer shown when user voluntarily leaves a game
+- **Desktop dark theme dialogs** - TOFU and error dialogs now use proper dark theme colors (containerColor/textContentColor)
+- **DedicatedServerService ANR** - Cert generation + Netty startup moved off main thread to Dispatchers.IO
+- **TLS toggle not passed to server** - "Enable TLS" checkbox value was missing from one startServer call path
+- **Create Game over TLS** - REST API call now uses HTTPS and trusted fingerprint when TLS is enabled
 
 ## [6.0.8-beta] - 2026-03-15
 

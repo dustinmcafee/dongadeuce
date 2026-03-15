@@ -116,7 +116,10 @@ class DedicatedServerService : Service() {
             RECEIVER_NOT_EXPORTED
         )
 
-        startDedicatedServer(port, maxGames, maxPlayers, tlsEnabled)
+        // Heavy work (cert generation, Netty startup) must be off the main thread
+        CoroutineScope(Dispatchers.IO).launch {
+            startDedicatedServer(port, maxGames, maxPlayers, tlsEnabled)
+        }
 
         return START_STICKY
     }
@@ -135,10 +138,16 @@ class DedicatedServerService : Service() {
         serviceScope = scope
 
         val tlsConfig = if (tlsEnabled) {
-            val keystorePath = java.io.File(filesDir, "server.jks").absolutePath
-            val certInfo = generateOrLoadCertificate(keystorePath = keystorePath)
-            _serverFingerprint.value = certInfo.fingerprint
-            certInfo.toServerTlsConfig()
+            try {
+                val keystorePath = java.io.File(filesDir, "server.jks").absolutePath
+                val certInfo = generateOrLoadCertificate(keystorePath = keystorePath)
+                _serverFingerprint.value = certInfo.fingerprint
+                certInfo.toServerTlsConfig()
+            } catch (e: Exception) {
+                android.util.Log.e("DongADeuceServer", "TLS cert generation failed, starting without TLS", e)
+                _serverFingerprint.value = null
+                null
+            }
         } else {
             _serverFingerprint.value = null
             null
