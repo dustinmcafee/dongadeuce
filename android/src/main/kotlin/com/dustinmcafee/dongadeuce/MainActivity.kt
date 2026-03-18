@@ -34,6 +34,9 @@ import com.dustinmcafee.dongadeuce.viewmodel.AndroidScreen
 import com.dustinmcafee.dongadeuce.viewmodel.MenuUiState
 import com.dustinmcafee.dongadeuce.viewmodel.Screen
 import com.dustinmcafee.dongadeuce.viewmodel.ServerMode
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import java.io.InputStreamReader
 
 /**
@@ -475,6 +478,81 @@ fun MenuScreen(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text("Host Dedicated Server")
+                }
+
+                // Dev Test button — debug builds only
+                if (BuildConfig.DEBUG) {
+                    var devTestLoading by remember { mutableStateOf(false) }
+                    Button(
+                        onClick = {
+                            if (devTestLoading) return@Button
+                            devTestLoading = true
+                            // Load Zedruu deck from assets for both players, start hotseat
+                            try {
+                                val deckContent = context.assets.open("Zedruu.cod").bufferedReader().readText()
+                                viewModel.setHotseatMode(true)
+                                MainScope().launch {
+                                    // Load Player 1's deck
+                                    viewModel.loadHotseatDeckFromContent(0, deckContent)
+                                    while (viewModel.uiState.value.isLoading ||
+                                        (!viewModel.uiState.value.hotseatDecks.containsKey(0) &&
+                                         viewModel.uiState.value.pendingDeckData == null)) {
+                                        delay(100)
+                                    }
+                                    if (viewModel.uiState.value.pendingDeckData != null) {
+                                        viewModel.selectCommander("Zedruu the Greathearted")
+                                        while (viewModel.uiState.value.isLoading ||
+                                            viewModel.uiState.value.pendingDeckData != null ||
+                                            !viewModel.uiState.value.hotseatDecks.containsKey(0)) {
+                                            delay(100)
+                                        }
+                                    }
+
+                                    // Reuse Player 1's loaded deck for Player 2 (same cards, already fetched)
+                                    val p1Deck = viewModel.uiState.value.hotseatDecks[0]
+                                    if (p1Deck != null) {
+                                        viewModel.setHotseatDeckDirectly(1, p1Deck)
+                                    } else {
+                                        // Fallback: load again
+                                        viewModel.loadHotseatDeckFromContent(1, deckContent)
+                                        while (viewModel.uiState.value.isLoading ||
+                                            (!viewModel.uiState.value.hotseatDecks.containsKey(1) &&
+                                             viewModel.uiState.value.pendingDeckData == null)) {
+                                            delay(100)
+                                        }
+                                        if (viewModel.uiState.value.pendingDeckData != null) {
+                                            viewModel.selectCommander("Zedruu the Greathearted")
+                                            while (viewModel.uiState.value.isLoading ||
+                                                !viewModel.uiState.value.hotseatDecks.containsKey(1)) {
+                                                delay(100)
+                                            }
+                                        }
+                                    }
+
+                                    viewModel.startHotseatGame()
+                                    devTestLoading = false
+                                }
+                            } catch (e: Exception) {
+                                android.util.Log.e("DevTest", "Failed to load dev test game", e)
+                                devTestLoading = false
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !devTestLoading && !uiState.isLoading,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFF6200EA)
+                        )
+                    ) {
+                        if (devTestLoading) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(16.dp),
+                                color = Color.White,
+                                strokeWidth = 2.dp
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                        }
+                        Text("Dev Test — 2P Hotseat (Zedruu)")
+                    }
                 }
 
                 Row(
@@ -1088,6 +1166,18 @@ fun GameScreen(
     viewModel: AndroidMenuViewModel,
     uiState: MenuUiState
 ) {
+    val context = LocalContext.current
+
+    // Start game session foreground service to keep alive when backgrounded
+    DisposableEffect(Unit) {
+        val mode = if (uiState.hotseatMode) "Hotseat" else "Network"
+        val server = if (!uiState.hotseatMode) "${uiState.serverAddress}:${uiState.serverPort}" else ""
+        com.dustinmcafee.dongadeuce.service.GameSessionService.start(context, mode, server)
+        onDispose {
+            com.dustinmcafee.dongadeuce.service.GameSessionService.stop(context)
+        }
+    }
+
     // Create GameViewModel with network client/server if in network mode
     val networkClient = viewModel.getGameClient()
     val networkServer = viewModel.getGameServer()

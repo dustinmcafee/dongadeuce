@@ -74,7 +74,8 @@ class GameViewModel(
     }
 
     /**
-     * Handle state update from network
+     * Handle state update from network.
+     * Preserves local hand card order (handPosition) so cards don't shuffle on sync.
      */
     private fun handleNetworkStateUpdate(gameState: GameState) {
         val playerId = localPlayerId ?: (networkClient?.playerId?.value)
@@ -87,8 +88,37 @@ class GameViewModel(
                 gameState.players.filter { it.id != id }
             } ?: gameState.players
 
+            // Preserve local hand card order across network syncs
+            val preservedState = if (playerId != null && currentState.gameState != null) {
+                val oldHand = currentState.gameState.cardInstances
+                    .filter { it.ownerId == playerId && it.zone == Zone.HAND }
+                val oldHandPositions = oldHand.associate { it.instanceId to it.handPosition }
+
+                if (oldHandPositions.isNotEmpty()) {
+                    val updatedCards = gameState.cardInstances.map { card ->
+                        if (card.ownerId == playerId && card.zone == Zone.HAND) {
+                            val savedPosition = oldHandPositions[card.instanceId]
+                            if (savedPosition != null) {
+                                card.copy(handPosition = savedPosition)
+                            } else {
+                                // New card drawn — assign next position
+                                val maxPos = oldHandPositions.values.filterNotNull().maxOrNull() ?: -1
+                                card.copy(handPosition = maxPos + 1)
+                            }
+                        } else {
+                            card
+                        }
+                    }
+                    gameState.copy(cardInstances = updatedCards)
+                } else {
+                    gameState
+                }
+            } else {
+                gameState
+            }
+
             currentState.copy(
-                gameState = gameState,
+                gameState = preservedState,
                 localPlayer = localPlayer,
                 opponents = opponents,
                 isNetworkMode = true
@@ -2897,5 +2927,39 @@ class GameViewModel(
                 gameState = gameState.copy(players = updatedPlayers).addEvent(event)
             )
         }
+    }
+
+    // ── Mana pool convenience methods ──────────────────────────────────
+
+    companion object {
+        val MANA_COLORS = listOf("manaW", "manaU", "manaB", "manaR", "manaG", "manaC")
+    }
+
+    /** Add 1 mana of the given color (counter key: manaW, manaU, manaB, manaR, manaG, manaC). */
+    fun addMana(playerId: String, color: String) {
+        addPlayerCounter(playerId, color, 1)
+    }
+
+    /** Remove 1 mana of the given color. */
+    fun removeMana(playerId: String, color: String) {
+        removePlayerCounter(playerId, color, 1)
+    }
+
+    /** Clear all mana for a player. */
+    fun clearMana(playerId: String) {
+        MANA_COLORS.forEach { color ->
+            val current = _uiState.value.gameState?.players?.find { it.id == playerId }?.getCounter(color) ?: 0
+            if (current > 0) {
+                setPlayerCounter(playerId, color, 0)
+            }
+        }
+    }
+
+    /** Get the latest N game events as display strings. */
+    fun getLatestEvents(count: Int = 3): List<String> {
+        val gameState = _uiState.value.gameState ?: return emptyList()
+        return gameState.gameLog
+            .takeLast(count)
+            .map { it.toDisplayString() }
     }
 }

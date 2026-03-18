@@ -1,0 +1,44 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- Card 1 (back, leftmost) -->
+    <path
+        android:fillColor="@android:color/transparent"
+        android:strokeWidth="1.2"
+        android:strokeColor="#FFFFFF"
+        android:pathData="M4,4 L12,4 C12.5,4 13,4.5 13,5 L13,17 C13,17.5 12.5,18 12,18 L4,18 C3.5,18 3,17.5 3,17 L3,5 C3,4.5 3.5,4 4,4 Z" />
+    <!-- Card 2 -->
+    <path
+        android:fillColor="@android:color/transparent"
+        android:strokeWidth="1.2"
+        android:strokeColor="#FFFFFF"
+        android:pathData="M6,3 L14,3 C14.5,3 15,3.5 15,4 L15,16 C15,16.5 14.5,17 14,17 L6,17 C5.5,17 5,16.5 5,16 L5,4 C5,3.5 5.5,3 6,3 Z" />
+    <!-- Card 3 -->
+    <path
+        android:fillColor="@android:color/transparent"
+        android:strokeWidth="1.2"
+        android:strokeColor="#FFFFFF"
+        android:pathData="M8,5 L16,5 C16.5,5 17,5.5 17,6 L17,18 C17,18.5 16.5,19 16,19 L8,19 C7.5,19 7,18.5 7,18 L7,6 C7,5.5 7.5,5 8,5 Z" />
+    <!-- Card 4 (front, rightmost) -->
+    <path
+        android:fillColor="@android:color/transparent"
+        android:strokeWidth="1.2"
+        android:strokeColor="#FFFFFF"
+        android:pathData="M10,7 L18,7 C18.5,7 19,7.5 19,8 L19,20 C19,20.5 18.5,21 18,21 L10,21 C9.5,21 9,20.5 9,20 L9,8 C9,7.5 9.5,7 10,7 Z" />
+    <!-- Plus sign outline (black border) -->
+    <path
+        android:strokeWidth="3.5"
+        android:strokeColor="#000000"
+        android:strokeLineCap="round"
+        android:fillColor="@android:color/transparent"
+        android:pathData="M13.5,11.5 L13.5,17.5 M10.5,14.5 L16.5,14.5" />
+    <!-- Plus sign (white fill on top) -->
+    <path
+        android:strokeWidth="2"
+        android:strokeColor="#FFFFFF"
+        android:strokeLineCap="round"
+        android:fillColor="@android:color/transparent"
+        android:pathData="M13.5,11.5 L13.5,17.5 M10.5,14.5 L16.5,14.5" />
+</vector>

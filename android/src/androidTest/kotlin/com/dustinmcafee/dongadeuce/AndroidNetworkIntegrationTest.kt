@@ -282,7 +282,7 @@ class AndroidNetworkIntegrationTest {
     }
 
     @Test
-    fun androidServer_disconnectPausesGame() = runBlocking {
+    fun androidServer_disconnectEliminatesPlayer() = runBlocking {
         val port = findFreePort()
         val server = GameServer(port = port, maxPlayers = 4)
         server.start()
@@ -304,15 +304,20 @@ class AndroidNetworkIntegrationTest {
         server.startGame()
         withTimeout(10000) { client1.gameStarted.first { it } }
 
+        val bobId = client2.playerId.value!!
+
         // Bob disconnects
         client2.disconnect()
         job2.cancel()
 
-        // Alice should see pause
+        // Alice should see Bob eliminated (not paused)
         withTimeout(10000) {
-            client1.isPaused.first { it }
+            client1.gameState.first { state ->
+                state?.players?.find { it.id == bobId }?.hasLost == true
+            }
         }
-        assertTrue(client1.isPaused.value)
+        assertFalse(client1.isPaused.value)
+        assertTrue(client1.gameState.value!!.players.find { it.id == bobId }!!.hasLost)
 
         client1.disconnect()
         job1.cancel()

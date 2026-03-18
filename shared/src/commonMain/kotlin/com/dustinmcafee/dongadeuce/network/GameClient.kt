@@ -274,7 +274,20 @@ class GameClient {
             }
 
             is GameMessage.ActionRejected -> {
-                _error.value = "Action rejected: ${message.reason}"
+                // Suppress common validation responses that aren't real errors
+                // (e.g. clicking something when it's not your turn)
+                val suppressedReasons = listOf(
+                    "Not your turn",
+                    "You have been eliminated",
+                    "Game is paused",
+                    "Only the active player"
+                )
+                val isSuppressed = suppressedReasons.any { reason ->
+                    message.reason.contains(reason, ignoreCase = true)
+                }
+                if (!isSuppressed) {
+                    _error.value = "Action rejected: ${message.reason}"
+                }
             }
 
             is GameMessage.Pause -> {

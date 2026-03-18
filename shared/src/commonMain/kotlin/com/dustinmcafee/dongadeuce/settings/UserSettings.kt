@@ -15,7 +15,9 @@ data class UserSettingsData(
     val serverAddress: String = "localhost",
     val serverPort: Int = 8080,
     val lastDeckDirectory: String? = null,
-    val uiScale: Float = 1.0f  // UI scale factor (0.75, 1.0, 1.25, 1.5)
+    val uiScale: Float = 1.0f,  // UI scale factor (0.75, 1.0, 1.25, 1.5)
+    val serverMode: String = "LAN",  // "LAN" or "DEDICATED"
+    val tlsEnabled: Boolean = false
 )
 
 /**
@@ -146,5 +148,29 @@ class UserSettings(
      */
     fun setUiScale(scale: Float) {
         update { it.copy(uiScale = scale.coerceIn(0.5f, 2.0f)) }
+    }
+
+    /**
+     * Get server mode ("LAN" or "DEDICATED")
+     */
+    fun getServerMode(): String = load().serverMode
+
+    /**
+     * Set server mode and persist
+     */
+    fun setServerMode(mode: String) {
+        update { it.copy(serverMode = mode) }
+    }
+
+    /**
+     * Get TLS enabled setting
+     */
+    fun getTlsEnabled(): Boolean = load().tlsEnabled
+
+    /**
+     * Set TLS enabled and persist
+     */
+    fun setTlsEnabled(enabled: Boolean) {
+        update { it.copy(tlsEnabled = enabled) }
     }
 }

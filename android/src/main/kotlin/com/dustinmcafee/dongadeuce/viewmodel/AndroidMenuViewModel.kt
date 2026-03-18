@@ -83,6 +83,11 @@ class AndroidMenuViewModel : ViewModel() {
     fun loadHotseatDeck(playerIndex: Int, filePath: String) = delegate.loadHotseatDeck(playerIndex, filePath)
 
     /**
+     * Directly set a deck for a hotseat player (skip parsing, reuse existing deck object)
+     */
+    fun setHotseatDeckDirectly(playerIndex: Int, deck: com.dustinmcafee.dongadeuce.models.Deck) = delegate.setHotseatDeckDirectly(playerIndex, deck)
+
+    /**
      * Select a commander for the pending deck
      */
     fun selectCommander(commanderName: String, partnerName: String? = null) = delegate.selectCommander(commanderName, partnerName)

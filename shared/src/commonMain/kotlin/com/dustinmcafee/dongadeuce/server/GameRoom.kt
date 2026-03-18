@@ -165,11 +165,14 @@ class GameRoom(
         }
 
         if (engine.isGameStarted()) {
-            engine.pauseGame("${player.name} disconnected")
-            broadcastToAll(GameMessage.Pause(
-                reason = "${player.name} disconnected",
-                disconnectedPlayerId = playerId
+            // Eliminate the disconnected player and continue the game
+            engine.eliminatePlayer(playerId)
+            broadcastToAll(GameMessage.PlayerLeft(
+                playerId = playerId,
+                playerName = player.name,
+                reason = "Disconnected"
             ))
+            broadcastStateUpdate()
         } else {
             engine.removePlayer(playerId)
             broadcastToAll(engine.lobbyState.value)

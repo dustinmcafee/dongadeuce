@@ -24,6 +24,7 @@ fun TurnIndicator(
     onPassTurn: () -> Unit,
     onUntapAll: () -> Unit,
     onRollDice: () -> Unit,
+    isActivePlayerLocal: Boolean = true,
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -92,7 +93,8 @@ fun TurnIndicator(
                 SmallButton(
                     text = "→ Turn",
                     onClick = onPassTurn,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
+                    enabled = isActivePlayerLocal
                 )
             }
         }
@@ -104,13 +106,15 @@ private fun SmallButton(
     text: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    outlined: Boolean = false
+    outlined: Boolean = false,
+    enabled: Boolean = true
 ) {
     if (outlined) {
         OutlinedButton(
             onClick = onClick,
             modifier = modifier.height(32.dp),
-            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+            enabled = enabled
         ) {
             Text(text, style = MaterialTheme.typography.labelSmall)
         }
@@ -118,7 +122,8 @@ private fun SmallButton(
         Button(
             onClick = onClick,
             modifier = modifier.height(32.dp),
-            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+            enabled = enabled
         ) {
             Text(text, style = MaterialTheme.typography.labelSmall)
         }

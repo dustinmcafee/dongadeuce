@@ -204,7 +204,7 @@ fun MenuScreen(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Text(uiState.loadingProgress, style = MaterialTheme.typography.bodyMedium)
+                        Text(uiState.loadingProgress, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSecondaryContainer)
 
                         Spacer(modifier = Modifier.height(8.dp))
 
@@ -253,9 +253,9 @@ fun MenuScreen(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         val deck = uiState.loadedDeck
-                        Text("Deck Loaded", style = MaterialTheme.typography.labelMedium)
-                        Text(deck?.commander?.name ?: "", style = MaterialTheme.typography.titleMedium)
-                        Text("${deck?.totalCards ?: 0} cards", style = MaterialTheme.typography.bodySmall)
+                        Text("Deck Loaded", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                        Text(deck?.commander?.name ?: "", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                        Text("${deck?.totalCards ?: 0} cards", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onPrimaryContainer)
                     }
                 }
             }
@@ -273,7 +273,7 @@ fun MenuScreen(
                     modifier = Modifier.padding(16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Text("Game Mode", style = MaterialTheme.typography.labelMedium)
+                    Text("Game Mode", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(modifier = Modifier.height(8.dp))
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -281,12 +281,12 @@ fun MenuScreen(
                         FilterChip(
                             selected = !uiState.hotseatMode,
                             onClick = { viewModel.setHotseatMode(false) },
-                            label = { Text("Network") }
+                            label = { Text("Network", color = MaterialTheme.colorScheme.onSurfaceVariant) }
                         )
                         FilterChip(
                             selected = uiState.hotseatMode,
                             onClick = { viewModel.setHotseatMode(true) },
-                            label = { Text("Local Hotseat") }
+                            label = { Text("Local Hotseat", color = MaterialTheme.colorScheme.onSurfaceVariant) }
                         )
                     }
                 }
@@ -305,7 +305,7 @@ fun MenuScreen(
                     modifier = Modifier.padding(16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Text("Player Count", style = MaterialTheme.typography.labelMedium)
+                    Text("Player Count", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(modifier = Modifier.height(8.dp))
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -314,7 +314,7 @@ fun MenuScreen(
                             FilterChip(
                                 selected = uiState.playerCount == count,
                                 onClick = { viewModel.setPlayerCount(count) },
-                                label = { Text("$count") }
+                                label = { Text("$count", color = MaterialTheme.colorScheme.onSurfaceVariant) }
                             )
                         }
                     }
@@ -334,7 +334,7 @@ fun MenuScreen(
                     modifier = Modifier.padding(16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Text("Card Cache", style = MaterialTheme.typography.labelMedium)
+                    Text("Card Cache", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(modifier = Modifier.height(4.dp))
 
                     if (uiState.cacheAvailable) {
@@ -504,12 +504,14 @@ fun HotseatDeckLoader(
                     ) {
                         Text(
                             "Player ${playerIndex + 1}",
-                            style = MaterialTheme.typography.titleSmall
+                            style = MaterialTheme.typography.titleSmall,
+                            color = if (deckLoaded) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         if (deck != null) {
                             Text(
                                 deck.commander.name,
-                                style = MaterialTheme.typography.bodySmall
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
                             )
                         } else {
                             Text(
@@ -598,7 +600,7 @@ fun HostLobbyScreen(viewModel: MenuViewModel) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Text("Hosting Game", style = MaterialTheme.typography.headlineMedium)
+            Text("Hosting Game", style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.onBackground)
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -715,7 +717,7 @@ fun JoinLobbyScreen(viewModel: MenuViewModel) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Text("Join Game", style = MaterialTheme.typography.headlineMedium)
+            Text("Join Game", style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.onBackground)
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -728,12 +730,12 @@ fun JoinLobbyScreen(viewModel: MenuViewModel) {
                             viewModel.setServerMode(ServerMode.LAN)
                             viewModel.setGameCode(null)
                         },
-                        label = { Text("LAN / P2P") }
+                        label = { Text("LAN / P2P", color = MaterialTheme.colorScheme.onSurface) }
                     )
                     FilterChip(
                         selected = isDedicated,
                         onClick = { viewModel.setServerMode(ServerMode.DEDICATED) },
-                        label = { Text("Dedicated Server") }
+                        label = { Text("Dedicated Server", color = MaterialTheme.colorScheme.onSurface) }
                     )
                 }
 
@@ -796,7 +798,7 @@ fun JoinLobbyScreen(viewModel: MenuViewModel) {
                         checked = uiState.tlsEnabled,
                         onCheckedChange = { viewModel.setTlsEnabled(it) }
                     )
-                    Text("Encrypt connection (TLS)", style = MaterialTheme.typography.bodyMedium)
+                    Text("Encrypt connection (TLS)", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onBackground)
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -829,10 +831,10 @@ fun JoinLobbyScreen(viewModel: MenuViewModel) {
                     )
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
-                        Text("Connected to lobby", style = MaterialTheme.typography.titleMedium)
+                        Text("Connected to lobby", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Spacer(modifier = Modifier.height(8.dp))
 
-                        Text("Players (${lobbyState?.players?.size ?: 0}/${lobbyState?.maxPlayers ?: 4}):", style = MaterialTheme.typography.labelLarge)
+                        Text("Players (${lobbyState?.players?.size ?: 0}/${lobbyState?.maxPlayers ?: 4}):", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
 
                         lobbyState?.players?.forEach { player ->
                             Row(
@@ -841,10 +843,11 @@ fun JoinLobbyScreen(viewModel: MenuViewModel) {
                             ) {
                                 Text(
                                     if (player.isAdmin || player.isHost) "👑 ${player.name}" else "• ${player.name}",
-                                    style = MaterialTheme.typography.bodyMedium
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                                 if (player.id == currentPlayerId) {
-                                    Text(" (You)", style = MaterialTheme.typography.bodySmall)
+                                    Text(" (You)", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
                                 if (player.isReady && !player.isAdmin && !player.isHost) {
                                     Text(" ✓ Ready", style = MaterialTheme.typography.bodySmall,

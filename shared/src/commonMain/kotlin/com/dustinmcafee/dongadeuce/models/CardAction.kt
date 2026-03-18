@@ -29,4 +29,5 @@ sealed class CardAction {
     data class CreateCopy(val cardInstance: CardInstance, val ownerId: String) : CardAction()
     data class RevealTo(val cardInstance: CardInstance, val targetPlayerIds: List<String>) : CardAction()
     data class ViewHand(val playerId: String) : CardAction()
+    data class Mulligan(val playerId: String) : CardAction()
 }

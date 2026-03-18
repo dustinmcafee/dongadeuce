@@ -133,7 +133,9 @@ class MenuViewModel {
             it.copy(
                 playerName = settings.playerName,
                 serverAddress = settings.serverAddress,
-                serverPort = settings.serverPort
+                serverPort = settings.serverPort,
+                serverMode = if (settings.serverMode == "DEDICATED") ServerMode.DEDICATED else ServerMode.LAN,
+                tlsEnabled = settings.tlsEnabled
             )
         }
     }
@@ -728,6 +730,15 @@ class MenuViewModel {
     /**
      * Start a local hotseat game
      */
+    /**
+     * Directly set a deck for a hotseat player (skip parsing, reuse existing deck object)
+     */
+    fun setHotseatDeckDirectly(playerIndex: Int, deck: Deck) {
+        _uiState.update {
+            it.copy(hotseatDecks = it.hotseatDecks + (playerIndex to deck))
+        }
+    }
+
     fun startHotseatGame() {
         val requiredDeckCount = _uiState.value.playerCount
         val loadedDeckCount = _uiState.value.hotseatDecks.size
@@ -1004,10 +1015,11 @@ class MenuViewModel {
     }
 
     /**
-     * Set server mode (LAN or DEDICATED)
+     * Set server mode (LAN or DEDICATED) and persist
      */
     fun setServerMode(mode: ServerMode) {
         _uiState.update { it.copy(serverMode = mode) }
+        userSettings.setServerMode(mode.name)
     }
 
     /**
@@ -1018,10 +1030,11 @@ class MenuViewModel {
     }
 
     /**
-     * Toggle TLS encryption for connections.
+     * Toggle TLS encryption for connections and persist.
      */
     fun setTlsEnabled(enabled: Boolean) {
         _uiState.update { it.copy(tlsEnabled = enabled) }
+        userSettings.setTlsEnabled(enabled)
     }
 
     // TOFU deferred — suspends GameClient.connect() until user responds

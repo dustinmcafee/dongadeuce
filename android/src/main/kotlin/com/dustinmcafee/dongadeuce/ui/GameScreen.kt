@@ -2,6 +2,9 @@
 
 package com.dustinmcafee.dongadeuce.ui
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.*
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -22,6 +25,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -35,8 +39,11 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
@@ -44,7 +51,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import kotlin.math.roundToInt
+import com.dustinmcafee.dongadeuce.R
 import com.dustinmcafee.dongadeuce.models.*
+import com.dustinmcafee.dongadeuce.service.GameSessionService
 import com.dustinmcafee.dongadeuce.ui.UIConstants
 import com.dustinmcafee.dongadeuce.viewmodel.AndroidMenuViewModel
 import com.dustinmcafee.dongadeuce.viewmodel.GameViewModel
@@ -106,6 +115,19 @@ fun AndroidGameScreen(
     var showSettingsDialog by remember { mutableStateOf(false) }
     var showStackUntilFoundDialog by remember { mutableStateOf(false) }
     var showSideboardDialog by remember { mutableStateOf(false) }
+    var showManaDialog by remember { mutableStateOf(false) }
+
+    // Update notification with latest game events (Issue 14)
+    val context = LocalContext.current
+    val gameLogSize = gameUiState.gameState?.gameLog?.size ?: 0
+    LaunchedEffect(gameLogSize) {
+        if (GameSessionService.isActive.value && gameLogSize > 0) {
+            val latestEvents = gameViewModel.getLatestEvents(3)
+            if (latestEvents.isNotEmpty()) {
+                GameSessionService.updateWithLog(context, latestEvents)
+            }
+        }
+    }
 
     // Setup keyboard shortcut callbacks and initialize game
     LaunchedEffect(Unit) {
@@ -233,6 +255,9 @@ fun AndroidGameScreen(
                 handOwnerIdToShow = action.playerId
                 showHandDialog = true
             }
+            is CardAction.Mulligan -> {
+                gameViewModel.mulligan(action.playerId)
+            }
             else -> {
                 gameViewModel.handleBatchCardAction(
                     action = action,
@@ -266,7 +291,16 @@ fun AndroidGameScreen(
 
             // Main game area
             if (gameState != null && allPlayers.isNotEmpty()) {
-                Column(modifier = Modifier.weight(1f)) {
+                // Resizable weights for opponent vs local player sections
+                var opponentWeight by remember { mutableStateOf(0.5f) }
+                var localWeight by remember { mutableStateOf(0.5f) }
+                val sectionDensity = LocalDensity.current
+                var columnHeightPx by remember { mutableStateOf(1f) }
+
+                Column(modifier = Modifier
+                    .weight(1f)
+                    .onGloballyPositioned { columnHeightPx = it.size.height.toFloat().coerceAtLeast(1f) }
+                ) {
                     // Opponents at top (scrollable horizontally for 3+ players)
                     val opponents = if (uiState.hotseatMode) {
                         val activeIndex = gameState.activePlayerIndex
@@ -290,8 +324,36 @@ fun AndroidGameScreen(
                             },
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .weight(0.5f)  // Equal space for opponents (full battlefield grids)
+                                .weight(opponentWeight.coerceAtLeast(0.1f))
                         )
+
+                        // ── Handle 1: Between opponent and local battlefield ──
+                        // Drag UP = shrink opponent, grow local battlefield
+                        // Drag DOWN = grow opponent, shrink local battlefield
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(12.dp)
+                                .pointerInput(Unit) {
+                                    detectDragGestures { _, dragAmount ->
+                                        // Convert pixel drag to proportional weight change
+                                        // based on actual column height for 1:1 finger tracking
+                                        val totalWeight = opponentWeight + localWeight
+                                        val pixelRatio = dragAmount.y / columnHeightPx
+                                        val delta = pixelRatio * totalWeight
+                                        opponentWeight = (opponentWeight + delta).coerceIn(0.1f, 2f)
+                                        localWeight = (localWeight - delta).coerceIn(0.1f, 2f)
+                                    }
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .width(40.dp)
+                                    .height(4.dp)
+                                    .background(Color.White.copy(alpha = 0.5f), RoundedCornerShape(2.dp))
+                            )
+                        }
                     }
 
                     // Local player section (bottom)
@@ -312,9 +374,10 @@ fun AndroidGameScreen(
                             onShowExile = { showExileDialog = true },
                             onShowHand = { showHandDialog = true },
                             onCardFocus = { card -> focusedCardState.updateFocusedCard(card) },
+                            onShowMana = { showManaDialog = true },
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .weight(0.5f)  // Equal space when opponents present
+                                .weight(localWeight.coerceAtLeast(0.1f))
                         )
                     }
                 }
@@ -335,8 +398,7 @@ fun AndroidGameScreen(
                 gameViewModel = gameViewModel,
                 onShowDieRoller = { showDieRollerDialog = true },
                 onShowTokenCreation = { showTokenDialog = true },
-                onShowLibraryActions = { showLibraryActionsDialog = true },
-                onShowTopCardDetails = { card -> cardDetailsToShow = card }
+                onShowMana = { showManaDialog = true }
             )
         }
 
@@ -453,6 +515,15 @@ fun AndroidGameScreen(
             onRollLogged = { dieType, result, numDice, individualResults ->
                 localPlayer?.let { gameViewModel.logDieRoll(it.id, dieType, result, numDice, individualResults) }
             }
+        )
+    }
+
+    // Mana pool dialog (Issue 15)
+    if (showManaDialog && localPlayer != null) {
+        ManaPoolDialog(
+            player = localPlayer,
+            gameViewModel = gameViewModel,
+            onDismiss = { showManaDialog = false }
         )
     }
 
@@ -1162,7 +1233,6 @@ private fun OpponentBattlefieldGrid(
 
     // Fixed 3 rows
     val totalRows = UIConstants.BATTLEFIELD_ROWS
-    val battlefieldHeightPx = totalRows * cellSize
 
     // Pinch-to-zoom and pan state using transformable
     var scale by remember { mutableStateOf(1f) }
@@ -1170,13 +1240,10 @@ private fun OpponentBattlefieldGrid(
 
     val transformState = rememberTransformableState { zoomChange, panChange, _ ->
         val newScale = (scale * zoomChange).coerceIn(0.5f, 5f)
-        // Limit pan: can't scroll past origin (left/up), and can only scroll right/down
-        // proportional to how much the content extends beyond the viewport when zoomed
-        val maxPanDown = -((newScale - 1f) * battlefieldHeightPx).coerceAtLeast(0f)
         scale = newScale
         panOffset = Offset(
-            x = (panOffset.x + panChange.x).coerceAtMost(0f),
-            y = (panOffset.y + panChange.y).coerceIn(maxPanDown, 0f)
+            x = panOffset.x + panChange.x,
+            y = panOffset.y + panChange.y
         )
     }
 
@@ -1299,7 +1366,7 @@ private fun SmallBattlefieldCard(
 }
 
 @Composable
-private fun LocalPlayerSection(
+internal fun LocalPlayerSection(
     player: Player,
     gameState: GameState?,
     gameViewModel: GameViewModel,
@@ -1312,6 +1379,7 @@ private fun LocalPlayerSection(
     onShowExile: () -> Unit,
     onShowHand: () -> Unit,
     onCardFocus: (CardInstance) -> Unit = {},
+    onShowMana: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val battlefieldCards = gameViewModel.getCards(player.id, Zone.BATTLEFIELD)
@@ -1327,17 +1395,37 @@ private fun LocalPlayerSection(
     var handZoneTop by remember { mutableStateOf(0f) }
     var battlefieldZoneBottom by remember { mutableStateOf(0f) }
 
+    // Track active card drag for zone button drop targets (Issue 12)
+    var draggedCardInstanceId by remember { mutableStateOf<String?>(null) }
+    var dragPositionY by remember { mutableStateOf(0f) }
+    var graveyardButtonTop by remember { mutableStateOf(0f) }
+    var graveyardButtonBottom by remember { mutableStateOf(0f) }
+    var exileButtonTop by remember { mutableStateOf(0f) }
+    var exileButtonBottom by remember { mutableStateOf(0f) }
+
+    // Resizable battlefield + hand heights (Issue 4)
+    // battlefieldWeight and handHeight are user-adjustable by dragging the resize handles
+    val density = LocalDensity.current
+    var battlefieldWeight by remember { mutableStateOf(1f) } // proportional weight for battlefield
+    var playerInfoHeightDp by remember { mutableStateOf(48f) } // command zone bar height in dp
+    var handHeightDp by remember { mutableStateOf(100f) } // hand height in dp
+
     // Light green for active player, dark green for inactive
     Column(modifier = modifier.background(if (isActivePlayer) Color(0xFF1B5E20) else Color(0xFF2E4A2E))) {
-        // Battlefield - extra bottom padding to prevent overlap with PlayerInfoBar
+        // Battlefield — resizable via drag handle below
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .weight(1f)
+                .weight(battlefieldWeight.coerceAtLeast(0.1f))
                 .clipToBounds()
-                .padding(start = 8.dp, end = 8.dp, top = 8.dp, bottom = 16.dp)
+                .padding(start = 8.dp, end = 8.dp, top = 8.dp, bottom = 4.dp)
                 .onGloballyPositioned { coordinates ->
                     battlefieldZoneBottom = coordinates.positionInWindow().y + coordinates.size.height
+                }
+                .pointerInput(Unit) {
+                    detectTapGestures(
+                        onLongPress = { onShowMana() }
+                    )
                 }
         ) {
             if (battlefieldCards.isEmpty()) {
@@ -1353,11 +1441,9 @@ private fun LocalPlayerSection(
                     players = gameState?.players ?: emptyList(),
                     selectionState = selectionState,
                     onCardClick = { card ->
-                        // Single tap just focuses the card
                         onCardFocus(card)
                     },
                     onCardDoubleClick = { card ->
-                        // Double tap toggles tap state
                         onCardFocus(card)
                         gameViewModel.toggleTap(card.instanceId)
                     },
@@ -1371,22 +1457,113 @@ private fun LocalPlayerSection(
                     handZoneTop = handZoneTop,
                     onCardDroppedToHand = { cardId ->
                         gameViewModel.moveCard(cardId, Zone.HAND)
+                    },
+                    onCardDragStateChanged = { cardId, y ->
+                        draggedCardInstanceId = cardId
+                        dragPositionY = y
+                    },
+                    graveyardBounds = graveyardButtonTop to graveyardButtonBottom,
+                    exileBounds = exileButtonTop to exileButtonBottom,
+                    onCardDroppedToGraveyard = { cardId ->
+                        gameViewModel.moveCard(cardId, Zone.GRAVEYARD)
+                    },
+                    onCardDroppedToExile = { cardId ->
+                        gameViewModel.moveCard(cardId, Zone.EXILE)
                     }
                 )
             }
         }
 
-        // Player info bar
+        // ── Handle 2: Between battlefield and PlayerInfoBar (command zone) ──
+        // Drag DOWN = bigger command zone bar (pull boundary down)
+        // Drag UP = smaller command zone bar (push boundary up, more battlefield)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(12.dp)
+                .pointerInput(Unit) {
+                    detectDragGestures { _, dragAmount ->
+                        val deltaDp = with(density) { dragAmount.y.toDp().value }
+                        // Drag DOWN = shrink command zone (more battlefield above)
+                        // Drag UP = grow command zone (less battlefield above)
+                        playerInfoHeightDp = (playerInfoHeightDp - deltaDp).coerceIn(32f, 200f)
+                    }
+                },
+            contentAlignment = Alignment.Center
+        ) {
+            // Visual handle indicator
+            Box(
+                modifier = Modifier
+                    .width(40.dp)
+                    .height(4.dp)
+                    .background(Color.White.copy(alpha = 0.5f), RoundedCornerShape(2.dp))
+            )
+        }
+
+        // Player info bar (command zone) — resizable via handle 2
         PlayerInfoBar(
             player = player,
             gameViewModel = gameViewModel,
             commandZoneCards = commandZoneCards,
             isActivePlayer = isActivePlayer,
+            heightDp = playerInfoHeightDp,
             onCardAction = onCardAction,
             onShowLibrary = onShowLibrary,
             onShowGraveyard = onShowGraveyard,
-            onShowExile = onShowExile
+            onShowExile = onShowExile,
+            isCardBeingDragged = draggedCardInstanceId != null,
+            dragY = dragPositionY,
+            onGraveyardBoundsChanged = { top, bottom -> graveyardButtonTop = top; graveyardButtonBottom = bottom },
+            onExileBoundsChanged = { top, bottom -> exileButtonTop = top; exileButtonBottom = bottom },
+            onDropOnGraveyard = {
+                draggedCardInstanceId?.let { cardId ->
+                    gameViewModel.moveCard(cardId, Zone.GRAVEYARD)
+                    draggedCardInstanceId = null
+                }
+            },
+            onDropOnExile = {
+                draggedCardInstanceId?.let { cardId ->
+                    gameViewModel.moveCard(cardId, Zone.EXILE)
+                    draggedCardInstanceId = null
+                }
+            },
+            onGrabTopFromLibrary = {
+                // Draw the top card from library to hand
+                gameViewModel.drawCard(player.id)
+            },
+            onGrabTopFromGraveyard = {
+                // Move top card of graveyard to hand
+                val topCard = gameViewModel.getCards(player.id, Zone.GRAVEYARD).lastOrNull()
+                topCard?.let { gameViewModel.moveCard(it.instanceId, Zone.HAND) }
+            },
+            onGrabTopFromExile = {
+                // Move top card of exile to hand
+                val topCard = gameViewModel.getCards(player.id, Zone.EXILE).lastOrNull()
+                topCard?.let { gameViewModel.moveCard(it.instanceId, Zone.HAND) }
+            }
         )
+
+        // ── Handle 3: Between PlayerInfoBar and hand strip ──
+        // Drag UP = bigger hand, drag DOWN = smaller hand
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(12.dp)
+                .pointerInput(Unit) {
+                    detectDragGestures { _, dragAmount ->
+                        val deltaDp = with(density) { dragAmount.y.toDp().value }
+                        handHeightDp = (handHeightDp - deltaDp).coerceIn(40f, 250f)
+                    }
+                },
+            contentAlignment = Alignment.Center
+        ) {
+            Box(
+                modifier = Modifier
+                    .width(40.dp)
+                    .height(4.dp)
+                    .background(Color.White.copy(alpha = 0.5f), RoundedCornerShape(2.dp))
+            )
+        }
 
         // Hand
         HandStrip(
@@ -1412,7 +1589,7 @@ private fun LocalPlayerSection(
             onZonePositioned = { top -> handZoneTop = top },
             modifier = Modifier
                 .fillMaxWidth()
-                .height(100.dp)
+                .height(handHeightDp.dp)
         )
     }
 }
@@ -1426,7 +1603,7 @@ private data class CardStackInfo(
 )
 
 @Composable
-private fun BattlefieldGrid(
+internal fun BattlefieldGrid(
     cards: List<CardInstance>,
     gridPositions: Map<String, Pair<Int, Int>>,
     players: List<Player>,
@@ -1436,7 +1613,12 @@ private fun BattlefieldGrid(
     onCardLongPress: (CardInstance) -> Unit,
     onCardPositionChanged: ((String, Int, Int) -> Unit)? = null,
     handZoneTop: Float = 0f,
-    onCardDroppedToHand: ((String) -> Unit)? = null
+    onCardDroppedToHand: ((String) -> Unit)? = null,
+    onCardDragStateChanged: ((cardId: String?, dragY: Float) -> Unit)? = null,
+    graveyardBounds: Pair<Float, Float> = 0f to 0f,
+    exileBounds: Pair<Float, Float> = 0f to 0f,
+    onCardDroppedToGraveyard: ((String) -> Unit)? = null,
+    onCardDroppedToExile: ((String) -> Unit)? = null
 ) {
     val cardSize = 70.dp
     // Spacing accounts for max stack extension: 2 * 10% * 70dp = ~14dp, plus buffer
@@ -1489,7 +1671,6 @@ private fun BattlefieldGrid(
 
     // Fixed 3 rows: lands (bottom), artifacts/enchantments (middle), creatures (top)
     val totalRows = UIConstants.BATTLEFIELD_ROWS
-    val battlefieldHeightPx = totalRows * cellSize
 
     // Pinch-to-zoom and pan state using transformable (handles multi-touch better)
     var scale by remember { mutableStateOf(1f) }
@@ -1497,13 +1678,10 @@ private fun BattlefieldGrid(
 
     val transformState = rememberTransformableState { zoomChange, panChange, _ ->
         val newScale = (scale * zoomChange).coerceIn(0.5f, 5f)
-        // Limit pan: can't scroll past origin (left/up), and can only scroll right/down
-        // proportional to how much the content extends beyond the viewport when zoomed
-        val maxPanDown = -((newScale - 1f) * battlefieldHeightPx).coerceAtLeast(0f)
         scale = newScale
         panOffset = Offset(
-            x = (panOffset.x + panChange.x).coerceAtMost(0f),
-            y = (panOffset.y + panChange.y).coerceIn(maxPanDown, 0f)
+            x = panOffset.x + panChange.x,
+            y = panOffset.y + panChange.y
         )
     }
 
@@ -1583,18 +1761,28 @@ private fun BattlefieldGrid(
                             dragStartCol = col
                             dragStartRow = row
                             dragOffset = Offset.Zero
+                            onCardDragStateChanged?.invoke(card.instanceId, gridPositionInWindow.y + row * cellSize)
                         },
                         onDrag = { offset ->
                             dragOffset += offset
+                            val absoluteY = gridPositionInWindow.y + row * cellSize + dragOffset.y
+                            onCardDragStateChanged?.invoke(draggingCard?.instanceId, absoluteY)
                         },
                         onDragEnd = {
+                            onCardDragStateChanged?.invoke(null, 0f)
                             draggingCard?.let { dragCard ->
                                 // Calculate absolute Y position of the card
                                 val cardYInGrid = row * cellSize + dragOffset.y
                                 val absoluteY = gridPositionInWindow.y + cardYInGrid
 
+                                // Check if dropped on graveyard zone button
+                                if (graveyardBounds.first > 0f && absoluteY in graveyardBounds.first..graveyardBounds.second && onCardDroppedToGraveyard != null) {
+                                    onCardDroppedToGraveyard(dragCard.instanceId)
+                                // Check if dropped on exile zone button
+                                } else if (exileBounds.first > 0f && absoluteY in exileBounds.first..exileBounds.second && onCardDroppedToExile != null) {
+                                    onCardDroppedToExile(dragCard.instanceId)
                                 // Check if dropped in hand zone
-                                if (handZoneTop > 0f && absoluteY > handZoneTop && onCardDroppedToHand != null) {
+                                } else if (handZoneTop > 0f && absoluteY > handZoneTop && onCardDroppedToHand != null) {
                                     // Dropped in hand zone - move to hand
                                     onCardDroppedToHand(dragCard.instanceId)
                                 } else {
@@ -1988,7 +2176,7 @@ private fun DraggableBattlefieldCard(
 }
 
 @Composable
-private fun PlayerInfoBar(
+internal fun PlayerInfoBar(
     player: Player,
     gameViewModel: GameViewModel,
     commandZoneCards: List<CardInstance>,
@@ -1996,11 +2184,34 @@ private fun PlayerInfoBar(
     onCardAction: (CardAction) -> Unit,
     onShowLibrary: () -> Unit,
     onShowGraveyard: () -> Unit,
-    onShowExile: () -> Unit
+    onShowExile: () -> Unit,
+    isCardBeingDragged: Boolean = false,
+    dragY: Float = 0f,
+    onGraveyardBoundsChanged: (top: Float, bottom: Float) -> Unit = { _, _ -> },
+    onExileBoundsChanged: (top: Float, bottom: Float) -> Unit = { _, _ -> },
+    onDropOnGraveyard: () -> Unit = {},
+    onDropOnExile: () -> Unit = {},
+    onGrabTopFromLibrary: () -> Unit = {},
+    onGrabTopFromGraveyard: () -> Unit = {},
+    onGrabTopFromExile: () -> Unit = {},
+    heightDp: Float = 48f
 ) {
     val libraryCount = gameViewModel.getCardCount(player.id, Zone.LIBRARY)
     val graveyardCount = gameViewModel.getCardCount(player.id, Zone.GRAVEYARD)
     val exileCount = gameViewModel.getCardCount(player.id, Zone.EXILE)
+
+    // Track zone button bounds for drop target highlighting
+    var graveyardButtonTopLocal by remember { mutableStateOf(0f) }
+    var graveyardButtonBottomLocal by remember { mutableStateOf(0f) }
+    var exileButtonTopLocal by remember { mutableStateOf(0f) }
+    var exileButtonBottomLocal by remember { mutableStateOf(0f) }
+
+    // Scale factor based on bar height (default 48dp)
+    val scaleFactor = (heightDp / 48f).coerceIn(0.5f, 4f)
+    val commanderCardWidth = (30 * scaleFactor).dp
+    val commanderCardHeight = (42 * scaleFactor).dp
+    val zoneIconSize = (13 * scaleFactor).coerceIn(10f, 36f).dp
+    val zoneTextSize = (9 * scaleFactor).coerceIn(7f, 20f).sp
 
     // Active player gets a highlighted bar color
     val barColor = if (isActivePlayer) Color(0xFF4CAF50) else Color(0xFF2E7D32)
@@ -2009,6 +2220,7 @@ private fun PlayerInfoBar(
         color = barColor,
         modifier = Modifier
             .fillMaxWidth()
+            .height(heightDp.dp)
             .then(
                 if (isActivePlayer) {
                     Modifier.border(2.dp, Color.Yellow)
@@ -2018,23 +2230,30 @@ private fun PlayerInfoBar(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .fillMaxHeight()
                 .padding(horizontal = 8.dp, vertical = 4.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
+            horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Life counter
+            // Life counter with long-press for exact value
+            var showSetLifeDialog by remember { mutableStateOf(false) }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 IconButton(
                     onClick = { gameViewModel.updateLife(player.id, player.life - 1) },
                     modifier = Modifier.size(32.dp)
                 ) {
-                    Icon(Icons.Default.KeyboardArrowDown, "Decrease life", tint = Color.White)
+                    Text("-", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
                 }
                 Text(
                     "${player.life}",
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
-                    color = if (player.life <= 10) Color.Red else Color.White
+                    color = if (player.life <= 10) Color.Red else Color.White,
+                    modifier = Modifier.pointerInput(Unit) {
+                        detectTapGestures(
+                            onLongPress = { showSetLifeDialog = true }
+                        )
+                    }
                 )
                 IconButton(
                     onClick = { gameViewModel.updateLife(player.id, player.life + 1) },
@@ -2044,13 +2263,79 @@ private fun PlayerInfoBar(
                 }
             }
 
-            // Commander
+            // Mana pool display
+            val manaColors = listOf(
+                "manaW" to Color(0xFFF9FAF4),
+                "manaU" to Color(0xFF0E68AB),
+                "manaB" to Color(0xFF150B00),
+                "manaR" to Color(0xFFD3202A),
+                "manaG" to Color(0xFF00733E),
+                "manaC" to Color(0xFF808080)
+            )
+            val hasMana = manaColors.any { (key, _) -> (player.counters[key] ?: 0) > 0 }
+            if (hasMana) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(2.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    manaColors.forEach { (key, color) ->
+                        val count = player.counters[key] ?: 0
+                        if (count > 0) {
+                            Box(
+                                modifier = Modifier
+                                    .size(18.dp)
+                                    .background(color, CircleShape)
+                                    .border(1.dp, Color.White, CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    "$count",
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (key == "manaW") Color.Black else Color.White
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Set life dialog (Issue 13)
+            if (showSetLifeDialog) {
+                var lifeInput by remember { mutableStateOf("${player.life}") }
+                AlertDialog(
+                    onDismissRequest = { showSetLifeDialog = false },
+                    title = { Text("Set Life Total") },
+                    text = {
+                        OutlinedTextField(
+                            value = lifeInput,
+                            onValueChange = { lifeInput = it.filter { c -> c.isDigit() || c == '-' } },
+                            label = { Text("Life") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            singleLine = true
+                        )
+                    },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            lifeInput.toIntOrNull()?.let { newLife ->
+                                gameViewModel.updateLife(player.id, newLife)
+                            }
+                            showSetLifeDialog = false
+                        }) { Text("Set") }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showSetLifeDialog = false }) { Text("Cancel") }
+                    }
+                )
+            }
+
+            // Commander — scales with bar height
             if (commandZoneCards.isNotEmpty()) {
                 Row {
                     commandZoneCards.forEach { commander ->
                         Box(
                             modifier = Modifier
-                                .size(width = 30.dp, height = 42.dp)
+                                .size(width = commanderCardWidth, height = commanderCardHeight)
                                 .clip(RoundedCornerShape(2.dp))
                                 .clickable { onCardAction(CardAction.ToBattlefield(commander)) }
                         ) {
@@ -2063,25 +2348,73 @@ private fun PlayerInfoBar(
                 }
             }
 
-            // Zone counts - tap to draw/view, long-press to open dialog
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                ZoneButton(
-                    label = "L",
-                    count = libraryCount,
-                    onClick = { gameViewModel.drawCard(player.id) },
-                    onLongClick = onShowLibrary
-                )
-                ZoneButton(
-                    label = "G",
+            // Zone counts with icons — scale with bar height
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Library — shows MTG card back image
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                    modifier = Modifier.pointerInput(Unit) {
+                        detectTapGestures(
+                            onTap = { gameViewModel.drawCard(player.id) },
+                            onLongPress = { onShowLibrary() }
+                        )
+                    }
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(width = commanderCardWidth * 0.6f, height = commanderCardHeight * 0.6f)
+                            .clip(RoundedCornerShape(2.dp)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CardImage(
+                            imageUrl = "https://cards.scryfall.io/back.png",
+                            contentDescription = "Library",
+                            modifier = Modifier.fillMaxSize()
+                        )
+                        // Card count overlaid on card back
+                        Text(
+                            libraryCount.toString(),
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = (zoneTextSize.value * 0.8f).sp
+                        )
+                    }
+                }
+                ZoneIconButton(
+                    iconResId = R.drawable.ic_graveyard,
+                    fallbackLabel = "G",
                     count = graveyardCount,
+                    iconSize = zoneIconSize,
+                    textSize = zoneTextSize,
                     onClick = onShowGraveyard,
-                    onLongClick = onShowGraveyard
+                    onLongClick = onShowGraveyard,
+                    isDropHighlighted = isCardBeingDragged && dragY in graveyardButtonTopLocal..graveyardButtonBottomLocal,
+                    onBoundsChanged = { top, bottom ->
+                        graveyardButtonTopLocal = top
+                        graveyardButtonBottomLocal = bottom
+                        onGraveyardBoundsChanged(top, bottom)
+                    },
+                    onDragTopCard = onGrabTopFromGraveyard
                 )
-                ZoneButton(
-                    label = "E",
+                ZoneIconButton(
+                    iconResId = R.drawable.ic_exile,
+                    fallbackLabel = "E",
                     count = exileCount,
+                    iconSize = zoneIconSize,
+                    textSize = zoneTextSize,
                     onClick = onShowExile,
-                    onLongClick = onShowExile
+                    onLongClick = onShowExile,
+                    isDropHighlighted = isCardBeingDragged && dragY in exileButtonTopLocal..exileButtonBottomLocal,
+                    onBoundsChanged = { top, bottom ->
+                        exileButtonTopLocal = top
+                        exileButtonBottomLocal = bottom
+                        onExileBoundsChanged(top, bottom)
+                    },
+                    onDragTopCard = onGrabTopFromExile
                 )
             }
         }
@@ -2110,7 +2443,112 @@ private fun ZoneButton(
 }
 
 @Composable
-private fun HandStrip(
+internal fun ZoneIconButton(
+    iconResId: Int?,
+    fallbackLabel: String,
+    count: Int,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit = {},
+    isDropHighlighted: Boolean = false,
+    onBoundsChanged: (top: Float, bottom: Float) -> Unit = { _, _ -> },
+    onDragTopCard: (() -> Unit)? = null,
+    iconSize: androidx.compose.ui.unit.Dp = 20.dp,
+    textSize: androidx.compose.ui.unit.TextUnit = 12.sp
+) {
+    val highlightColor = if (isDropHighlighted) Color.Yellow.copy(alpha = 0.4f) else Color.Transparent
+    var isDragSource by remember { mutableStateOf(false) }
+
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .background(
+                if (isDragSource) Color.Cyan.copy(alpha = 0.4f) else highlightColor,
+                RoundedCornerShape(4.dp)
+            )
+            .padding(horizontal = 4.dp, vertical = 2.dp)
+            .onGloballyPositioned { coordinates ->
+                val pos = coordinates.positionInWindow()
+                onBoundsChanged(pos.y, pos.y + coordinates.size.height)
+            }
+            .pointerInput(onDragTopCard) {
+                if (onDragTopCard != null) {
+                    awaitEachGesture {
+                        val down = awaitFirstDown()
+                        val longPressTimeout = viewConfiguration.longPressTimeoutMillis
+                        val startTime = System.currentTimeMillis()
+
+                        // Wait for pointer up or drag
+                        var dragged = false
+                        var released = false
+                        while (!dragged && !released) {
+                            val event = awaitPointerEvent(PointerEventPass.Main)
+                            val change = event.changes.firstOrNull() ?: break
+
+                            if (change.changedToUp()) {
+                                released = true
+                                val elapsed = System.currentTimeMillis() - startTime
+                                if (elapsed < longPressTimeout) {
+                                    onClick()
+                                } else {
+                                    onLongClick()
+                                }
+                                change.consume()
+                            } else {
+                                val dragDist = (change.position - down.position).getDistance()
+                                val elapsed = System.currentTimeMillis() - startTime
+                                if (dragDist > 20f && elapsed >= longPressTimeout) {
+                                    // Long-press + drag detected — grab top card
+                                    isDragSource = true
+                                    onDragTopCard()
+                                    isDragSource = false
+                                    dragged = true
+                                    change.consume()
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    detectTapGestures(
+                        onTap = { onClick() },
+                        onLongPress = { onLongClick() }
+                    )
+                }
+            }
+    ) {
+        if (iconResId != null) {
+            Icon(
+                painter = painterResource(id = iconResId),
+                contentDescription = fallbackLabel,
+                tint = when {
+                    isDragSource -> Color.Cyan
+                    isDropHighlighted -> Color.Yellow
+                    else -> Color.Unspecified // preserve vector's own colors
+                },
+                modifier = Modifier.size(iconSize)
+            )
+            // Label below icon, above count — tight spacing
+            val labelSize = (textSize.value * 0.65f).sp
+            Text(
+                fallbackLabel,
+                color = Color.White.copy(alpha = 0.7f),
+                fontSize = labelSize,
+                lineHeight = labelSize
+            )
+        } else {
+            Text(fallbackLabel, color = Color.White.copy(alpha = 0.7f), fontSize = textSize, fontWeight = FontWeight.Bold)
+        }
+        Text(
+            count.toString(),
+            color = Color.White,
+            fontWeight = FontWeight.Bold,
+            fontSize = textSize,
+            lineHeight = textSize
+        )
+    }
+}
+
+@Composable
+internal fun HandStrip(
     handCards: List<CardInstance>,
     onCardClick: (CardInstance) -> Unit,
     onCardLongPress: (CardInstance) -> Unit,
@@ -2199,20 +2637,28 @@ private fun HandStrip(
                 }
             }
 
-            // Hand count badge
-            Surface(
-                color = Color.Black.copy(alpha = 0.7f),
-                shape = RoundedCornerShape(4.dp),
+            // Hand count badge with hand icon
+            Box(
                 modifier = Modifier
                     .align(Alignment.CenterEnd)
                     .padding(end = 8.dp)
-                    .clickable { onViewHand() }
+                    .clickable { onViewHand() },
+                contentAlignment = Alignment.Center
             ) {
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_hand),
+                    contentDescription = "Hand",
+                    tint = Color.White.copy(alpha = 0.6f),
+                    modifier = Modifier.size(36.dp)
+                )
                 Text(
                     text = "${handCards.size}",
                     color = Color.White,
                     style = MaterialTheme.typography.labelMedium,
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier
+                        .background(Color.Black.copy(alpha = 0.6f), CircleShape)
+                        .padding(horizontal = 6.dp, vertical = 2.dp)
                 )
             }
         }
@@ -2220,7 +2666,7 @@ private fun HandStrip(
 }
 
 @Composable
-private fun HandCard(
+internal fun HandCard(
     cardInstance: CardInstance,
     onSingleClick: () -> Unit = {},
     onDoubleClick: () -> Unit,
@@ -2289,18 +2735,14 @@ private fun HandCard(
 }
 
 @Composable
-private fun BottomActionBar(
+internal fun BottomActionBar(
     activePlayer: Player?,
     localPlayer: Player?,
     gameViewModel: GameViewModel,
     onShowDieRoller: () -> Unit,
     onShowTokenCreation: () -> Unit,
-    onShowLibraryActions: () -> Unit,
-    onShowTopCardDetails: (CardInstance) -> Unit
+    onShowMana: () -> Unit = {}
 ) {
-    val libraryCards = localPlayer?.let { gameViewModel.getCards(it.id, Zone.LIBRARY) } ?: emptyList()
-    val topCard = libraryCards.lastOrNull()
-    val showTopCard = localPlayer?.revealTopCard == true || localPlayer?.lookAtTopCard == true
 
     Surface(
         color = MaterialTheme.colorScheme.surfaceVariant,
@@ -2313,88 +2755,47 @@ private fun BottomActionBar(
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            IconButton(onClick = { activePlayer?.let { gameViewModel.passTurn() } }) {
-                Icon(Icons.Default.KeyboardArrowRight, "Pass Turn")
+            val isActivePlayer = activePlayer != null && localPlayer != null && activePlayer.id == localPlayer.id
+            IconButton(
+                onClick = { if (isActivePlayer) gameViewModel.passTurn() },
+                enabled = isActivePlayer
+            ) {
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_pass_turn),
+                    contentDescription = "Pass Turn",
+                    tint = Color.Unspecified,
+                    modifier = Modifier.size(24.dp)
+                )
             }
             IconButton(onClick = { localPlayer?.let { gameViewModel.untapAll(it.id) } }) {
-                Icon(Icons.Default.Refresh, "Untap All")
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_untap),
+                    contentDescription = "Untap All",
+                    tint = Color.Unspecified,
+                    modifier = Modifier.size(24.dp)
+                )
             }
             IconButton(onClick = { localPlayer?.let { gameViewModel.drawCard(it.id) } }) {
-                Icon(Icons.Default.Add, "Draw")
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_draw_card),
+                    contentDescription = "Draw",
+                    tint = Color.Unspecified,
+                    modifier = Modifier.size(24.dp)
+                )
             }
             IconButton(onClick = onShowTokenCreation) {
                 Text("🪙", fontSize = 20.sp)
             }
-            IconButton(onClick = onShowDieRoller) {
-                Text("🎲", fontSize = 20.sp)
-            }
-
-            // Library zone button - shows card back or top card
-            var lastClickTime by remember { mutableStateOf(0L) }
-            Box(
-                modifier = Modifier
-                    .size(36.dp)
-                    .clip(RoundedCornerShape(4.dp))
-                    .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(4.dp))
-                    .pointerInput(showTopCard, topCard) {
-                        detectTapGestures(
-                            onTap = {
-                                val now = System.currentTimeMillis()
-                                if (now - lastClickTime < UIConstants.DOUBLE_CLICK_DELAY_MS) {
-                                    // Double-tap: view top card details if visible
-                                    if (showTopCard && topCard != null) {
-                                        onShowTopCardDetails(topCard)
-                                    }
-                                    lastClickTime = 0L
-                                } else {
-                                    // Single tap: show library actions
-                                    onShowLibraryActions()
-                                    lastClickTime = now
-                                }
-                            },
-                            onLongPress = {
-                                if (showTopCard && topCard != null) {
-                                    onShowTopCardDetails(topCard)
-                                } else {
-                                    onShowLibraryActions()
-                                }
-                            }
-                        )
-                    }
-            ) {
-                if (showTopCard && topCard != null) {
-                    // Show top card image
-                    CardImage(
-                        imageUrl = topCard.card.imageUri,
-                        contentDescription = "Top of Library: ${topCard.card.name}",
-                        modifier = Modifier.fillMaxSize()
-                    )
-                } else {
-                    // Show card back image from Scryfall
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        CardImage(
-                            imageUrl = "https://cards.scryfall.io/back.png",
-                            contentDescription = "Library",
-                            modifier = Modifier.fillMaxSize()
-                        )
-                        // Card count overlay
-                        Text(
-                            text = "${libraryCards.size}",
-                            color = Color.White,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier
-                                .background(
-                                    Color.Black.copy(alpha = 0.6f),
-                                    RoundedCornerShape(4.dp)
-                                )
-                                .padding(horizontal = 4.dp, vertical = 2.dp)
-                        )
+            IconButton(onClick = onShowMana) {
+                // Mana pool button - 5 colored dots
+                Row(horizontalArrangement = Arrangement.spacedBy(1.dp)) {
+                    listOf(Color(0xFFF9FAF4), Color(0xFF0E68AB), Color(0xFF150B00), Color(0xFFD3202A), Color(0xFF00733E)).forEach { c ->
+                        Box(Modifier.size(6.dp).background(c, CircleShape))
                     }
                 }
+            }
+            IconButton(onClick = onShowDieRoller) {
+                Text("🎲", fontSize = 20.sp)
             }
         }
     }
@@ -2437,6 +2838,126 @@ private fun PausedOverlay(
             }
         }
     }
+}
+
+/**
+ * Mana pool management dialog - tap to add, long-press to remove mana
+ */
+@Composable
+internal fun ManaPoolDialog(
+    player: Player,
+    gameViewModel: GameViewModel,
+    onDismiss: () -> Unit
+) {
+    val manaColors = listOf(
+        Triple("manaW", "W", Color(0xFFF9FAF4)),
+        Triple("manaU", "U", Color(0xFF0E68AB)),
+        Triple("manaB", "B", Color(0xFF150B00)),
+        Triple("manaR", "R", Color(0xFFD3202A)),
+        Triple("manaG", "G", Color(0xFF00733E)),
+        Triple("manaC", "C", Color(0xFF808080))
+    )
+
+    // Track which color is being edited for exact input
+    var editingColor by remember { mutableStateOf<String?>(null) }
+    var editingInput by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Mana Pool") },
+        text = {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("Tap count to set exact value", style = MaterialTheme.typography.bodySmall)
+                Spacer(modifier = Modifier.height(12.dp))
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    manaColors.forEach { (key, label, color) ->
+                        val count = player.counters[key] ?: 0
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            // Color circle
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .background(color, CircleShape)
+                                    .border(2.dp, Color.White, CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    label,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 12.sp,
+                                    color = if (key == "manaW") Color.Black else Color.White
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(4.dp))
+                            // + button
+                            Text(
+                                "+",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 18.sp,
+                                modifier = Modifier.clickable { gameViewModel.addMana(player.id, key) }
+                            )
+                            // Count — tap to edit exact value
+                            if (editingColor == key) {
+                                OutlinedTextField(
+                                    value = editingInput,
+                                    onValueChange = { editingInput = it.filter { c -> c.isDigit() } },
+                                    modifier = Modifier.width(40.dp),
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                    singleLine = true,
+                                    textStyle = androidx.compose.ui.text.TextStyle(
+                                        fontSize = 12.sp,
+                                        textAlign = TextAlign.Center
+                                    )
+                                )
+                                TextButton(
+                                    onClick = {
+                                        editingInput.toIntOrNull()?.let { value ->
+                                            gameViewModel.setPlayerCounter(player.id, key, value.coerceAtLeast(0))
+                                        }
+                                        editingColor = null
+                                    },
+                                    modifier = Modifier.height(24.dp),
+                                    contentPadding = PaddingValues(0.dp)
+                                ) { Text("Set", fontSize = 10.sp) }
+                            } else {
+                                Text(
+                                    "$count",
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.clickable {
+                                        editingColor = key
+                                        editingInput = "$count"
+                                    }
+                                )
+                            }
+                            // - button
+                            Text(
+                                "-",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 18.sp,
+                                modifier = Modifier.clickable { gameViewModel.removeMana(player.id, key) }
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Row {
+                TextButton(onClick = {
+                    gameViewModel.clearMana(player.id)
+                }) { Text("Clear All") }
+                Spacer(modifier = Modifier.width(8.dp))
+                TextButton(onClick = onDismiss) { Text("Done") }
+            }
+        }
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

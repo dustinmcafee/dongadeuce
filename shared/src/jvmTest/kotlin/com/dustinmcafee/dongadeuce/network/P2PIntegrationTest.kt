@@ -493,20 +493,27 @@ class P2PIntegrationTest {
     }
 
     @Test
-    fun `P2P player disconnect during game pauses for all`() = runBlocking {
+    fun `P2P player disconnect during game eliminates player`() = runBlocking {
         val port = findFreePort()
         val game = setupStartedGame(port)
 
         try {
+            val bobId = game.client2.playerId.value!!
+
             // Bob disconnects
             game.client2.disconnect()
 
-            // Alice should see game pause
+            // Alice should see Bob marked as eliminated (not paused)
             withTimeout(5000) {
-                game.client1.isPaused.first { it }
+                game.client1.gameState.first { state ->
+                    state?.players?.find { it.id == bobId }?.hasLost == true
+                }
             }
 
-            assertTrue(game.client1.isPaused.value)
+            val bobPlayer = game.client1.gameState.value?.players?.find { it.id == bobId }
+            assertTrue(bobPlayer?.hasLost == true)
+            // Game should NOT be paused
+            assertFalse(game.client1.isPaused.value)
         } finally {
             game.cleanup()
         }
@@ -712,29 +719,28 @@ class P2PIntegrationTest {
     }
 
     @Test
-    fun `P2P resume after pause`() = runBlocking {
+    fun `P2P game continues after player disconnect`() = runBlocking {
         val port = findFreePort()
         val game = setupStartedGame(port)
 
         try {
-            // Bob disconnects → game pauses
+            val bobId = game.client2.playerId.value!!
+
+            // Bob disconnects → Bob is eliminated, game continues (not paused)
             game.client2.disconnect()
             game.job2.cancel()
 
+            // Wait for Alice to see Bob eliminated
             withTimeout(5000) {
-                game.client1.isPaused.first { it }
+                game.client1.gameState.first { state ->
+                    state?.players?.find { it.id == bobId }?.hasLost == true
+                }
             }
-            assertTrue(game.client1.isPaused.value)
 
-            // Host resumes
-            game.server.resumeGame()
-
-            withTimeout(3000) {
-                game.client1.isPaused.first { !it }
-            }
+            // Game should NOT be paused
             assertFalse(game.client1.isPaused.value)
 
-            // Alice can still take actions
+            // Alice can still take actions immediately (no resume needed)
             val aliceId = game.client1.playerId.value!!
             game.client1.sendAction(NetworkAction.DrawCard(aliceId))
 

@@ -258,6 +258,8 @@ private fun buildMainMenuItems(
                 items.add(MenuItemData("Reveal To ►") { onMenuStateChange(MenuState.REVEAL_TO) })
                 items.add(MenuItemData("Give Control ►") { onMenuStateChange(MenuState.GIVE_CONTROL) })
             }
+
+            items.add(MenuItemData("Mulligan") { onAction(CardAction.Mulligan(cardInstance.ownerId)) })
         }
 
         Zone.GRAVEYARD -> {
@@ -549,6 +551,9 @@ fun handleCardAction(
         is CardAction.ViewHand -> {
             // Handled in UI layer (GameScreen)
             // Will show hand dialog
+        }
+        is CardAction.Mulligan -> {
+            viewModel.mulligan(action.playerId)
         }
     }
 }

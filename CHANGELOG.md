@@ -7,6 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.2.0-beta] - 2026-03-17
+
+### Added
+- **Resizable game layout** - Three drag handles let players resize opponent area, battlefield, command zone bar, and hand independently
+- **Mana pool system** - Full mana tracking (W/U/B/R/G/C) on both Android and Desktop with +1/-1 buttons and tap-to-set-exact-value
+- **Zone icons** - Graveyard (headstone), Exile (skull & crossbones), Library (MTG card back) replace text labels
+- **Custom bottom bar icons** - Pass turn (checkmark), Untap (U-shaped arrow), Draw (4 stacked cards with +)
+- **Hand icon badge** - Card count displayed over an open-hand icon
+- **Zone button drop targets** - Drag cards onto graveyard/exile zone buttons to move them there; buttons highlight yellow during drag
+- **Zone button drag sources** - Long-press+drag on library/graveyard/exile grabs the top card to hand
+- **Mana display in command zone bar** - Shows colored mana circles with counts when non-zero
+- **Long-press battlefield for mana dialog** - Quick access to mana pool from the game area
+- **Long-press life total for exact value** - Opens a dialog to type an exact life total
+- **Mulligan in hand context menu** - Both Android and Desktop hand context menus include "Mulligan" option
+- **Dev Test button (debug only)** - Auto-loads Zedruu deck for 2 players and starts a hotseat game instantly
+- **Game session notification with log events** - Background notification shows latest 2-3 game events
+- **Server config persistence** - Server mode (LAN/Dedicated) and TLS toggle persist across app restarts
+- **Scalable command zone bar** - Commander cards, zone icons, and text all scale proportionally when resizing
+
+### Changed
+- **Player disconnect continues game** - Disconnected players are eliminated instead of pausing the game for everyone
+- **Pass Turn disabled for non-active player** - Button is greyed out when it's not your turn (both platforms)
+- **Suppressed common error dialogs** - "Not your turn" and "You have been eliminated" no longer show as blocking error popups
+- **Hand card order preserved on network sync** - Cards no longer reshuffle when another player takes an action
+- **Free 2D battlefield panning** - Removed axis constraints for simultaneous horizontal+vertical scrolling
+- **Library moved to command zone bar** - Removed duplicate library button from bottom action bar
+- **HP decrease shows minus sign** - Replaced down arrow with "-" text for clarity
+
+### Fixed
+- **White-on-white text on desktop** - Added explicit text colors to all Card blocks with colored containers
+- **Hand position set on draw** - GameEngine assigns handPosition when drawing cards to prevent ordering issues
+
 ## [6.1.0-beta] - 2026-03-15
 
 ### Added

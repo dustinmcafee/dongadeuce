@@ -167,6 +167,7 @@ private fun MainMenu(
                     SubMenuItem("Give Control") { onNavigate(BottomSheetMenuState.GIVE_CONTROL) }
                 }
 
+                MenuItem("Mulligan") { onAction(CardAction.Mulligan(cardInstance.ownerId)) }
                 MenuItem("View Hand") { onAction(CardAction.ViewHand(cardInstance.ownerId)) }
             }
 

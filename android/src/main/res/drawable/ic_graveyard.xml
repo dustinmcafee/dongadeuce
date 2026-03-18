@@ -1,0 +1,33 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- Headstone outline - arch top, straight sides -->
+    <path
+        android:fillColor="@android:color/transparent"
+        android:strokeWidth="1.8"
+        android:strokeColor="#FFFFFF"
+        android:strokeLineJoin="round"
+        android:pathData="M6,20 L6,8 C6,4.5 8.7,2 12,2 C15.3,2 18,4.5 18,8 L18,20 Z" />
+    <!-- Inner arch line (3D depth effect) -->
+    <path
+        android:fillColor="@android:color/transparent"
+        android:strokeWidth="1.2"
+        android:strokeColor="#FFFFFF"
+        android:pathData="M7.5,19 L7.5,8.5 C7.5,5.5 9.5,3.5 12,3.5 C14.5,3.5 16.5,5.5 16.5,8.5" />
+    <!-- Cross on headstone -->
+    <path
+        android:fillColor="@android:color/transparent"
+        android:strokeWidth="1.5"
+        android:strokeColor="#FFFFFF"
+        android:strokeLineCap="round"
+        android:pathData="M12,7 L12,15 M9.5,10 L14.5,10" />
+    <!-- Ground base rectangle -->
+    <path
+        android:fillColor="@android:color/transparent"
+        android:strokeWidth="1.8"
+        android:strokeColor="#FFFFFF"
+        android:strokeLineJoin="round"
+        android:pathData="M4,20 L20,20 L20,22 L4,22 Z" />
+</vector>

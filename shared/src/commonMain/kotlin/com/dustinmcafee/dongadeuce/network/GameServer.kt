@@ -210,13 +210,14 @@ class GameServer(
         }
 
         if (engine.isGameStarted()) {
-            // Game in progress - pause
-            engine.pauseGame("${player.name} disconnected")
-
-            broadcastToAll(GameMessage.Pause(
-                reason = "${player.name} disconnected",
-                disconnectedPlayerId = playerId
+            // Game in progress - eliminate the disconnected player and continue
+            engine.eliminatePlayer(playerId)
+            broadcastToAll(GameMessage.PlayerLeft(
+                playerId = playerId,
+                playerName = player.name,
+                reason = "Disconnected"
             ))
+            broadcastStateUpdate()
         } else {
             // Still in lobby - just remove player
             engine.removePlayer(playerId)

@@ -1,0 +1,19 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- Untap symbol: U-shaped arrow curving down then back up with arrowhead -->
+    <!-- U-shaped curve from top-left, down, across bottom, up to top-right -->
+    <path
+        android:fillColor="@android:color/transparent"
+        android:strokeWidth="2.5"
+        android:strokeColor="#FFFFFF"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M6,4 L6,14 C6,18 9,20 12,20 C15,20 18,18 18,14 L18,7" />
+    <!-- Arrow head pointing up at top-right -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M14,9 L18,3 L22,9 Z" />
+</vector>

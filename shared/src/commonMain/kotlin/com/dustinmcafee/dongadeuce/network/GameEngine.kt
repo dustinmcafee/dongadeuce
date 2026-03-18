@@ -253,6 +253,53 @@ class GameEngine(private val maxPlayers: Int = 6) {
     }
 
     /**
+     * Eliminate a player (e.g. on disconnect). Sets hasLost, advances turn if they were active.
+     */
+    fun eliminatePlayer(playerId: String) {
+        val currentState = _gameState.value ?: return
+        val player = currentState.players.find { it.id == playerId } ?: return
+        if (player.hasLost) return
+
+        var updatedState = currentState.updatePlayer(playerId) { p ->
+            p.copy(hasLost = true, life = 0)
+        }
+
+        val event = GameEvent.PlayerLost(
+            playerId = playerId,
+            playerName = player.name,
+            reason = "disconnected"
+        )
+        updatedState = updatedState.addEvent(event)
+
+        // If the disconnected player was the active player, advance to next non-eliminated player
+        if (currentState.activePlayer.id == playerId) {
+            val playerCount = updatedState.players.size
+            var nextIndex = (currentState.activePlayerIndex + 1) % playerCount
+            // Skip any already-eliminated players
+            var attempts = 0
+            while (updatedState.players[nextIndex].hasLost && attempts < playerCount) {
+                nextIndex = (nextIndex + 1) % playerCount
+                attempts++
+            }
+            val nextPlayer = updatedState.players[nextIndex]
+            val turnEvent = GameEvent.TurnPassed(
+                playerId = player.id,
+                playerName = player.name,
+                toPlayerId = nextPlayer.id,
+                toPlayerName = nextPlayer.name,
+                turnNumber = currentState.turnNumber + 1
+            )
+            updatedState = updatedState.copy(
+                activePlayerIndex = nextIndex,
+                turnNumber = currentState.turnNumber + 1,
+                phase = GamePhase.UNTAP
+            ).addEvent(turnEvent)
+        }
+
+        _gameState.value = updatedState
+    }
+
+    /**
      * Get the admin player ID.
      */
     fun getAdminId(): String = adminId
@@ -386,13 +433,17 @@ class GameEngine(private val maxPlayers: Int = 6) {
                     state.updatePlayer(action.playerId) { updatedPlayer }.addEvent(event)
                 } else {
                     val cardToDraw = libraryCards.first()
+                    // Assign handPosition so card order is preserved across network syncs
+                    val currentHandSize = state.cardInstances.count {
+                        it.ownerId == action.playerId && it.zone == Zone.HAND
+                    }
                     val event = GameEvent.CardDrawn(
                         playerId = action.playerId,
                         playerName = targetPlayer.name,
                         cardName = "a card"
                     )
                     state.updateCardInstance(cardToDraw.instanceId) {
-                        it.moveToZone(Zone.HAND)
+                        it.moveToZone(Zone.HAND).copy(handPosition = currentHandSize)
                     }.addEvent(event)
                 }
             }

@@ -1,10 +1,10 @@
 # Dong-A-Deuce - Development TODO
 
-**Current Version:** v6.1.0-beta
+**Current Version:** v6.2.0-beta
 **Desktop:** 99% complete (fully playable!)
 **Android:** 99% complete (fully playable!)
 **Network Mode:** 100% complete (P2P + Dedicated Server + TLS)
-**Last Updated:** 2026-03-15
+**Last Updated:** 2026-03-17
 
 ---
 
@@ -244,6 +244,7 @@ These are nice-to-have features that would improve the experience but aren't req
 
 | Version | Highlights |
 |---------|------------|
+| v6.2.0 | Post-playtest UX overhaul: resizable layout, mana pool, zone icons, drag-drop between all zones, disconnect = eliminate, 15 bug fixes |
 | v6.1.0 | Self-signed TLS with TOFU, cert auto-renewal, Android dedicated server with Netty TLS, 8 TLS instrumented tests |
 | v6.0.5 | Android dedicated server mode (foreground service, boot restart, WorkManager), dedicated server UI |
 | v6.0.4 | 587 automated tests, Android instrumented tests verified on Pixel 8 Pro |

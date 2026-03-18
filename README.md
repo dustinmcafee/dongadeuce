@@ -19,7 +19,7 @@ A lightweight, cross-platform MTG Commander game client built with Kotlin and Co
 [![Monero](https://img.shields.io/badge/Monero-XMR-grey?style=flat&logo=monero)](#crypto-donations)
 
 <details>
-<summary id="crypto-donations">💰 Crypto Donations</summary>
+<summary id="crypto-donations">Crypto Donations</summary>
 
 **Bitcoin (BTC)**
 ```
@@ -54,8 +54,10 @@ A lightweight, cross-platform MTG Commander game client built with Kotlin and Co
 - **Commander Selection**: Interactive dialog when importing decks without explicit commander
 - **Cross-platform**: Runs on Windows, macOS, Linux, and Android
 - **Offline Card Cache**: 500MB+ Scryfall bulk data for instant deck loading
-- **Settings Persistence**: Player name and network settings saved between sessions
+- **Settings Persistence**: Player name, server mode, TLS toggle, and network settings saved between sessions
 - **Keyboard Shortcuts**: 120+ shortcuts for fast gameplay
+- **Mana Pool Tracking**: Full WUBRG+C mana counters with +/-/set-exact on both platforms
+- **Resizable Game Layout**: Drag handles to resize opponent area, battlefield, command zone, and hand
 
 ## Download & Install
 
@@ -99,21 +101,32 @@ Android APK builds are available from GitHub Releases. Full touch support with d
 
 ```
 dongadeuce/
-├── shared/              # Shared game logic and models (Kotlin Multiplatform)
-│   ├── models/         # Card, Deck, GameState, Player, Zone
-│   ├── network/        # GameEngine, GameServer, GameClient, protocol
-│   ├── server/         # GameRoom, LobbyManager, ServerConfig (shared by JVM + Android)
-│   ├── tls/            # TLS config, cert generation, trusted servers store
-│   ├── settings/       # User settings persistence
-│   └── game/           # Game logic, deck parser
-├── desktop/            # Compose Desktop UI
-│   ├── ui/             # UI components (game screen, zones, cards)
-│   ├── viewmodel/      # ViewModels with StateFlow (MVVM architecture)
-│   └── utils/          # Image cache, utilities
-├── android/            # Android app + dedicated server foreground service
-├── server/             # Dedicated game server (standalone JVM app)
-├── mcp-server/         # MCP server for AI integration
-└── resources/          # Icons and assets
+├── shared/                  # Shared game logic and models (Kotlin Multiplatform)
+│   ├── models/              # Card, Deck, GameState, Player, Zone, CardAction, GameEvent
+│   ├── network/             # GameEngine, GameServer, GameClient, protocol messages
+│   ├── server/              # GameRoom, LobbyManager, ServerConfig
+│   ├── viewmodel/           # GameViewModel, MenuViewModel (shared state management)
+│   ├── tls/                 # TLS config, cert generation, trusted servers store
+│   ├── settings/            # UserSettings persistence (player name, server mode, TLS)
+│   ├── game/                # DeckParser, DeckFormat
+│   ├── api/                 # CardCache, ScryfallApi
+│   ├── ui/                  # UIConstants, SelectionState, DragDropState
+│   └── platform/            # Expect declarations (FileSystem, HttpEngine, ServerEngine)
+├── desktop/                 # Compose Desktop UI
+│   └── ui/                  # MainScreen, GameScreen, CardContextMenu, TurnIndicator,
+│                            #   SettingsDialog, PersistentCardViewer, KeyboardShortcuts
+├── android/                 # Android app
+│   ├── ui/                  # GameScreen (2900+ lines), CardContextMenu, CardImage,
+│   │                        #   PersistentCardViewer, CommanderSelectionDialog, GameDialogs,
+│   │                        #   KeyboardShortcutHandler, Theme
+│   ├── viewmodel/           # AndroidMenuViewModel (lifecycle-aware wrapper)
+│   ├── service/             # DedicatedServerService, GameSessionService,
+│   │                        #   ServerNotificationManager, ServerBootReceiver, ServerRestartWorker
+│   └── res/drawable/        # ic_graveyard, ic_exile, ic_hand, ic_untap, ic_draw_card,
+│                            #   ic_pass_turn, ic_notification_game
+├── server/                  # Standalone dedicated game server (JVM)
+├── mcp-server/              # MCP server for AI integration
+└── resources/               # Icons and assets
 ```
 
 ## Architecture
@@ -130,31 +143,44 @@ The game supports two network modes that share the same core components:
 - **Self-Signed TLS (TOFU)**: Server auto-generates RSA 2048 cert on first start; clients verify via SSH-style fingerprint prompt, with auto-renewal
 
 Shared components (zero duplication):
-- **GameEngine**: All game logic — validation, execution, state management
+- **GameEngine**: All game logic — validation, execution, state management, player elimination on disconnect
 - **GameClient**: All players use this to connect (even the P2P host connects to localhost)
 - **GameMessage protocol**: Identical for both modes
 - **GameRoom / LobbyManager**: Shared by JVM and Android dedicated servers
 
 ### MVVM Layers
 
-- **Models** (`shared/models/`): Domain objects like Card, Deck, Player, GameState
+- **Models** (`shared/models/`): Domain objects like Card, Deck, Player, GameState, CardAction
 - **ViewModels** (`shared/viewmodel/`): Manage UI state with Kotlin StateFlow
-  - `GameViewModel`: Manages game state, player actions, card movements
-  - `MenuViewModel`: Handles menu navigation, deck loading, lobby management
+  - `GameViewModel`: Game state, card movements, mana pool, hand ordering, life tracking
+  - `MenuViewModel`: Menu navigation, deck loading, lobby management, settings persistence
 - **Views** (`desktop/ui/`, `android/ui/`): Composable UI components that observe ViewModel state
 
-Benefits:
-- Clean separation of concerns
-- Testable business logic
-- Reactive state management with StateFlow
-- Single code path for host and client networking
-- Easy to integrate P2P networking (ViewModels handle network events)
+### Android Game Screen Layout
+
+```
+┌─────────────────────────────┐
+│  Top Bar (turn, phase, nav) │
+├─────────────────────────────┤
+│  Opponent Section           │  Resizable (handle 1)
+├─── ═══ resize handle ═══ ──┤
+│  Local Battlefield          │  Resizable (handles 1 & 2)
+├─── ═══ resize handle ═══ ──┤
+│  Command Zone Bar           │  Resizable (handle 2) — life, commander,
+│  (life, cmdr, G/E/L, mana) │  library, graveyard, exile, mana display
+├─── ═══ resize handle ═══ ──┤
+│  Hand Strip                 │  Resizable (handle 3)
+├─────────────────────────────┤
+│  Bottom Action Bar          │  Pass turn, untap, draw, token, mana, dice
+└─────────────────────────────┘
+```
 
 ## Building and Running
 
 ### Prerequisites
-- JDK 11 or higher
+- JDK 17 or higher
 - Gradle (wrapper included)
+- Android SDK (for Android builds)
 
 ### Run the application
 ```bash
@@ -172,126 +198,78 @@ cd dongadeuce
 
 # Linux .deb
 ./gradlew desktop:packageDeb
+
+# Android APK
+./gradlew :android:assembleDebug
 ```
 
-## Current Status (v6.1.0-beta)
+### Run tests
+```bash
+# JVM unit tests (499 tests)
+./gradlew :shared:jvmTest
 
-**Desktop:** 99% Complete - Fully Playable! ✅
-**Android:** 99% Complete - Fully Playable! ✅
-**Network Mode:** 100% Complete - Fully Playable! ✅
+# Server tests
+cd server && ../gradlew test
 
-### ✅ Fully Implemented
+# Android instrumentation tests (requires emulator/device)
+./gradlew :android:connectedDebugAndroidTest
+
+# Visual gesture test (slow, with card artwork)
+./gradlew :android:connectedDebugAndroidTest \
+  -Pandroid.testInstrumentationRunnerArguments.class=com.dustinmcafee.dongadeuce.DragDropGestureTest \
+  -Pandroid.testInstrumentationRunnerArguments.visual=true
+```
+
+## Current Status (v6.2.0-beta)
+
+**Desktop:** 99% Complete - Fully Playable!
+**Android:** 99% Complete - Fully Playable!
+**Network Mode:** 100% Complete - Fully Playable!
+
+### Fully Implemented
 
 **Core Gameplay:**
-- **Turn/Phase System** - Full MTG phase cycle with visual indicator
-- **Commander Damage Tracking** - Complete UI with 21-damage lethal detection
-- **Card Context Menus** - Right-click menus for all zones with comprehensive actions
-- **Library Search** - Full search/filter dialog with card manipulation
-- **Zone Viewers** - Interactive dialogs for graveyard, exile, command zone
-- **Drag-and-Drop Battlefield** - Grid-based card positioning system
-- **Card Images** - Async loading with 500MB+ offline cache
-- **Tap/Untap** - Double-click and context menu support
-- **Counters** - Add/remove +1/+1, charge, and custom counters
-- **Card Attachments** - Aura/Equipment attachment system
-- **Flip Cards** - Full flip card support
-- **Face Down Cards** - Morph/manifest support
-- **Life Tracking** - Automatic loss detection
-- **Draw from Empty Library** - Automatic loss detection
-- **All Zone Operations** - Move cards between any zones
-- **Library Operations** - Draw, mill, shuffle, search, tutor, mulligan, peek top/bottom N
-- **P/T Modifications** - Increase/decrease/set/reset/flow power and toughness
-- **Card Annotations** - Custom text notes on cards
-- **Token Creation** - Create tokens via Scryfall search or custom
-- **Card Copy/Clone** - Clone cards with visual indicator
-- **Player Counters** - Poison, energy, experience, and custom counters
-- **Die Rolling** - D4, D6, D8, D10, D12, D20, D100, custom dice, coin flip
-- **Game Log** - Real-time event logging with 21 event types
-- **Chat Messages** - In-game chat between players
-- **Give Control** - Transfer control of permanents between players
+- Full MTG phase cycle with visual turn indicator
+- Commander damage tracking with 21-damage lethal detection
+- Right-click/long-press context menus for all zones
+- Library search, zone viewers (graveyard, exile, command zone)
+- Grid-based drag-and-drop battlefield with pinch-to-zoom and free 2D panning
+- Async card image loading with 500MB+ offline cache
+- Tap/untap, counters (+1/+1, charge, custom), card attachments, flip/face-down
+- Life tracking with long-press for exact value
+- All zone operations, library operations (draw, mill, shuffle, tutor, mulligan, peek)
+- P/T modifications, card annotations, token creation, card copy/clone
+- Player counters (poison, energy, experience), mana pool (WUBRG+C)
+- Die rolling (D4-D100, coin flip), game log, in-game chat, give control
 
-**Hotseat Multiplayer:**
-- **2-6 Player Support** - Full local multiplayer
-- **Per-Player Deck Loading** - Each player loads their own deck
-- **Automatic Player Rotation** - UI rotates to show active player
-- **Hand Privacy** - Only active player sees their cards
-- **Turn Passing** - Automatic player advancement
+**Android-Specific:**
+- Three drag handles for resizing opponent area, battlefield, command zone, and hand
+- Zone icons: headstone (graveyard), skull & crossbones (exile), MTG card back (library)
+- Custom icons: checkmark (pass turn), U-arrow (untap), stacked cards (draw), open hand (hand count)
+- Zone button drop targets with yellow highlight during drag
+- Zone button drag sources (long-press+drag grabs top card)
+- Long-press battlefield for mana dialog
+- Dev Test button (debug builds) for instant 2-player hotseat with Zedruu deck
+- Foreground service keeps game alive when backgrounded (all game modes)
+- Notification shows latest game events
 
-**Network Multiplayer:**
-- **Host/Join Games** - WebSocket-based networking over local network or internet
-- **Dedicated Server** - Run on Android (foreground service) or PC (standalone JVM jar)
-- **Self-Signed TLS** - Auto-generated certs with SSH-style trust-on-first-use (TOFU)
-- **Certificate Auto-Renewal** - 10-year validity, auto-regenerates 30 days before expiry
-- **Lobby System** - Player ready status, host can kick players
-- **Create Game via REST** - Clients create game rooms on dedicated servers via API
-- **Real-time Sync** - Full game state synchronization
-- **35+ Network Actions** - All game actions supported over network
-- **Disconnect Handling** - Game pauses on player disconnect
-- **Action Validation** - Server-side cheating prevention
-- **Unique Player Names** - Auto-rename duplicate names
-
-**Settings & Persistence:**
-- **Settings Dialog** - Gear icon in main menu for configuration
-- **Player Name** - Persisted between sessions
-- **Server Address** - Last used address saved
-- **Server Port** - Custom port configuration
-- **Default Deck Directory** - File picker remembers last location
-- **Cross-platform Storage** - Windows: %APPDATA%, Linux/macOS: ~/.commandermtg
+**Multiplayer:**
+- 2-6 player hotseat with automatic player rotation
+- WebSocket networking (LAN P2P + dedicated server)
+- Self-signed TLS with TOFU, auto-renewal
+- Lobby system, REST API for game room creation
+- Disconnected players eliminated (game continues without pause)
+- Server config (mode, TLS) persisted across restarts
 
 **Technical:**
-- MVVM architecture with StateFlow (100% compliant)
-- Ktor WebSocket server (Netty for TLS, CIO for plain) and client (OkHttp for TLS, CIO for plain)
-- Self-signed TLS with Bouncy Castle cert generation (Android) and Ktor TLS certificates (JVM)
-- Scryfall API integration
-- Bulk card cache with progress UI
+- MVVM with StateFlow, Kotlin Multiplatform
+- Ktor WebSocket server (Netty for TLS, CIO for plain)
+- Bouncy Castle cert generation (Android), Ktor TLS certificates (JVM)
+- Scryfall API with offline bulk cache
 - Multi-format deck parser (Cockatrice, .dec, .dek, .txt, .mwDeck)
-- Sideboard support with deck loading
-- 590+ passing tests (480 JVM shared, 29 JVM server, 86 Android instrumented including 8 TLS)
+- 540+ passing tests (JVM unit, server, Android instrumented, gesture)
 - CI/CD with GitHub Actions (APK signing, test automation)
-- Comprehensive input validation
-- Cross-platform packaging (Windows, macOS, Linux, Android)
-
-**Keyboard Shortcuts (120+ implemented):**
-- **Game Phases**: F5-F10 for phases, Ctrl+Space/Tab for next phase, Ctrl+Enter for pass turn
-- **Card Actions**: T to tap, Ctrl+U untap all, Del to graveyard, Ctrl+X to exile
-- **Power/Toughness**: Ctrl/Alt +/- for P/T, Ctrl+Alt+=/- for both
-- **Counters**: Ctrl+./,  Alt+./, for colored counters A-F
-- **Library**: Ctrl+D draw, Ctrl+M mulligan, Ctrl+S shuffle
-- **View Zones**: F3 library, F4 graveyard, Ctrl+W peek top
-- **Selection**: Ctrl+A select all, Ctrl+Shift+X select row
-- **Arrows**: Alt+A draw arrow, Ctrl+R remove arrows
-- **Mana Counters**: W/U/B/R/G/X for mana pool tracking
-- **Stack Until Found**: Ctrl+Shift+Y to reveal cards until match
-
-### ❌ Not Yet Implemented
-
-**Missing Features:**
-- **Game Save/Load** - Games meant to be played in one session
-
-### Completion Status
-- **Desktop:** ~99% complete (fully playable)
-- **Android:** ~99% complete (fully playable)
-- **Network Mode:** 100% complete (P2P + Dedicated Server + TLS)
-
-## Tech Stack
-
-- **Kotlin**: Primary language (Kotlin Multiplatform)
-- **Compose Multiplatform**: Cross-platform UI framework (Desktop + Android)
-- **Ktor**: Networking — Netty server (TLS), CIO server (plain), OkHttp client (TLS), CIO client (plain)
-- **Bouncy Castle**: Self-signed certificate generation on Android (bcprov + bcpkix)
-- **kotlinx.serialization**: JSON serialization for network protocol
-- **Scryfall API**: Card data and images with offline bulk cache
-- **WorkManager**: Android server auto-restart after device reboot
-
-## Game Zones
-
-The UI includes all Commander zones:
-- **Command Zone**: Your commander
-- **Library**: Draw deck
-- **Hand**: Cards in hand
-- **Battlefield**: Permanents in play
-- **Graveyard**: Discarded/destroyed cards
-- **Exile**: Exiled cards
-- **Stack**: Spells/abilities being resolved (not visible yet)
+- 120+ keyboard shortcuts
 
 ## Running a Dedicated Server
 
@@ -327,6 +305,17 @@ Environment variables:
 5. Click "Connect"
 6. On first TLS connection, verify the fingerprint matches what the server displays
 
+## Tech Stack
+
+- **Kotlin**: Primary language (Kotlin Multiplatform)
+- **Compose Multiplatform**: Cross-platform UI framework (Desktop + Android)
+- **Ktor**: Networking — Netty server (TLS), CIO server (plain), OkHttp client (TLS), CIO client (plain)
+- **Bouncy Castle**: Self-signed certificate generation on Android (bcprov + bcpkix)
+- **kotlinx.serialization**: JSON serialization for network protocol
+- **Scryfall API**: Card data and images with offline bulk cache
+- **WorkManager**: Android server auto-restart after device reboot
+- **UI Automator**: Android gesture instrumentation tests
+
 ## Next Steps
 
 See [TODO.md](TODO.md) for development roadmap and feature status.
@@ -337,6 +326,4 @@ See [TODO.md](TODO.md) for development roadmap and feature status.
 - **Themes** - Light mode, custom card backs
 - **Deck Builder** - In-app deck creation and editing
 - **Spectator Mode** - Watch games in progress
-
-**Result:** Feature-complete Commander experience
-
+- **Game Save/Load** - Persist game state across sessions

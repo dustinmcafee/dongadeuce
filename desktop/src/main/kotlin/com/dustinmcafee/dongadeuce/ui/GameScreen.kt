@@ -2,8 +2,11 @@ package com.dustinmcafee.dongadeuce.ui
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
@@ -13,8 +16,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.dustinmcafee.dongadeuce.globalKeyEventHandler
 import com.dustinmcafee.dongadeuce.models.CardAction
 import com.dustinmcafee.dongadeuce.models.Zone
@@ -208,6 +214,9 @@ fun GameScreen(
                     cardId = action.cardInstance.instanceId,
                     newOwnerId = action.ownerId
                 )
+            }
+            is CardAction.Mulligan -> {
+                viewModel.mulligan(action.playerId)
             }
             else -> {
                 // Delegate to ViewModel with multi-selection support
@@ -828,6 +837,7 @@ fun GameScreen(
                     }
 
                     // Turn indicator
+                    val isLocalPlayerActive = uiState.localPlayer?.id == sidebarGameState.activePlayer.id
                     TurnIndicator(
                         activePlayer = sidebarGameState.activePlayer,
                         currentPhase = sidebarGameState.phase,
@@ -836,8 +846,102 @@ fun GameScreen(
                         onPassTurn = { viewModel.passTurn() },
                         onUntapAll = { viewModel.untapAll(sidebarGameState.activePlayer.id) },
                         onRollDice = { showDieRollerDialog = true },
+                        isActivePlayerLocal = isLocalPlayerActive || isHotseatMode,
                         modifier = Modifier.fillMaxWidth()
                     )
+
+                    // Mana pool display - show non-zero mana for active player
+                    val manaColors = listOf(
+                        "manaW" to Color(0xFFF9FAF4),
+                        "manaU" to Color(0xFF0E68AB),
+                        "manaB" to Color(0xFF150B00),
+                        "manaR" to Color(0xFFD3202A),
+                        "manaG" to Color(0xFF00733E),
+                        "manaC" to Color(0xFF808080)
+                    )
+                    val manaPlayer = sidebarGameState.activePlayer
+                    var manaEditKey by remember { mutableStateOf<String?>(null) }
+                    var manaEditInput by remember { mutableStateOf("") }
+
+                    // Mana pool — always visible, +1 top, count (tap for X), -1 bottom
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp)
+                    ) {
+                        Text(
+                            "Mana:",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        manaColors.forEach { (key, color) ->
+                            val count = manaPlayer.counters[key] ?: 0
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                // +1
+                                Text(
+                                    "+",
+                                    fontSize = 8.sp,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier.clickable { viewModel.addMana(manaPlayer.id, key) }
+                                )
+                                // Count circle — click to set exact value
+                                Box(
+                                    modifier = Modifier
+                                        .size(20.dp)
+                                        .background(color, CircleShape)
+                                        .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
+                                        .clickable {
+                                            manaEditKey = key
+                                            manaEditInput = "$count"
+                                        },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        "$count",
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (key == "manaW") Color.Black else Color.White
+                                    )
+                                }
+                                // -1
+                                Text(
+                                    "-",
+                                    fontSize = 8.sp,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier.clickable { viewModel.removeMana(manaPlayer.id, key) }
+                                )
+                            }
+                        }
+                    }
+
+                    // Exact mana input dialog
+                    if (manaEditKey != null) {
+                        AlertDialog(
+                            onDismissRequest = { manaEditKey = null },
+                            title = { Text("Set ${manaEditKey!!.removePrefix("mana")} Mana") },
+                            text = {
+                                OutlinedTextField(
+                                    value = manaEditInput,
+                                    onValueChange = { manaEditInput = it.filter { c -> c.isDigit() } },
+                                    singleLine = true,
+                                    label = { Text("Amount") }
+                                )
+                            },
+                            confirmButton = {
+                                TextButton(onClick = {
+                                    manaEditInput.toIntOrNull()?.let { value ->
+                                        viewModel.setPlayerCounter(manaPlayer.id, manaEditKey!!, value.coerceAtLeast(0))
+                                    }
+                                    manaEditKey = null
+                                }) { Text("Set") }
+                            },
+                            dismissButton = {
+                                TextButton(onClick = { manaEditKey = null }) { Text("Cancel") }
+                            }
+                        )
+                    }
 
                     // Persistent card viewer with resizable height
                     Column(modifier = Modifier.fillMaxWidth()) {
