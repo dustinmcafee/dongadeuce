@@ -279,14 +279,25 @@ fun MenuScreen(
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         FilterChip(
-                            selected = !uiState.hotseatMode,
-                            onClick = { viewModel.setHotseatMode(false) },
-                            label = { Text("Network", color = MaterialTheme.colorScheme.onSurfaceVariant) }
-                        )
-                        FilterChip(
                             selected = uiState.hotseatMode,
                             onClick = { viewModel.setHotseatMode(true) },
                             label = { Text("Local Hotseat", color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                        )
+                        FilterChip(
+                            selected = !uiState.hotseatMode && uiState.serverMode == ServerMode.LAN,
+                            onClick = {
+                                viewModel.setHotseatMode(false)
+                                viewModel.setServerMode(ServerMode.LAN)
+                            },
+                            label = { Text("Network - P2P", color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                        )
+                        FilterChip(
+                            selected = !uiState.hotseatMode && uiState.serverMode == ServerMode.DEDICATED,
+                            onClick = {
+                                viewModel.setHotseatMode(false)
+                                viewModel.setServerMode(ServerMode.DEDICATED)
+                            },
+                            label = { Text("Network - Dedicated", color = MaterialTheme.colorScheme.onSurfaceVariant) }
                         )
                     }
                 }
@@ -404,21 +415,40 @@ fun MenuScreen(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // Network mode: Single deck + Host/Join buttons
-                Button(
-                    onClick = { viewModel.startHosting() },
-                    modifier = Modifier.width(200.dp),
-                    enabled = uiState.loadedDeck != null && !uiState.isLoading && playerName.isNotBlank()
-                ) {
-                    Text("Host Game")
-                }
+                if (uiState.serverMode == ServerMode.LAN) {
+                    // P2P panel
+                    Button(
+                        onClick = { viewModel.startHosting() },
+                        modifier = Modifier.width(200.dp),
+                        enabled = !uiState.isLoading && playerName.isNotBlank()
+                    ) {
+                        Text("Host Game")
+                    }
 
-                Button(
-                    onClick = { viewModel.navigateToJoin() },
-                    modifier = Modifier.width(200.dp),
-                    enabled = uiState.loadedDeck != null && !uiState.isLoading && playerName.isNotBlank()
-                ) {
-                    Text("Join Game")
+                    Button(
+                        onClick = { viewModel.navigateToJoin() },
+                        modifier = Modifier.width(200.dp),
+                        enabled = !uiState.isLoading && playerName.isNotBlank()
+                    ) {
+                        Text("Join Game")
+                    }
+                } else {
+                    // Dedicated panel
+                    Button(
+                        onClick = { viewModel.hostDedicatedGame() },
+                        modifier = Modifier.width(200.dp),
+                        enabled = !uiState.isLoading && playerName.isNotBlank()
+                    ) {
+                        Text("Host Game")
+                    }
+
+                    Button(
+                        onClick = { viewModel.navigateToJoin() },
+                        modifier = Modifier.width(200.dp),
+                        enabled = !uiState.isLoading && playerName.isNotBlank()
+                    ) {
+                        Text("Join Game")
+                    }
                 }
 
                 Row(
@@ -592,6 +622,19 @@ fun HostLobbyScreen(viewModel: MenuViewModel) {
     val uiState by viewModel.uiState.collectAsState()
     val lobbyState = uiState.lobbyState
 
+    // Commander Selection Dialog
+    if (uiState.pendingDeckData != null && uiState.commanderCandidates.isNotEmpty()) {
+        CommanderSelectionDialog(
+            deckData = uiState.pendingDeckData!!,
+            candidates = uiState.commanderCandidates,
+            playerIndex = uiState.pendingDeckPlayerIndex,
+            onCommanderSelected = { commanderName, partnerName ->
+                viewModel.selectCommander(commanderName, partnerName)
+            },
+            onDismiss = { viewModel.cancelCommanderSelection() }
+        )
+    }
+
     Box(
         modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).padding(32.dp),
         contentAlignment = Alignment.Center
@@ -603,6 +646,71 @@ fun HostLobbyScreen(viewModel: MenuViewModel) {
             Text("Hosting Game", style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.onBackground)
 
             Spacer(modifier = Modifier.height(16.dp))
+
+            // Deck status card
+            Card(
+                modifier = Modifier.width(400.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = if (uiState.loadedDeck != null)
+                        MaterialTheme.colorScheme.primaryContainer
+                    else
+                        MaterialTheme.colorScheme.surfaceVariant
+                )
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        if (uiState.loadedDeck != null) "Deck: ${uiState.loadedDeck!!.commander.name}"
+                        else "No deck loaded",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = if (uiState.loadedDeck != null) MaterialTheme.colorScheme.onPrimaryContainer
+                        else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedButton(
+                            onClick = {
+                                val defaultDir = viewModel.userSettings.getLastDeckDirectory()
+                                val fileChooser = JFileChooser().apply {
+                                    fileFilter = FileNameExtensionFilter("Deck files (*.txt, *.dec, *.dek, *.cod, *.mwDeck)", "txt", "dec", "dek", "cod", "mwDeck")
+                                    if (!defaultDir.isNullOrBlank()) {
+                                        currentDirectory = File(defaultDir)
+                                    }
+                                }
+                                val result = fileChooser.showOpenDialog(null)
+                                if (result == JFileChooser.APPROVE_OPTION) {
+                                    viewModel.userSettings.setLastDeckDirectory(
+                                        fileChooser.selectedFile.parentFile.absolutePath
+                                    )
+                                    viewModel.loadDeck(fileChooser.selectedFile.absolutePath)
+                                }
+                            },
+                            enabled = !uiState.isLoading
+                        ) {
+                            Text(if (uiState.loadedDeck != null) "Change Deck" else "Load Deck")
+                        }
+                        OutlinedButton(
+                            onClick = {
+                                try {
+                                    val clipboard = Toolkit.getDefaultToolkit().systemClipboard
+                                    val clipboardData = clipboard.getData(DataFlavor.stringFlavor) as? String
+                                    if (clipboardData != null && clipboardData.isNotBlank()) {
+                                        viewModel.loadDeckFromContent(clipboardData)
+                                    }
+                                } catch (_: Exception) {}
+                            },
+                            enabled = !uiState.isLoading
+                        ) {
+                            Text("Paste Deck")
+                        }
+                    }
+                }
+            }
+
+            // Loading indicator
+            if (uiState.isLoading) {
+                LinearProgressIndicator(modifier = Modifier.width(400.dp))
+                Text(uiState.loadingProgress, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onBackground)
+            }
 
             Card(modifier = Modifier.width(400.dp)) {
                 Column(modifier = Modifier.padding(16.dp)) {
@@ -632,6 +740,10 @@ fun HostLobbyScreen(viewModel: MenuViewModel) {
                                         if (player.isAdmin || player.isHost) "👑 ${player.name}" else "• ${player.name}",
                                         style = MaterialTheme.typography.bodyMedium
                                     )
+                                    if (!player.hasDeck) {
+                                        Text(" (no deck)", style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.error)
+                                    }
                                     if (player.isReady && !player.isAdmin && !player.isHost) {
                                         Text(" ✓ Ready", style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.primary)
@@ -654,8 +766,9 @@ fun HostLobbyScreen(viewModel: MenuViewModel) {
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Check if all non-host players are ready
+            // Check if all non-host players are ready and all have decks
             val allReady = lobbyState?.players?.filter { !it.isAdmin && !it.isHost }?.all { it.isReady } ?: false
+            val allHaveDecks = lobbyState?.players?.all { it.hasDeck } ?: false
             val enoughPlayers = (lobbyState?.players?.size ?: 0) >= 2
 
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -665,7 +778,7 @@ fun HostLobbyScreen(viewModel: MenuViewModel) {
                             // Show error if start failed
                         }
                     },
-                    enabled = enoughPlayers && allReady
+                    enabled = enoughPlayers && allReady && allHaveDecks
                 ) {
                     Text("Start Game")
                 }
@@ -679,6 +792,12 @@ fun HostLobbyScreen(viewModel: MenuViewModel) {
             if (!enoughPlayers) {
                 Text(
                     "Need at least 2 players to start",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            } else if (!allHaveDecks) {
+                Text(
+                    "Waiting for all players to load a deck...",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -697,9 +816,9 @@ fun HostLobbyScreen(viewModel: MenuViewModel) {
 @Composable
 fun JoinLobbyScreen(viewModel: MenuViewModel) {
     val uiState by viewModel.uiState.collectAsState()
-    var serverAddress by remember { mutableStateOf("localhost") }
-    var serverPort by remember { mutableStateOf("8080") }
-    var gameCode by remember { mutableStateOf("") }
+    var serverAddress by remember { mutableStateOf(uiState.serverAddress) }
+    var serverPort by remember { mutableStateOf(uiState.serverPort.toString()) }
+    var gameCode by remember { mutableStateOf(uiState.gameCode ?: "") }
     val isDedicated = uiState.serverMode == ServerMode.DEDICATED
     val lobbyState = uiState.lobbyState
     val isConnected = uiState.connectionState is com.dustinmcafee.dongadeuce.network.ConnectionState.Connected
@@ -708,6 +827,26 @@ fun JoinLobbyScreen(viewModel: MenuViewModel) {
     val currentPlayerId = (uiState.connectionState as? com.dustinmcafee.dongadeuce.network.ConnectionState.Connected)?.playerId
     val currentPlayer = lobbyState?.players?.find { it.id == currentPlayerId }
     val isReady = currentPlayer?.isReady ?: false
+
+    // Sync game code from viewmodel (e.g. after Create Game)
+    LaunchedEffect(uiState.gameCode) {
+        if (uiState.gameCode != null && uiState.gameCode != gameCode) {
+            gameCode = uiState.gameCode!!
+        }
+    }
+
+    // Commander Selection Dialog
+    if (uiState.pendingDeckData != null && uiState.commanderCandidates.isNotEmpty()) {
+        CommanderSelectionDialog(
+            deckData = uiState.pendingDeckData!!,
+            candidates = uiState.commanderCandidates,
+            playerIndex = uiState.pendingDeckPlayerIndex,
+            onCommanderSelected = { commanderName, partnerName ->
+                viewModel.selectCommander(commanderName, partnerName)
+            },
+            onDismiss = { viewModel.cancelCommanderSelection() }
+        )
+    }
 
     Box(
         modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).padding(32.dp),
@@ -722,24 +861,7 @@ fun JoinLobbyScreen(viewModel: MenuViewModel) {
             Spacer(modifier = Modifier.height(16.dp))
 
             if (!isConnected) {
-                // Server mode toggle
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FilterChip(
-                        selected = !isDedicated,
-                        onClick = {
-                            viewModel.setServerMode(ServerMode.LAN)
-                            viewModel.setGameCode(null)
-                        },
-                        label = { Text("LAN / P2P", color = MaterialTheme.colorScheme.onSurface) }
-                    )
-                    FilterChip(
-                        selected = isDedicated,
-                        onClick = { viewModel.setServerMode(ServerMode.DEDICATED) },
-                        label = { Text("Dedicated Server", color = MaterialTheme.colorScheme.onSurface) }
-                    )
-                }
-
-                // Connection form
+                // Connection form — server mode already set from menu
                 OutlinedTextField(
                     value = serverAddress,
                     onValueChange = {
@@ -824,6 +946,72 @@ fun JoinLobbyScreen(viewModel: MenuViewModel) {
                 }
             } else {
                 // Connected - show lobby
+
+                // Deck status + load/paste buttons
+                Card(
+                    modifier = Modifier.width(400.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (uiState.loadedDeck != null)
+                            MaterialTheme.colorScheme.primaryContainer
+                        else
+                            MaterialTheme.colorScheme.surfaceVariant
+                    )
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            if (uiState.loadedDeck != null) "Deck: ${uiState.loadedDeck!!.commander.name}"
+                            else "No deck loaded",
+                            style = MaterialTheme.typography.titleSmall,
+                            color = if (uiState.loadedDeck != null) MaterialTheme.colorScheme.onPrimaryContainer
+                            else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            OutlinedButton(
+                                onClick = {
+                                    val defaultDir = viewModel.userSettings.getLastDeckDirectory()
+                                    val fileChooser = JFileChooser().apply {
+                                        fileFilter = FileNameExtensionFilter("Deck files (*.txt, *.dec, *.dek, *.cod, *.mwDeck)", "txt", "dec", "dek", "cod", "mwDeck")
+                                        if (!defaultDir.isNullOrBlank()) {
+                                            currentDirectory = File(defaultDir)
+                                        }
+                                    }
+                                    val result = fileChooser.showOpenDialog(null)
+                                    if (result == JFileChooser.APPROVE_OPTION) {
+                                        viewModel.userSettings.setLastDeckDirectory(
+                                            fileChooser.selectedFile.parentFile.absolutePath
+                                        )
+                                        viewModel.loadDeck(fileChooser.selectedFile.absolutePath)
+                                    }
+                                },
+                                enabled = !uiState.isLoading
+                            ) {
+                                Text(if (uiState.loadedDeck != null) "Change Deck" else "Load Deck")
+                            }
+                            OutlinedButton(
+                                onClick = {
+                                    try {
+                                        val clipboard = Toolkit.getDefaultToolkit().systemClipboard
+                                        val clipboardData = clipboard.getData(DataFlavor.stringFlavor) as? String
+                                        if (clipboardData != null && clipboardData.isNotBlank()) {
+                                            viewModel.loadDeckFromContent(clipboardData)
+                                        }
+                                    } catch (_: Exception) {}
+                                },
+                                enabled = !uiState.isLoading
+                            ) {
+                                Text("Paste Deck")
+                            }
+                        }
+                    }
+                }
+
+                // Loading indicator
+                if (uiState.isLoading) {
+                    LinearProgressIndicator(modifier = Modifier.width(400.dp))
+                    Text(uiState.loadingProgress, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onBackground)
+                }
+
                 Card(
                     modifier = Modifier.width(400.dp),
                     colors = CardDefaults.cardColors(
@@ -849,6 +1037,10 @@ fun JoinLobbyScreen(viewModel: MenuViewModel) {
                                 if (player.id == currentPlayerId) {
                                     Text(" (You)", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
+                                if (!player.hasDeck) {
+                                    Text(" (no deck)", style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.error)
+                                }
                                 if (player.isReady && !player.isAdmin && !player.isHost) {
                                     Text(" ✓ Ready", style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.primary)
@@ -863,19 +1055,21 @@ fun JoinLobbyScreen(viewModel: MenuViewModel) {
                 // Check if current player is admin (first player / game creator)
                 val isAdmin = lobbyState?.players?.find { it.id == currentPlayerId }?.isAdmin ?: false
                 val allNonAdminReady = lobbyState?.players?.filter { !it.isAdmin }?.all { it.isReady } ?: false
+                val allHaveDecks = lobbyState?.players?.all { it.hasDeck } ?: false
                 val enoughPlayers = (lobbyState?.players?.size ?: 0) >= 2
 
                 Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                     if (isAdmin && isDedicated) {
                         Button(
                             onClick = { viewModel.startNetworkGame() },
-                            enabled = enoughPlayers && allNonAdminReady
+                            enabled = enoughPlayers && allNonAdminReady && allHaveDecks
                         ) {
                             Text("Start Game")
                         }
                     } else {
                         Button(
-                            onClick = { viewModel.setReady(!isReady) }
+                            onClick = { viewModel.setReady(!isReady) },
+                            enabled = uiState.loadedDeck != null || isReady
                         ) {
                             Text(if (isReady) "Not Ready" else "Ready!")
                         }
@@ -888,7 +1082,9 @@ fun JoinLobbyScreen(viewModel: MenuViewModel) {
 
                 Text(
                     when {
+                        uiState.loadedDeck == null && !isAdmin -> "Load a deck to ready up"
                         isAdmin && !enoughPlayers -> "Need at least 2 players to start"
+                        isAdmin && !allHaveDecks -> "Waiting for all players to load a deck..."
                         isAdmin && !allNonAdminReady -> "Waiting for all players to be ready..."
                         isReady -> "Waiting for host to start the game..."
                         else -> "Click 'Ready!' when you're ready to play"

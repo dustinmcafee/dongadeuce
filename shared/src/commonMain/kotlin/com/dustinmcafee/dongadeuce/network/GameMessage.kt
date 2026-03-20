@@ -18,7 +18,7 @@ sealed class GameMessage {
     @Serializable
     data class PlayerJoin(
         val playerName: String,
-        val deck: Deck
+        val deck: Deck? = null
     ) : GameMessage()
 
     /**
@@ -49,6 +49,15 @@ sealed class GameMessage {
         val isReady: Boolean
     ) : GameMessage()
 
+    /**
+     * Client -> Host: Update deck after joining (lobby deck loading)
+     */
+    @Serializable
+    data class UpdateDeck(
+        val playerId: String,
+        val deck: Deck
+    ) : GameMessage()
+
     // ==================== Lobby Messages ====================
 
     /**
@@ -57,7 +66,7 @@ sealed class GameMessage {
     @Serializable
     data class CreateGame(
         val playerName: String,
-        val deck: Deck,
+        val deck: Deck? = null,
         val maxPlayers: Int = 4
     ) : GameMessage()
 
@@ -77,7 +86,7 @@ sealed class GameMessage {
     data class JoinGame(
         val gameCode: String,
         val playerName: String,
-        val deck: Deck
+        val deck: Deck? = null
     ) : GameMessage()
 
     /**

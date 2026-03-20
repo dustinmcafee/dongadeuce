@@ -346,14 +346,17 @@ class GestureAndUiTest {
     @Test
     fun manaPoolDialog_tapIncrementsCounter() {
         val vm = setupGameViewModel()
-        val player = vm.uiState.value.localPlayer!!
 
         // Add mana directly through ViewModel (gesture detection in dialog uses pointerInput
         // which is difficult to trigger reliably in Compose test — test the ViewModel path instead)
-        vm.addMana(player.id, "manaW")
+        val playerId = vm.uiState.value.localPlayer!!.id
+        vm.addMana(playerId, "manaW")
 
         val manaW = vm.uiState.value.localPlayer!!.getCounter("manaW")
         assert(manaW == 1) { "White mana should be 1 after addMana, was $manaW" }
+
+        // Re-read player after addMana so it has the updated mana counts
+        val player = vm.uiState.value.localPlayer!!
 
         // Verify the dialog renders the count correctly
         composeTestRule.setContent {
@@ -405,13 +408,16 @@ class GestureAndUiTest {
     @Test
     fun playerInfoBar_showsManaWhenPresent() {
         val vm = setupGameViewModel()
-        val player = vm.uiState.value.localPlayer!!
-        val commandZoneCards = vm.getCards(player.id, Zone.COMMAND_ZONE)
+        val playerId = vm.uiState.value.localPlayer!!.id
 
         // Add some mana
-        vm.addMana(player.id, "manaW")
-        vm.addMana(player.id, "manaW")
-        vm.addMana(player.id, "manaR")
+        vm.addMana(playerId, "manaW")
+        vm.addMana(playerId, "manaW")
+        vm.addMana(playerId, "manaR")
+
+        // Re-read player after addMana so it has the updated mana counts
+        val player = vm.uiState.value.localPlayer!!
+        val commandZoneCards = vm.getCards(player.id, Zone.COMMAND_ZONE)
 
         composeTestRule.setContent {
             DongAdeuceTheme {

@@ -98,6 +98,11 @@ class AndroidMenuViewModel : ViewModel() {
     fun cancelCommanderSelection() = delegate.cancelCommanderSelection()
 
     /**
+     * Send loaded deck to the lobby server
+     */
+    fun sendDeckToLobby() = delegate.sendDeckToLobby()
+
+    /**
      * Start hosting a game
      */
     fun startHosting() {
@@ -110,6 +115,14 @@ class AndroidMenuViewModel : ViewModel() {
      */
     fun navigateToJoin() {
         delegate.navigateToJoin()
+        _currentScreen.value = AndroidScreen.JoinLobby
+    }
+
+    /**
+     * Host a game on a dedicated server (create room + auto-connect)
+     */
+    fun hostDedicatedGame() {
+        delegate.hostDedicatedGame()
         _currentScreen.value = AndroidScreen.JoinLobby
     }
 

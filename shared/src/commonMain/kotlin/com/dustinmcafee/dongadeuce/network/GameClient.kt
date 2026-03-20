@@ -88,7 +88,7 @@ class GameClient {
         host: String,
         port: Int,
         playerName: String,
-        deck: Deck,
+        deck: Deck? = null,
         gameCode: String? = null,
         useTls: Boolean = false,
         tofuVerifier: TofuVerifier? = null,
@@ -180,7 +180,7 @@ class GameClient {
      */
     private suspend fun connectWss(
         host: String, port: Int, path: String,
-        fingerprint: String, playerName: String, deck: Deck
+        fingerprint: String, playerName: String, deck: Deck?
     ) {
         client?.close()
         client = HttpClient(createTlsHttpClientEngine(fingerprint)) {
@@ -432,15 +432,32 @@ class GameClient {
     }
 
     /**
+     * Send/update deck to the server (lobby deck loading).
+     * Also updates lastDeck so reconnect uses the latest deck.
+     */
+    suspend fun sendDeck(deck: Deck) {
+        val id = _playerId.value ?: return
+        val currentSession = session ?: return
+
+        lastDeck = deck
+
+        try {
+            val message = GameMessage.UpdateDeck(id, deck)
+            currentSession.send(Frame.Text(json.encodeToString<GameMessage>(message)))
+        } catch (e: Exception) {
+            _error.value = "Failed to send deck: ${e.message}"
+        }
+    }
+
+    /**
      * Attempt to reconnect with stored credentials
      */
     suspend fun reconnect(): Boolean {
         val host = lastHost ?: return false
         val port = lastPort ?: return false
         val name = lastPlayerName ?: return false
-        val deck = lastDeck ?: return false
 
-        return connect(host, port, name, deck, lastGameCode, lastUseTls, lastTofuVerifier, lastTrustedServersStore)
+        return connect(host, port, name, lastDeck, lastGameCode, lastUseTls, lastTofuVerifier, lastTrustedServersStore)
     }
 
     /**

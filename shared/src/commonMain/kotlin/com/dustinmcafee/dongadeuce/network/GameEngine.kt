@@ -52,20 +52,23 @@ class GameEngine(private val maxPlayers: Int = 6) {
 
     /**
      * Add a player to the game. Returns the assigned player ID.
+     * Deck is optional — players can join without a deck and send it later via UpdateDeck.
      */
-    fun addPlayer(name: String, deck: Deck, isAdmin: Boolean = false): String {
+    fun addPlayer(name: String, deck: Deck? = null, isAdmin: Boolean = false): String {
         val playerId = generateUUID()
         val uniqueName = generateUniqueName(name)
 
         players[playerId] = LobbyPlayer(
             id = playerId,
             name = uniqueName,
-            hasDeck = true,
-            isReady = isAdmin, // Admin is auto-ready
+            hasDeck = deck != null,
+            isReady = false, // Never auto-ready — player may not have a deck yet
             isHost = isAdmin,  // Keep backward compat
             isAdmin = isAdmin
         )
-        playerDecks[playerId] = deck
+        if (deck != null) {
+            playerDecks[playerId] = deck
+        }
 
         if (isAdmin || adminId.isEmpty()) {
             adminId = playerId
@@ -73,6 +76,17 @@ class GameEngine(private val maxPlayers: Int = 6) {
 
         updateLobbyState()
         return playerId
+    }
+
+    /**
+     * Update a player's deck. Sets hasDeck = true and resets isReady to force re-confirmation.
+     */
+    fun updatePlayerDeck(playerId: String, deck: Deck) {
+        players[playerId]?.let { player ->
+            playerDecks[playerId] = deck
+            players[playerId] = player.copy(hasDeck = true, isReady = false)
+            updateLobbyState()
+        }
     }
 
     /**
@@ -105,13 +119,14 @@ class GameEngine(private val maxPlayers: Int = 6) {
     fun isLobbyFull(): Boolean = players.size >= maxPlayers
 
     /**
-     * Set a player's ready status.
+     * Set a player's ready status. Returns false if player has no deck.
      */
-    fun setPlayerReady(playerId: String, ready: Boolean) {
-        players[playerId]?.let { player ->
-            players[playerId] = player.copy(isReady = ready)
-        }
+    fun setPlayerReady(playerId: String, ready: Boolean): Boolean {
+        val player = players[playerId] ?: return false
+        if (ready && !player.hasDeck) return false
+        players[playerId] = player.copy(isReady = ready)
         updateLobbyState()
+        return true
     }
 
     /**
@@ -120,6 +135,9 @@ class GameEngine(private val maxPlayers: Int = 6) {
     fun startGame(): Boolean {
         if (_gameStarted.value) return false
         if (players.size < 2) return false
+
+        // Check all players have decks
+        if (players.values.any { !it.hasDeck }) return false
 
         // Check all non-admin players are ready
         val nonAdminPlayers = players.values.filter { !it.isAdmin }

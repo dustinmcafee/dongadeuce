@@ -152,6 +152,13 @@ class GameServer(
                                 broadcastToAll(engine.lobbyState.value)
                             }
 
+                            is GameMessage.UpdateDeck -> {
+                                if (playerId != null && !engine.isGameStarted()) {
+                                    engine.updatePlayerDeck(playerId, message.deck)
+                                    broadcastToAll(engine.lobbyState.value)
+                                }
+                            }
+
                             is GameMessage.PlayerReady -> {
                                 if (playerId != null) {
                                     engine.setPlayerReady(playerId, message.isReady)

@@ -83,7 +83,7 @@ class GameEngineTest {
         assertNotNull(player)
         assertTrue(player.isAdmin)
         assertTrue(player.isHost)
-        assertTrue(player.isReady) // admin is auto-ready
+        assertFalse(player.isReady) // admin is not auto-ready (may not have deck)
         assertEquals(id1, engine.getAdminId())
     }
 

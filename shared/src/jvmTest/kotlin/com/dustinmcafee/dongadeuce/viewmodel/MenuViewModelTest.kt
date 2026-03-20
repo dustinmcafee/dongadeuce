@@ -116,8 +116,9 @@ class MenuViewModelTest {
     @Test
     fun `clearError clears error`() {
         val vm = MenuViewModel()
-        // Trigger an error by trying to host without deck
-        vm.startHosting()
+        // Trigger an error by trying to connect with blank address
+        vm.setServerAddress("")
+        vm.connectToGame()
         assertNotNull(vm.uiState.value.error)
 
         vm.clearError()
@@ -125,36 +126,38 @@ class MenuViewModelTest {
     }
 
     @Test
-    fun `startHosting without deck shows error`() {
+    fun `startHosting without deck proceeds to lobby`() {
         val vm = MenuViewModel()
         vm.startHosting()
-        assertEquals("Please load a deck first", vm.uiState.value.error)
-        assertFalse(vm.uiState.value.isHosting)
+        // Deck is no longer required upfront — can load in lobby
+        assertTrue(vm.uiState.value.isHosting)
+        assertEquals(Screen.HostLobby, vm.uiState.value.currentScreen)
+        vm.returnToMenu() // cleanup server
     }
 
     @Test
-    fun `navigateToJoin without deck shows error`() {
+    fun `navigateToJoin without deck proceeds to join screen`() {
         val vm = MenuViewModel()
         vm.navigateToJoin()
-        assertEquals("Please load a deck first", vm.uiState.value.error)
+        // Deck is no longer required upfront — can load in lobby
+        assertEquals(Screen.JoinLobby, vm.uiState.value.currentScreen)
     }
 
     @Test
-    fun `connectToGame without deck shows error`() {
+    fun `connectToGame without deck proceeds with connection`() {
         val vm = MenuViewModel()
+        vm.setServerAddress("localhost")
         vm.connectToGame()
-        assertEquals("Please load a deck first", vm.uiState.value.error)
+        // Deck is no longer required — will attempt connection (may fail due to no server)
+        assertNull(vm.uiState.value.error?.takeIf { it == "Please load a deck first" })
     }
 
     @Test
     fun `connectToGame with blank address shows error`() {
         val vm = MenuViewModel()
-        // Need to set a deck first via internal state
-        // Use reflection or just test the address check
         vm.setServerAddress("")
         vm.connectToGame()
-        // Will hit deck check first
-        assertEquals("Please load a deck first", vm.uiState.value.error)
+        assertEquals("Please enter a server address", vm.uiState.value.error)
     }
 
     @Test

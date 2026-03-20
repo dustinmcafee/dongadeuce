@@ -383,6 +383,8 @@ class MenuViewModel {
                             error = null
                         )
                     }
+                    // Auto-send deck to lobby if connected
+                    sendDeckToLobby()
                 }
             } catch (e: Exception) {
                 _uiState.update {
@@ -481,6 +483,8 @@ class MenuViewModel {
                     error = null
                 )
             }
+            // Auto-send deck to lobby if connected
+            sendDeckToLobby()
         }
     }
 
@@ -758,14 +762,9 @@ class MenuViewModel {
      * Creates an embedded server, then connects to it as a regular GameClient.
      */
     fun startHosting() {
-        val deck = _uiState.value.loadedDeck
-        if (deck == null) {
-            _uiState.update { it.copy(error = "Please load a deck first") }
-            return
-        }
-
         val port = _uiState.value.serverPort
         val playerName = _uiState.value.playerName
+        val deck = _uiState.value.loadedDeck // May be null — can load in lobby
 
         // 1. Create and start the embedded server (no host deck/name coupling)
         gameServer = GameServer(
@@ -784,7 +783,7 @@ class MenuViewModel {
             )
         }
 
-        // 2. Connect to own server as a regular client
+        // 2. Connect to own server as a regular client (deck may be null)
         connectAsClient("localhost", port, playerName, deck, gameCode = null)
     }
 
@@ -792,11 +791,6 @@ class MenuViewModel {
      * Navigate to join game screen
      */
     fun navigateToJoin() {
-        if (_uiState.value.loadedDeck == null) {
-            _uiState.update { it.copy(error = "Please load a deck first") }
-            return
-        }
-
         _uiState.update {
             it.copy(currentScreen = Screen.JoinLobby, error = null)
         }
@@ -814,15 +808,10 @@ class MenuViewModel {
      * Connect to a hosted game (P2P or dedicated server)
      */
     fun connectToGame() {
-        val deck = _uiState.value.loadedDeck
-        if (deck == null) {
-            _uiState.update { it.copy(error = "Please load a deck first") }
-            return
-        }
-
         val address = _uiState.value.serverAddress
         val port = _uiState.value.serverPort
         val playerName = _uiState.value.playerName
+        val deck = _uiState.value.loadedDeck // May be null — can load in lobby
 
         if (address.isBlank()) {
             _uiState.update { it.copy(error = "Please enter a server address") }
@@ -838,7 +827,7 @@ class MenuViewModel {
      * Shared connection flow: create a GameClient, observe its state, and connect.
      * Used by both startHosting() (to localhost) and connectToGame() (to remote).
      */
-    private fun connectAsClient(host: String, port: Int, playerName: String, deck: Deck, gameCode: String?) {
+    private fun connectAsClient(host: String, port: Int, playerName: String, deck: Deck?, gameCode: String?) {
         // Create client (reuse if already created, e.g. for host reconnect)
         if (gameClient == null) {
             gameClient = GameClient()
@@ -988,11 +977,42 @@ class MenuViewModel {
     }
 
     /**
-     * Set ready status (client only)
+     * Set ready status (client only). Requires a loaded deck.
      */
     fun setReady(ready: Boolean) {
+        if (ready && _uiState.value.loadedDeck == null) {
+            _uiState.update { it.copy(error = "Please load a deck before readying up") }
+            return
+        }
         viewModelScope.launch {
             gameClient?.setReady(ready)
+        }
+    }
+
+    /**
+     * Send the loaded deck to the lobby server (for lobby deck loading).
+     * Called automatically after deck finishes loading while connected.
+     */
+    fun sendDeckToLobby() {
+        val deck = _uiState.value.loadedDeck ?: return
+        val connected = _uiState.value.connectionState is ConnectionState.Connected
+        if (!connected) return
+        viewModelScope.launch {
+            gameClient?.sendDeck(deck)
+        }
+    }
+
+    /**
+     * Host a game on a dedicated server: create room via REST, then auto-connect as admin.
+     */
+    fun hostDedicatedGame() {
+        createGameOnServer { code ->
+            // After game code is received, auto-connect
+            val address = _uiState.value.serverAddress
+            val port = _uiState.value.serverPort
+            val playerName = _uiState.value.playerName
+            val deck = _uiState.value.loadedDeck
+            connectAsClient(address, port, playerName, deck, gameCode = code)
         }
     }
 
