@@ -1,6 +1,6 @@
 # Dong-A-Deuce - Development TODO
 
-**Current Version:** v6.5.0-beta
+**Current Version:** v6.5.1-beta
 **Desktop:** 99% complete (fully playable!)
 **Android:** 99% complete (fully playable!)
 **Network Mode:** 100% complete (P2P + Dedicated Server + TLS)

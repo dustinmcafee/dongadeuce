@@ -1356,7 +1356,7 @@ private fun SmallBattlefieldCard(
         ) {
             CardImage(
                 imageUrl = when {
-                    cardInstance.isFaceDown -> null
+                    cardInstance.isFaceDown -> "https://cards.scryfall.io/back.png"
                     cardInstance.isFlipped -> cardInstance.card.backFaceImageUri ?: "https://cards.scryfall.io/back.png"
                     else -> cardInstance.card.imageUri
                 },
@@ -1399,10 +1399,15 @@ internal fun LocalPlayerSection(
 
     // Track active card drag for zone button drop targets (Issue 12)
     var draggedCardInstanceId by remember { mutableStateOf<String?>(null) }
+    var dragPositionX by remember { mutableStateOf(0f) }
     var dragPositionY by remember { mutableStateOf(0f) }
+    var graveyardButtonLeft by remember { mutableStateOf(0f) }
     var graveyardButtonTop by remember { mutableStateOf(0f) }
+    var graveyardButtonRight by remember { mutableStateOf(0f) }
     var graveyardButtonBottom by remember { mutableStateOf(0f) }
+    var exileButtonLeft by remember { mutableStateOf(0f) }
     var exileButtonTop by remember { mutableStateOf(0f) }
+    var exileButtonRight by remember { mutableStateOf(0f) }
     var exileButtonBottom by remember { mutableStateOf(0f) }
 
     // Resizable battlefield + hand heights (Issue 4)
@@ -1460,12 +1465,13 @@ internal fun LocalPlayerSection(
                     onCardDroppedToHand = { cardId ->
                         gameViewModel.moveCard(cardId, Zone.HAND)
                     },
-                    onCardDragStateChanged = { cardId, y ->
+                    onCardDragStateChanged = { cardId, x, y ->
                         draggedCardInstanceId = cardId
+                        dragPositionX = x
                         dragPositionY = y
                     },
-                    graveyardBounds = graveyardButtonTop to graveyardButtonBottom,
-                    exileBounds = exileButtonTop to exileButtonBottom,
+                    graveyardBounds = androidx.compose.ui.geometry.Rect(graveyardButtonLeft, graveyardButtonTop, graveyardButtonRight, graveyardButtonBottom),
+                    exileBounds = androidx.compose.ui.geometry.Rect(exileButtonLeft, exileButtonTop, exileButtonRight, exileButtonBottom),
                     onCardDroppedToGraveyard = { cardId ->
                         gameViewModel.moveCard(cardId, Zone.GRAVEYARD)
                     },
@@ -1514,9 +1520,10 @@ internal fun LocalPlayerSection(
             onShowGraveyard = onShowGraveyard,
             onShowExile = onShowExile,
             isCardBeingDragged = draggedCardInstanceId != null,
+            dragX = dragPositionX,
             dragY = dragPositionY,
-            onGraveyardBoundsChanged = { top, bottom -> graveyardButtonTop = top; graveyardButtonBottom = bottom },
-            onExileBoundsChanged = { top, bottom -> exileButtonTop = top; exileButtonBottom = bottom },
+            onGraveyardBoundsChanged = { left, top, right, bottom -> graveyardButtonLeft = left; graveyardButtonTop = top; graveyardButtonRight = right; graveyardButtonBottom = bottom },
+            onExileBoundsChanged = { left, top, right, bottom -> exileButtonLeft = left; exileButtonTop = top; exileButtonRight = right; exileButtonBottom = bottom },
             onDropOnGraveyard = {
                 draggedCardInstanceId?.let { cardId ->
                     gameViewModel.moveCard(cardId, Zone.GRAVEYARD)
@@ -1616,9 +1623,9 @@ internal fun BattlefieldGrid(
     onCardPositionChanged: ((String, Int, Int) -> Unit)? = null,
     handZoneTop: Float = 0f,
     onCardDroppedToHand: ((String) -> Unit)? = null,
-    onCardDragStateChanged: ((cardId: String?, dragY: Float) -> Unit)? = null,
-    graveyardBounds: Pair<Float, Float> = 0f to 0f,
-    exileBounds: Pair<Float, Float> = 0f to 0f,
+    onCardDragStateChanged: ((cardId: String?, dragX: Float, dragY: Float) -> Unit)? = null,
+    graveyardBounds: androidx.compose.ui.geometry.Rect = androidx.compose.ui.geometry.Rect.Zero,
+    exileBounds: androidx.compose.ui.geometry.Rect = androidx.compose.ui.geometry.Rect.Zero,
     onCardDroppedToGraveyard: ((String) -> Unit)? = null,
     onCardDroppedToExile: ((String) -> Unit)? = null
 ) {
@@ -1763,25 +1770,30 @@ internal fun BattlefieldGrid(
                             dragStartCol = col
                             dragStartRow = row
                             dragOffset = Offset.Zero
-                            onCardDragStateChanged?.invoke(card.instanceId, gridPositionInWindow.y + row * cellSize)
+                            val startX = gridPositionInWindow.x + col * cellSize
+                            val startY = gridPositionInWindow.y + row * cellSize
+                            onCardDragStateChanged?.invoke(card.instanceId, startX, startY)
                         },
                         onDrag = { offset ->
                             dragOffset += offset
+                            val absoluteX = gridPositionInWindow.x + col * cellSize + dragOffset.x
                             val absoluteY = gridPositionInWindow.y + row * cellSize + dragOffset.y
-                            onCardDragStateChanged?.invoke(draggingCard?.instanceId, absoluteY)
+                            onCardDragStateChanged?.invoke(draggingCard?.instanceId, absoluteX, absoluteY)
                         },
                         onDragEnd = {
-                            onCardDragStateChanged?.invoke(null, 0f)
+                            onCardDragStateChanged?.invoke(null, 0f, 0f)
                             draggingCard?.let { dragCard ->
-                                // Calculate absolute Y position of the card
+                                // Calculate absolute position of the card
+                                val cardXInGrid = col * cellSize + dragOffset.x
                                 val cardYInGrid = row * cellSize + dragOffset.y
+                                val absoluteX = gridPositionInWindow.x + cardXInGrid
                                 val absoluteY = gridPositionInWindow.y + cardYInGrid
 
                                 // Check if dropped on graveyard zone button
-                                if (graveyardBounds.first > 0f && absoluteY in graveyardBounds.first..graveyardBounds.second && onCardDroppedToGraveyard != null) {
+                                if (!graveyardBounds.isEmpty && graveyardBounds.contains(androidx.compose.ui.geometry.Offset(absoluteX, absoluteY)) && onCardDroppedToGraveyard != null) {
                                     onCardDroppedToGraveyard(dragCard.instanceId)
                                 // Check if dropped on exile zone button
-                                } else if (exileBounds.first > 0f && absoluteY in exileBounds.first..exileBounds.second && onCardDroppedToExile != null) {
+                                } else if (!exileBounds.isEmpty && exileBounds.contains(androidx.compose.ui.geometry.Offset(absoluteX, absoluteY)) && onCardDroppedToExile != null) {
                                     onCardDroppedToExile(dragCard.instanceId)
                                 // Check if dropped in hand zone
                                 } else if (handZoneTop > 0f && absoluteY > handZoneTop && onCardDroppedToHand != null) {
@@ -1872,7 +1884,7 @@ private fun BattlefieldCard(
         ) {
             CardImage(
                 imageUrl = when {
-                    cardInstance.isFaceDown -> null
+                    cardInstance.isFaceDown -> "https://cards.scryfall.io/back.png"
                     cardInstance.isFlipped -> cardInstance.card.backFaceImageUri ?: "https://cards.scryfall.io/back.png"
                     else -> cardInstance.card.imageUri
                 },
@@ -2034,7 +2046,7 @@ private fun DraggableBattlefieldCard(
         ) {
             CardImage(
                 imageUrl = when {
-                    cardInstance.isFaceDown -> null
+                    cardInstance.isFaceDown -> "https://cards.scryfall.io/back.png"
                     cardInstance.isFlipped -> cardInstance.card.backFaceImageUri ?: "https://cards.scryfall.io/back.png"
                     else -> cardInstance.card.imageUri
                 },
@@ -2188,9 +2200,10 @@ internal fun PlayerInfoBar(
     onShowGraveyard: () -> Unit,
     onShowExile: () -> Unit,
     isCardBeingDragged: Boolean = false,
+    dragX: Float = 0f,
     dragY: Float = 0f,
-    onGraveyardBoundsChanged: (top: Float, bottom: Float) -> Unit = { _, _ -> },
-    onExileBoundsChanged: (top: Float, bottom: Float) -> Unit = { _, _ -> },
+    onGraveyardBoundsChanged: (left: Float, top: Float, right: Float, bottom: Float) -> Unit = { _, _, _, _ -> },
+    onExileBoundsChanged: (left: Float, top: Float, right: Float, bottom: Float) -> Unit = { _, _, _, _ -> },
     onDropOnGraveyard: () -> Unit = {},
     onDropOnExile: () -> Unit = {},
     onGrabTopFromLibrary: () -> Unit = {},
@@ -2203,9 +2216,13 @@ internal fun PlayerInfoBar(
     val exileCount = gameViewModel.getCardCount(player.id, Zone.EXILE)
 
     // Track zone button bounds for drop target highlighting
+    var graveyardButtonLeftLocal by remember { mutableStateOf(0f) }
     var graveyardButtonTopLocal by remember { mutableStateOf(0f) }
+    var graveyardButtonRightLocal by remember { mutableStateOf(0f) }
     var graveyardButtonBottomLocal by remember { mutableStateOf(0f) }
+    var exileButtonLeftLocal by remember { mutableStateOf(0f) }
     var exileButtonTopLocal by remember { mutableStateOf(0f) }
+    var exileButtonRightLocal by remember { mutableStateOf(0f) }
     var exileButtonBottomLocal by remember { mutableStateOf(0f) }
 
     // Scale factor based on bar height (default 48dp)
@@ -2394,11 +2411,13 @@ internal fun PlayerInfoBar(
                     textSize = zoneTextSize,
                     onClick = onShowGraveyard,
                     onLongClick = onShowGraveyard,
-                    isDropHighlighted = isCardBeingDragged && dragY in graveyardButtonTopLocal..graveyardButtonBottomLocal,
-                    onBoundsChanged = { top, bottom ->
+                    isDropHighlighted = isCardBeingDragged && dragY in graveyardButtonTopLocal..graveyardButtonBottomLocal && dragX in graveyardButtonLeftLocal..graveyardButtonRightLocal,
+                    onBoundsChanged = { left, top, right, bottom ->
+                        graveyardButtonLeftLocal = left
                         graveyardButtonTopLocal = top
+                        graveyardButtonRightLocal = right
                         graveyardButtonBottomLocal = bottom
-                        onGraveyardBoundsChanged(top, bottom)
+                        onGraveyardBoundsChanged(left, top, right, bottom)
                     },
                     onDragTopCard = onGrabTopFromGraveyard
                 )
@@ -2410,11 +2429,13 @@ internal fun PlayerInfoBar(
                     textSize = zoneTextSize,
                     onClick = onShowExile,
                     onLongClick = onShowExile,
-                    isDropHighlighted = isCardBeingDragged && dragY in exileButtonTopLocal..exileButtonBottomLocal,
-                    onBoundsChanged = { top, bottom ->
+                    isDropHighlighted = isCardBeingDragged && dragY in exileButtonTopLocal..exileButtonBottomLocal && dragX in exileButtonLeftLocal..exileButtonRightLocal,
+                    onBoundsChanged = { left, top, right, bottom ->
+                        exileButtonLeftLocal = left
                         exileButtonTopLocal = top
+                        exileButtonRightLocal = right
                         exileButtonBottomLocal = bottom
-                        onExileBoundsChanged(top, bottom)
+                        onExileBoundsChanged(left, top, right, bottom)
                     },
                     onDragTopCard = onGrabTopFromExile
                 )
@@ -2452,7 +2473,7 @@ internal fun ZoneIconButton(
     onClick: () -> Unit,
     onLongClick: () -> Unit = {},
     isDropHighlighted: Boolean = false,
-    onBoundsChanged: (top: Float, bottom: Float) -> Unit = { _, _ -> },
+    onBoundsChanged: (left: Float, top: Float, right: Float, bottom: Float) -> Unit = { _, _, _, _ -> },
     onDragTopCard: (() -> Unit)? = null,
     iconSize: androidx.compose.ui.unit.Dp = 20.dp,
     textSize: androidx.compose.ui.unit.TextUnit = 12.sp
@@ -2470,7 +2491,7 @@ internal fun ZoneIconButton(
             .padding(horizontal = 4.dp, vertical = 2.dp)
             .onGloballyPositioned { coordinates ->
                 val pos = coordinates.positionInWindow()
-                onBoundsChanged(pos.y, pos.y + coordinates.size.height)
+                onBoundsChanged(pos.x, pos.y, pos.x + coordinates.size.width, pos.y + coordinates.size.height)
             }
             .pointerInput(onDragTopCard) {
                 if (onDragTopCard != null) {

@@ -220,7 +220,7 @@ cd server && ../gradlew test
   -Pandroid.testInstrumentationRunnerArguments.visual=true
 ```
 
-## Current Status (v6.5.0-beta)
+## Current Status (v6.5.1-beta)
 
 **Desktop:** 99% Complete - Fully Playable!
 **Android:** 99% Complete - Fully Playable!

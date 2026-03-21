@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.5.1-beta] - 2026-03-20
+
+### Fixed
+- **Face-down card image (Android)** - Face-down cards now show the standard Magic card back instead of a red placeholder
+- **"Turn Face Up" accessible** - Added top-level "Turn Face Up" option in battlefield context menu on both Android and Desktop
+- **Exile drag-drop target** - Dragging cards to exile no longer sends them to graveyard; drop targets now check both X and Y coordinates
+
 ## [6.5.0-beta] - 2026-03-20
 
 ### Fixed

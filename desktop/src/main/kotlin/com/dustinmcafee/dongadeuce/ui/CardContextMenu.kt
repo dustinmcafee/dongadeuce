@@ -227,6 +227,11 @@ private fun buildMainMenuItems(
 
             items.add(MenuItemData("Flip Card") { onAction(CardAction.FlipCard(cardInstance)) })
 
+            // Face down toggle — show at top level for easy access
+            if (cardInstance.isFaceDown) {
+                items.add(MenuItemData("Turn Face Up") { onAction(CardAction.ToggleFaceDown(cardInstance)) })
+            }
+
             // P/T modifications (for creatures)
             if (cardInstance.card.power != null && cardInstance.card.toughness != null) {
                 items.add(MenuItemData("Modify Power/Toughness...") {

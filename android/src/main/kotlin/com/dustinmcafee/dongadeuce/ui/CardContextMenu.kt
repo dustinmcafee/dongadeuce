@@ -138,6 +138,11 @@ private fun MainMenu(
 
                 MenuItem("Flip Card") { onAction(CardAction.FlipCard(cardInstance)) }
 
+                // Face down toggle — show at top level for easy access
+                if (cardInstance.isFaceDown) {
+                    MenuItem("Turn Face Up") { onAction(CardAction.ToggleFaceDown(cardInstance)) }
+                }
+
                 if (cardInstance.card.power != null && cardInstance.card.toughness != null) {
                     MenuItem("Modify Power/Toughness...") {
                         onAction(CardAction.ShowPowerToughnessDialog(cardInstance))
