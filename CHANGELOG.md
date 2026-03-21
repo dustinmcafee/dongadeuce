@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.5.0-beta] - 2026-03-20
+
+### Fixed
+- **Face-down card rendering (Desktop)** - Cards played face down now show the card back image instead of the front face
+- **Token oracle text** - Token abilities/oracle text now flows through creation dialog, network protocol, and displays in the card viewer text tab
+- **Token creation dialog** - Added "Abilities" text field on both Android and Desktop, auto-fills from Scryfall search results
+
 ## [6.4.0-beta] - 2026-03-20
 
 ### Added

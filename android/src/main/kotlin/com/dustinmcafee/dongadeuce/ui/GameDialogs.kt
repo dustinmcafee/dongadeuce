@@ -655,7 +655,7 @@ fun PlayerCountersDialog(
 fun TokenCreationDialog(
     viewModel: GameViewModel,
     onDismiss: () -> Unit,
-    onCreateToken: (String, String, String, String, String, String?, Int) -> Unit
+    onCreateToken: (String, String, String, String, String, String?, Int, String?) -> Unit
 ) {
     var tokenName by remember { mutableStateOf("") }
     var tokenType by remember { mutableStateOf("Creature Token") }
@@ -664,6 +664,7 @@ fun TokenCreationDialog(
     var color by remember { mutableStateOf("Colorless") }
     var tokenImageUri by remember { mutableStateOf<String?>(null) }
     var quantity by remember { mutableStateOf("1") }
+    var oracleText by remember { mutableStateOf("") }
     var searchQuery by remember { mutableStateOf("") }
 
     val uiState by viewModel.uiState.collectAsState()
@@ -715,6 +716,7 @@ fun TokenCreationDialog(
                                     power = card.power ?: ""
                                     toughness = card.toughness ?: ""
                                     tokenImageUri = card.imageUri
+                                    oracleText = card.oracleText ?: ""
                                     color = when {
                                         card.colors.isEmpty() -> "Colorless"
                                         card.colors.size > 1 -> "Colorless"
@@ -780,6 +782,17 @@ fun TokenCreationDialog(
                     )
                 }
 
+                // Abilities/Text
+                OutlinedTextField(
+                    value = oracleText,
+                    onValueChange = { oracleText = it },
+                    label = { Text("Abilities") },
+                    placeholder = { Text("e.g., Flying, haste") },
+                    modifier = Modifier.fillMaxWidth(),
+                    minLines = 2,
+                    maxLines = 4
+                )
+
                 Spacer(modifier = Modifier.height(8.dp))
 
                 // Color selector
@@ -818,7 +831,8 @@ fun TokenCreationDialog(
                         toughness.ifBlank { "1" },
                         color,
                         tokenImageUri,
-                        quantity.toIntOrNull() ?: 1
+                        quantity.toIntOrNull() ?: 1,
+                        oracleText.trim().ifBlank { null }
                     )
                 }
             }) {

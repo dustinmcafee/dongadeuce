@@ -2478,11 +2478,12 @@ class GameViewModel(
         toughness: String?,
         color: String,
         imageUri: String? = null,
-        quantity: Int = 1
+        quantity: Int = 1,
+        oracleText: String? = null
     ) {
         // In network mode, send action to server
         if (isNetworkGame) {
-            sendNetworkAction(NetworkAction.CreateToken(playerId, tokenName, tokenType, power, toughness, color, imageUri, quantity))
+            sendNetworkAction(NetworkAction.CreateToken(playerId, tokenName, tokenType, power, toughness, color, imageUri, quantity, oracleText))
             return
         }
 
@@ -2498,7 +2499,8 @@ class GameViewModel(
                 toughness = toughness,
                 colors = if (color.isNotBlank()) listOf(color) else emptyList(),
                 imageUri = imageUri,
-                scryfallId = null
+                scryfallId = null,
+                oracleText = oracleText
             )
 
             // Create the specified number of token instances with grid positions

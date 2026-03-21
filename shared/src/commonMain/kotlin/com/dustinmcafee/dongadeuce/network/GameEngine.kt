@@ -1175,7 +1175,8 @@ class GameEngine(private val maxPlayers: Int = 6) {
                     toughness = action.toughness,
                     colors = if (action.color.isNotBlank()) listOf(action.color) else emptyList(),
                     imageUri = action.imageUri,
-                    scryfallId = null
+                    scryfallId = null,
+                    oracleText = action.oracleText
                 )
                 var tempState = state
                 val tokenInstances = List(action.quantity) {

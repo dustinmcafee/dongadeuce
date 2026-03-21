@@ -294,8 +294,8 @@ private fun PlayerAreaDialogs(
         TokenCreationDialog(
             viewModel = viewModel,
             onDismiss = onDismissTokenCreation,
-            onCreateToken = { tokenName, tokenType, power, toughness, color, imageUri, quantity ->
-                viewModel.createToken(player.id, tokenName, tokenType, power, toughness, color, imageUri, quantity)
+            onCreateToken = { tokenName, tokenType, power, toughness, color, imageUri, quantity, oracleText ->
+                viewModel.createToken(player.id, tokenName, tokenType, power, toughness, color, imageUri, quantity, oracleText)
             }
         )
     }

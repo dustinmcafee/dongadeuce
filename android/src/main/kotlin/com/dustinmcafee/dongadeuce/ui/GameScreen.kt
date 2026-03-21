@@ -540,8 +540,8 @@ fun AndroidGameScreen(
         TokenCreationDialog(
             viewModel = gameViewModel,
             onDismiss = { showTokenDialog = false },
-            onCreateToken = { name, type, power, toughness, color, imageUri, quantity ->
-                gameViewModel.createToken(activePlayer.id, name, type, power, toughness, color, imageUri, quantity)
+            onCreateToken = { name, type, power, toughness, color, imageUri, quantity, oracleText ->
+                gameViewModel.createToken(activePlayer.id, name, type, power, toughness, color, imageUri, quantity, oracleText)
                 showTokenDialog = false
             }
         )

@@ -396,7 +396,8 @@ sealed class NetworkAction {
         val toughness: String?,
         val color: String,
         val imageUri: String?,
-        val quantity: Int = 1
+        val quantity: Int = 1,
+        val oracleText: String? = null
     ) : NetworkAction()
 
     /**

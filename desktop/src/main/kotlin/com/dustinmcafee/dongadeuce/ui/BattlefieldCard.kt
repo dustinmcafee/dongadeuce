@@ -157,7 +157,10 @@ fun BattlefieldCard(
                 // Card image as background
                 // For transform cards: show back face image when flipped
                 // For non-transform cards: show standard Magic card back when flipped
-                val imageUrl = if (cardInstance.isFlipped) {
+                val imageUrl = if (cardInstance.isFaceDown) {
+                    // Face-down cards always show standard card back
+                    "https://cards.scryfall.io/back.png"
+                } else if (cardInstance.isFlipped) {
                     // Show back face for DFCs, or standard card back for regular cards
                     cardInstance.card.backFaceImageUri ?: "https://cards.scryfall.io/back.png"
                 } else {

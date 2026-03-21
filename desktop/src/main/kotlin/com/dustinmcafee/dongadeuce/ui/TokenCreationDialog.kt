@@ -21,7 +21,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 fun TokenCreationDialog(
     viewModel: GameViewModel,
     onDismiss: () -> Unit,
-    onCreateToken: (tokenName: String, tokenType: String, power: String?, toughness: String?, color: String, imageUri: String?, quantity: Int) -> Unit
+    onCreateToken: (tokenName: String, tokenType: String, power: String?, toughness: String?, color: String, imageUri: String?, quantity: Int, oracleText: String?) -> Unit
 ) {
     var tokenName by remember { mutableStateOf("") }
     var tokenType by remember { mutableStateOf("Creature Token") }
@@ -30,6 +30,7 @@ fun TokenCreationDialog(
     var selectedColor by remember { mutableStateOf("Colorless") }
     var tokenImageUri by remember { mutableStateOf<String?>(null) }
     var quantity by remember { mutableStateOf("1") }
+    var oracleText by remember { mutableStateOf("") }
     var searchQuery by remember { mutableStateOf("") }
 
     val colors = listOf("Colorless", "White", "Blue", "Black", "Red", "Green", "Multicolor")
@@ -100,6 +101,7 @@ fun TokenCreationDialog(
                                             power = card.power ?: ""
                                             toughness = card.toughness ?: ""
                                             tokenImageUri = card.imageUri
+                                            oracleText = card.oracleText ?: ""
                                             selectedColor = when {
                                                 card.colors.isEmpty() -> "Colorless"
                                                 card.colors.size > 1 -> "Multicolor"
@@ -181,6 +183,17 @@ fun TokenCreationDialog(
                     )
                 }
 
+                // Abilities/Text
+                OutlinedTextField(
+                    value = oracleText,
+                    onValueChange = { oracleText = it },
+                    label = { Text("Abilities") },
+                    placeholder = { Text("e.g., Flying, haste") },
+                    modifier = Modifier.fillMaxWidth(),
+                    minLines = 2,
+                    maxLines = 4
+                )
+
                 // Color Dropdown
                 Text("Color", style = MaterialTheme.typography.labelMedium)
                 FlowRow(
@@ -218,7 +231,7 @@ fun TokenCreationDialog(
                     val qty = quantity.toIntOrNull()?.coerceAtLeast(1) ?: 1
                     val colorValue = if (selectedColor == "Colorless") "" else selectedColor
 
-                    onCreateToken(name, type, pow, tough, colorValue, tokenImageUri, qty)
+                    onCreateToken(name, type, pow, tough, colorValue, tokenImageUri, qty, oracleText.trim().ifBlank { null })
                     onDismiss()
                 },
                 enabled = tokenName.isNotBlank()

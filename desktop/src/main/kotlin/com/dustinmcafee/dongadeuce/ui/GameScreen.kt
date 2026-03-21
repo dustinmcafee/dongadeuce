@@ -1151,7 +1151,7 @@ fun GameScreen(
             TokenCreationDialog(
                 viewModel = viewModel,
                 onDismiss = { showTokenDialog = false },
-                onCreateToken = { tokenName, tokenType, power, toughness, color, imageUri, quantity ->
+                onCreateToken = { tokenName, tokenType, power, toughness, color, imageUri, quantity, oracleText ->
                     viewModel.createToken(
                         playerId = activePlayer.id,
                         tokenName = tokenName,
@@ -1160,7 +1160,8 @@ fun GameScreen(
                         toughness = toughness,
                         color = color,
                         imageUri = imageUri,
-                        quantity = quantity
+                        quantity = quantity,
+                        oracleText = oracleText
                     )
                     showTokenDialog = false
                 }
