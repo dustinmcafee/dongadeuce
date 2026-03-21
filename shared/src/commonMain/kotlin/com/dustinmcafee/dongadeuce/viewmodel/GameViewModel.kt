@@ -2016,16 +2016,25 @@ class GameViewModel(
         val gameState = currentState.gameState ?: return
         val player = gameState.players.find { it.id == playerId } ?: return
 
-        // Move all hand cards to library (without individual logging)
+        // Move all non-command-zone cards back to library (full reset)
         _uiState.update { state ->
             val gs = state.gameState ?: return@update state
             val updatedCardInstances = gs.cardInstances.map { card ->
-                if (card.ownerId == playerId && card.zone == Zone.HAND) {
-                    card.moveToZone(Zone.LIBRARY)
+                if (card.ownerId == playerId && card.zone != Zone.LIBRARY && card.zone != Zone.COMMAND_ZONE && !card.isToken) {
+                    card.moveToZone(Zone.LIBRARY).copy(
+                        isTapped = false,
+                        isFaceDown = false,
+                        isFlipped = false,
+                        powerModifier = 0,
+                        toughnessModifier = 0,
+                        doesntUntap = false,
+                        counters = emptyMap(),
+                        annotation = null
+                    )
                 } else {
                     card
                 }
-            }
+            }.filter { !(it.ownerId == playerId && it.isToken) } // Remove tokens
             state.copy(gameState = gs.copy(cardInstances = updatedCardInstances))
         }
 

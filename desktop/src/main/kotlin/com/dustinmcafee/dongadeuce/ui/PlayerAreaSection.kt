@@ -46,6 +46,7 @@ fun PlayerArea(
     var showLibrarySearchDialog by remember { mutableStateOf(false) }
     var showCommandZoneDialog by remember { mutableStateOf(false) }
     var showTokenCreationDialog by remember { mutableStateOf(false) }
+    var showLibraryOperationsDialog by remember { mutableStateOf(false) }
     var showSetLifeDialog by remember { mutableStateOf(false) }
 
     val libraryCount = viewModel.getCardCount(player.id, Zone.LIBRARY)
@@ -85,6 +86,28 @@ fun PlayerArea(
         showSetLifeDialog = showSetLifeDialog,
         onDismissSetLife = { showSetLifeDialog = false }
     )
+
+    // Library operations dialog (needs access to showLibrarySearchDialog state)
+    if (showLibraryOperationsDialog) {
+        LibraryOperationsDialog(
+            playerName = player.name,
+            librarySize = viewModel.getCardCount(player.id, Zone.LIBRARY),
+            allPlayers = allPlayers,
+            onDismiss = { showLibraryOperationsDialog = false },
+            onViewTopCards = { showLibraryOperationsDialog = false; showLibrarySearchDialog = true },
+            onViewBottomCards = { showLibraryOperationsDialog = false; showLibrarySearchDialog = true },
+            onShuffleTopCards = { viewModel.shuffleLibrary(player.id) },
+            onShuffleBottomCards = { viewModel.shuffleLibrary(player.id) },
+            onMoveTopToZone = { count, zone ->
+                viewModel.getTopCards(player.id, count).forEach { viewModel.moveCard(it.instanceId, zone) }
+            },
+            onMoveBottomToZone = { count, zone ->
+                viewModel.getBottomCards(player.id, count).forEach { viewModel.moveCard(it.instanceId, zone) }
+            },
+            onRevealTopCard = { viewModel.toggleRevealTopCard(player.id) },
+            onViewLibrary = { showLibraryOperationsDialog = false; showLibrarySearchDialog = true }
+        )
+    }
 
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
         // Player's battlefield
@@ -132,6 +155,7 @@ fun PlayerArea(
             onShowSetLifeDialog = { showSetLifeDialog = true },
             onShowCommandZoneDialog = { showCommandZoneDialog = true },
             onShowLibrarySearchDialog = { showLibrarySearchDialog = true },
+            onShowLibraryOperationsDialog = { showLibraryOperationsDialog = true },
             onShowGraveyardDialog = { showGraveyardDialog = true },
             onShowExileDialog = { showExileDialog = true },
             onShowCommanderDamageDialog = { showCommanderDamageDialog = true },
@@ -300,6 +324,21 @@ private fun PlayerAreaDialogs(
         )
     }
 
+    if (false) { // Removed — rendered in PlayerArea
+        LibraryOperationsDialog(
+            playerName = "",
+            librarySize = 0,
+            onDismiss = {},
+            onViewTopCards = {},
+            onViewBottomCards = {},
+            onShuffleTopCards = {},
+            onShuffleBottomCards = {},
+            onMoveTopToZone = { _, _ -> },
+            onMoveBottomToZone = { _, _ -> },
+            onRevealTopCard = {}
+        )
+    }
+
     if (showSetLifeDialog) {
         SetLifeDialog(
             playerName = player.name,
@@ -328,6 +367,7 @@ private fun PlayerZonesRow(
     onShowSetLifeDialog: () -> Unit,
     onShowCommandZoneDialog: () -> Unit,
     onShowLibrarySearchDialog: () -> Unit,
+    onShowLibraryOperationsDialog: () -> Unit,
     onShowGraveyardDialog: () -> Unit,
     onShowExileDialog: () -> Unit,
     onShowCommanderDamageDialog: () -> Unit,
@@ -450,6 +490,7 @@ private fun PlayerZonesRow(
                 cardCount = libraryCount,
                 modifier = Modifier.weight(1f).fillMaxWidth(),
                 onClick = onShowLibrarySearchDialog,
+                onRightClick = onShowLibraryOperationsDialog,
                 dragDropState = dragDropState,
                 onDropCards = { cardIds ->
                     dragDropState?.markHandledByZone()

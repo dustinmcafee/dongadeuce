@@ -12,8 +12,8 @@ android {
         applicationId = "com.dustinmcafee.dongadeuce"
         minSdk = 29
         targetSdk = 34
-        versionCode = 35
-        versionName = "6.5.1-beta"
+        versionCode = 36
+        versionName = "6.5.2-beta"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 

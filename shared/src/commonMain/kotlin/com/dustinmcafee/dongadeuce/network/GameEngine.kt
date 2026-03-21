@@ -990,14 +990,24 @@ class GameEngine(private val maxPlayers: Int = 6) {
             is NetworkAction.Mulligan -> {
                 val targetPlayer = state.players.find { it.id == action.playerId } ?: return state
 
+                // Move all non-command-zone cards back to library (full reset), remove tokens
                 var newState = state.copy(
                     cardInstances = state.cardInstances.map { card ->
-                        if (card.ownerId == action.playerId && card.zone == Zone.HAND) {
-                            card.moveToZone(Zone.LIBRARY)
+                        if (card.ownerId == action.playerId && card.zone != Zone.LIBRARY && card.zone != Zone.COMMAND_ZONE && !card.isToken) {
+                            card.moveToZone(Zone.LIBRARY).copy(
+                                isTapped = false,
+                                isFaceDown = false,
+                                isFlipped = false,
+                                powerModifier = 0,
+                                toughnessModifier = 0,
+                                doesntUntap = false,
+                                counters = emptyMap(),
+                                annotation = null
+                            )
                         } else {
                             card
                         }
-                    }
+                    }.filter { !(it.ownerId == action.playerId && it.isToken) }
                 )
 
                 val libraryCards = newState.cardInstances.filter {

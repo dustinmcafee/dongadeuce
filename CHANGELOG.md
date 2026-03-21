@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.5.2-beta] - 2026-03-20
+
+### Added
+- **Library operations in network mode (Desktop)** - Right-click library zone button to access peek, move to zone, reveal, and shuffle operations
+
+### Fixed
+- **Mulligan full reset** - Mulligan now returns all cards (hand, battlefield, graveyard, exile) to library, removes tokens, resets card state, then shuffles and draws a new hand
+
 ## [6.5.1-beta] - 2026-03-20
 
 ### Fixed
