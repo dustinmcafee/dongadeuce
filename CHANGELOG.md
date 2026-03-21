@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.3.0-beta] - 2026-03-20
+
+### Added
+- **Load deck in lobby** - Players can host/join games without a deck loaded, then load their deck while in the lobby
+- **UpdateDeck protocol message** - New message type for sending deck to lobby after connecting
+- **Game code display in lobby** - Both host and join lobby screens show the game code prominently
+- **Dedicated server Create/Join split** - "Create Game" creates a new room on the server, "Join Game" joins an existing room with a code
+- **P2P TLS hosting** - P2P host now generates a self-signed certificate and starts with TLS when enabled
+- **Graceful port-in-use handling** - P2P hosting shows an error message instead of crashing when port is taken
+
+### Changed
+- **3-mode game selector** - Replaced 2-chip (Network/Hotseat) with 3-chip (Hotseat/P2P/Dedicated) on both Android and Desktop
+- **TLS enabled by default** - TLS is now on by default for all new installations
+- **TLS is a global setting** - Removed per-connection TLS checkbox; TLS is now controlled only from global settings
+- **Port defaults by mode** - P2P defaults to port 8080, Dedicated defaults to port 9090
+- **Admin not auto-readied** - Host starts unready since they may not have a deck loaded yet
+- **Deck optional for hosting/joining** - All deck-required guards removed from host/join flows
+
 ## [6.2.0-beta] - 2026-03-17
 
 ### Added

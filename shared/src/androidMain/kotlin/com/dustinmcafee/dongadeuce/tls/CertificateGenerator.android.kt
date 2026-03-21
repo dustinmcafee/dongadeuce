@@ -27,11 +27,11 @@ private const val KEYSTORE_TYPE = "PKCS12"
  *
  * Uses Bouncy Castle for cert generation (Android doesn't support JKS or sun.security.x509).
  */
-fun generateOrLoadCertificate(
+actual fun generateOrLoadCertificate(
     keystorePath: String,
-    keystorePassword: String = "dongadeuce",
-    keyAlias: String = "dongadeuce",
-    privateKeyPassword: String = "dongadeuce"
+    keystorePassword: String,
+    keyAlias: String,
+    privateKeyPassword: String
 ): CertificateInfo {
     val keystoreFile = File(keystorePath)
 

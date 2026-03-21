@@ -17,7 +17,7 @@ data class UserSettingsData(
     val lastDeckDirectory: String? = null,
     val uiScale: Float = 1.0f,  // UI scale factor (0.75, 1.0, 1.25, 1.5)
     val serverMode: String = "LAN",  // "LAN" or "DEDICATED"
-    val tlsEnabled: Boolean = false
+    val tlsEnabled: Boolean = true
 )
 
 /**

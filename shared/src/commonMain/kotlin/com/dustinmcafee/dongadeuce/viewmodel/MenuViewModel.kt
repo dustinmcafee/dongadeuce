@@ -17,6 +17,8 @@ import com.dustinmcafee.dongadeuce.settings.UserSettings
 import com.dustinmcafee.dongadeuce.tls.TofuVerifier
 import com.dustinmcafee.dongadeuce.tls.TrustDecision
 import com.dustinmcafee.dongadeuce.tls.TrustedServersStore
+import com.dustinmcafee.dongadeuce.tls.generateOrLoadCertificate
+import com.dustinmcafee.dongadeuce.platform.getAppDataDirectory
 import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
@@ -73,13 +75,14 @@ data class MenuUiState(
     // Server mode
     val serverMode: ServerMode = ServerMode.LAN,
     val gameCode: String? = null, // Game code for dedicated server mode
+    val dedicatedCreateMode: Boolean = false, // True = creating new game, False = joining existing
     val availableGames: List<String> = emptyList(), // Available games from dedicated server
     // Commander selection state
     val pendingDeckData: ParsedDeckData? = null, // Deck waiting for commander selection
     val pendingDeckPlayerIndex: Int? = null, // Player index for hotseat (null for single deck)
     val commanderCandidates: List<Card> = emptyList(), // Cards that can be selected as commander
     // TLS
-    val tlsEnabled: Boolean = false,
+    val tlsEnabled: Boolean = true,
     val serverFingerprint: String? = null, // Shown when hosting with TLS
     val tofuPrompt: TofuPromptData? = null // Shown when connecting to untrusted server
 )
@@ -109,6 +112,9 @@ class MenuViewModel {
     private val scryfallApi = ScryfallApi()
     private val cardCache = CardCache()
 
+    private fun getKeystorePath(): String =
+        getAppDataDirectory().child("server.keystore").path
+
     // Network components
     private var gameServer: GameServer? = null
     private var gameClient: GameClient? = null
@@ -129,12 +135,14 @@ class MenuViewModel {
      */
     private fun loadPersistedSettings() {
         val settings = userSettings.load()
+        val mode = if (settings.serverMode == "DEDICATED") ServerMode.DEDICATED else ServerMode.LAN
+        val defaultPort = if (mode == ServerMode.DEDICATED) 9090 else 8080
         _uiState.update {
             it.copy(
                 playerName = settings.playerName,
                 serverAddress = settings.serverAddress,
-                serverPort = settings.serverPort,
-                serverMode = if (settings.serverMode == "DEDICATED") ServerMode.DEDICATED else ServerMode.LAN,
+                serverPort = defaultPort,
+                serverMode = mode,
                 tlsEnabled = settings.tlsEnabled
             )
         }
@@ -765,14 +773,38 @@ class MenuViewModel {
         val port = _uiState.value.serverPort
         val playerName = _uiState.value.playerName
         val deck = _uiState.value.loadedDeck // May be null — can load in lobby
+        val useTls = _uiState.value.tlsEnabled
 
-        // 1. Create and start the embedded server (no host deck/name coupling)
+        // Generate TLS cert if enabled
+        val tlsConfig = if (useTls) {
+            try {
+                val certInfo = generateOrLoadCertificate(
+                    keystorePath = getKeystorePath()
+                )
+                _uiState.update { it.copy(serverFingerprint = certInfo.fingerprint) }
+                // Auto-trust our own server
+                trustedServersStore.trustServer("localhost", port, certInfo.fingerprint)
+                certInfo.toServerTlsConfig()
+            } catch (e: Exception) {
+                _uiState.update { it.copy(error = "Failed to generate TLS certificate: ${e.message}") }
+                return
+            }
+        } else null
+
+        // 1. Create and start the embedded server
         gameServer = GameServer(
             port = port,
-            maxPlayers = 4
+            maxPlayers = 4,
+            tlsConfig = tlsConfig
         )
 
-        val serverUrl = gameServer?.start()
+        val serverUrl = try {
+            gameServer?.start()
+        } catch (e: Exception) {
+            gameServer = null
+            _uiState.update { it.copy(error = "Failed to start server: ${e.message}") }
+            return
+        }
 
         _uiState.update {
             it.copy(
@@ -792,7 +824,13 @@ class MenuViewModel {
      */
     fun navigateToJoin() {
         _uiState.update {
-            it.copy(currentScreen = Screen.JoinLobby, error = null)
+            it.copy(currentScreen = Screen.JoinLobby, dedicatedCreateMode = false, error = null)
+        }
+    }
+
+    fun navigateToDedicatedCreate() {
+        _uiState.update {
+            it.copy(currentScreen = Screen.JoinLobby, dedicatedCreateMode = true, error = null)
         }
     }
 
@@ -1038,7 +1076,8 @@ class MenuViewModel {
      * Set server mode (LAN or DEDICATED) and persist
      */
     fun setServerMode(mode: ServerMode) {
-        _uiState.update { it.copy(serverMode = mode) }
+        val defaultPort = if (mode == ServerMode.DEDICATED) 9090 else 8080
+        _uiState.update { it.copy(serverMode = mode, serverPort = defaultPort) }
         userSettings.setServerMode(mode.name)
     }
 

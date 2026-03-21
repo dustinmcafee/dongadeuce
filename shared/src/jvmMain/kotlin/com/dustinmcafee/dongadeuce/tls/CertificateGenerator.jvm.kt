@@ -15,11 +15,11 @@ private const val VALIDITY_DAYS = 3650L // 10 years
  * or loads an existing one. If the existing cert is expired or expiring
  * within 30 days, the keystore is regenerated.
  */
-fun generateOrLoadCertificate(
+actual fun generateOrLoadCertificate(
     keystorePath: String,
-    keystorePassword: String = "dongadeuce",
-    keyAlias: String = "dongadeuce",
-    privateKeyPassword: String = "dongadeuce"
+    keystorePassword: String,
+    keyAlias: String,
+    privateKeyPassword: String
 ): CertificateInfo {
     val keystoreFile = File(keystorePath)
 

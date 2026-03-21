@@ -180,7 +180,7 @@ class PostPlaytestUiTest {
     fun userSettingsData_hasCorrectDefaults() {
         val data = com.dustinmcafee.dongadeuce.settings.UserSettingsData()
         assert(data.serverMode == "LAN") { "Default serverMode should be LAN" }
-        assert(!data.tlsEnabled) { "Default tlsEnabled should be false" }
+        assert(data.tlsEnabled) { "Default tlsEnabled should be true" }
         assert(data.playerName == "Player 1") { "Default playerName should be Player 1" }
         assert(data.serverPort == 8080) { "Default serverPort should be 8080" }
     }

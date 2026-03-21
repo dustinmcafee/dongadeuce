@@ -3,6 +3,7 @@ package com.dustinmcafee.dongadeuce
 import com.dustinmcafee.dongadeuce.models.*
 import com.dustinmcafee.dongadeuce.network.*
 import com.dustinmcafee.dongadeuce.settings.UserSettings
+import com.dustinmcafee.dongadeuce.settings.UserSettingsData
 import com.dustinmcafee.dongadeuce.viewmodel.GameViewModel
 import kotlin.test.*
 
@@ -176,10 +177,9 @@ class PostPlaytestFixesTest {
 
     @Test
     fun `UserSettings defaults for new fields`() {
-        val settings = UserSettings()
-        val data = settings.load()
+        val data = UserSettingsData()
         assertEquals("LAN", data.serverMode)
-        assertFalse(data.tlsEnabled)
+        assertTrue(data.tlsEnabled)
     }
 
     // ==================== Issue 8: Hand position preservation ====================

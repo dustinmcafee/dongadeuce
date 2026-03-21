@@ -118,6 +118,11 @@ class AndroidMenuViewModel : ViewModel() {
         _currentScreen.value = AndroidScreen.JoinLobby
     }
 
+    fun navigateToDedicatedCreate() {
+        delegate.navigateToDedicatedCreate()
+        _currentScreen.value = AndroidScreen.JoinLobby
+    }
+
     /**
      * Host a game on a dedicated server (create room + auto-connect)
      */

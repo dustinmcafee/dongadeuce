@@ -89,17 +89,19 @@ class AndroidMenuViewModelTest {
     @Test
     fun clearError_clearsError() {
         val vm = AndroidMenuViewModel()
-        vm.startHosting() // triggers error (no deck)
+        vm.setServerAddress("") // blank address
+        vm.connectToGame() // triggers "Please enter a server address" error
         assertNotNull(vm.uiState.value.error)
         vm.clearError()
         assertNull(vm.uiState.value.error)
     }
 
     @Test
-    fun startHosting_withoutDeck_showsError() {
+    fun startHosting_withoutDeck_proceedsToLobby() {
         val vm = AndroidMenuViewModel()
         vm.startHosting()
-        assertEquals("Please load a deck first", vm.uiState.value.error)
+        // Deck is no longer required — hosting proceeds (may fail on port, but no deck error)
+        assertNotEquals("Please load a deck first", vm.uiState.value.error)
     }
 
     @Test

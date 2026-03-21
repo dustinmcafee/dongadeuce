@@ -488,11 +488,11 @@ fun MenuScreen(
                 } else {
                     // Dedicated panel
                     Button(
-                        onClick = { viewModel.hostDedicatedGame() },
+                        onClick = { viewModel.navigateToDedicatedCreate() },
                         modifier = Modifier.fillMaxWidth(),
                         enabled = !uiState.isLoading && playerName.isNotBlank()
                     ) {
-                        Text("Host Game")
+                        Text("Create Game")
                     }
 
                     Button(
@@ -734,6 +734,15 @@ fun HostLobbyScreen(
     ) {
         Text("Hosting Game", style = MaterialTheme.typography.headlineMedium)
 
+        // Show game code if available (dedicated server mode)
+        if (uiState.gameCode != null) {
+            Text(
+                "Game Code: ${uiState.gameCode}",
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.primary
+            )
+        }
+
         Spacer(modifier = Modifier.height(16.dp))
 
         // Deck status card
@@ -950,12 +959,15 @@ fun JoinLobbyScreen(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Text("Join Game", style = MaterialTheme.typography.headlineMedium)
+        Text(
+            if (uiState.dedicatedCreateMode) "Create Game" else "Join Game",
+            style = MaterialTheme.typography.headlineMedium
+        )
 
         Spacer(modifier = Modifier.height(16.dp))
 
         if (!isConnected) {
-            // Connection form — server mode already set from menu
+            // Connection form
             OutlinedTextField(
                 value = serverAddress,
                 onValueChange = {
@@ -978,8 +990,8 @@ fun JoinLobbyScreen(
                 modifier = Modifier.fillMaxWidth()
             )
 
-            // Game code field + create button (dedicated server only)
-            if (isDedicated) {
+            // Game code field (dedicated join only — not shown in create mode)
+            if (isDedicated && !uiState.dedicatedCreateMode) {
                 OutlinedTextField(
                     value = gameCode,
                     onValueChange = {
@@ -990,38 +1002,20 @@ fun JoinLobbyScreen(
                     placeholder = { Text("e.g. ABC123") },
                     modifier = Modifier.fillMaxWidth()
                 )
-
-                OutlinedButton(
-                    onClick = {
-                        viewModel.createGameOnServer { code ->
-                            gameCode = code
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = !uiState.isLoading
-                ) {
-                    Text("Create New Game")
-                }
-            }
-
-            // TLS toggle
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Checkbox(
-                    checked = uiState.tlsEnabled,
-                    onCheckedChange = { viewModel.setTlsEnabled(it) }
-                )
-                Text("Encrypt connection (TLS)", style = MaterialTheme.typography.bodyMedium)
             }
 
             Spacer(modifier = Modifier.weight(1f))
 
             Button(
-                onClick = { viewModel.connectToGame() },
+                onClick = {
+                    if (uiState.dedicatedCreateMode) {
+                        viewModel.hostDedicatedGame()
+                    } else {
+                        viewModel.connectToGame()
+                    }
+                },
                 modifier = Modifier.fillMaxWidth(),
-                enabled = !uiState.isLoading && (!isDedicated || gameCode.isNotBlank())
+                enabled = !uiState.isLoading && (!isDedicated || uiState.dedicatedCreateMode || gameCode.isNotBlank())
             ) {
                 if (uiState.isLoading) {
                     CircularProgressIndicator(
@@ -1029,7 +1023,7 @@ fun JoinLobbyScreen(
                         strokeWidth = 2.dp
                     )
                 } else {
-                    Text("Connect")
+                    Text(if (uiState.dedicatedCreateMode) "Create & Join" else "Connect")
                 }
             }
 
@@ -1041,6 +1035,15 @@ fun JoinLobbyScreen(
             }
         } else {
             // Connected - show lobby
+
+            // Show game code if available
+            if (uiState.gameCode != null) {
+                Text(
+                    "Game Code: ${uiState.gameCode}",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
 
             // Deck status + load/paste buttons
             Card(

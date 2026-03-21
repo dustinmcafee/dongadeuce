@@ -264,7 +264,7 @@ fun MenuScreen(
 
             // Game mode selector
             Card(
-                modifier = Modifier.width(300.dp),
+                modifier = Modifier.width(450.dp),
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surfaceVariant
                 )
@@ -281,7 +281,7 @@ fun MenuScreen(
                         FilterChip(
                             selected = uiState.hotseatMode,
                             onClick = { viewModel.setHotseatMode(true) },
-                            label = { Text("Local Hotseat", color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                            label = { Text("Hotseat", color = MaterialTheme.colorScheme.onSurfaceVariant) }
                         )
                         FilterChip(
                             selected = !uiState.hotseatMode && uiState.serverMode == ServerMode.LAN,
@@ -289,7 +289,7 @@ fun MenuScreen(
                                 viewModel.setHotseatMode(false)
                                 viewModel.setServerMode(ServerMode.LAN)
                             },
-                            label = { Text("Network - P2P", color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                            label = { Text("P2P", color = MaterialTheme.colorScheme.onSurfaceVariant) }
                         )
                         FilterChip(
                             selected = !uiState.hotseatMode && uiState.serverMode == ServerMode.DEDICATED,
@@ -297,7 +297,7 @@ fun MenuScreen(
                                 viewModel.setHotseatMode(false)
                                 viewModel.setServerMode(ServerMode.DEDICATED)
                             },
-                            label = { Text("Network - Dedicated", color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                            label = { Text("Dedicated", color = MaterialTheme.colorScheme.onSurfaceVariant) }
                         )
                     }
                 }
@@ -435,11 +435,11 @@ fun MenuScreen(
                 } else {
                     // Dedicated panel
                     Button(
-                        onClick = { viewModel.hostDedicatedGame() },
+                        onClick = { viewModel.navigateToDedicatedCreate() },
                         modifier = Modifier.width(200.dp),
                         enabled = !uiState.isLoading && playerName.isNotBlank()
                     ) {
-                        Text("Host Game")
+                        Text("Create Game")
                     }
 
                     Button(
@@ -644,6 +644,15 @@ fun HostLobbyScreen(viewModel: MenuViewModel) {
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Text("Hosting Game", style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.onBackground)
+
+            // Show game code if available (dedicated server mode)
+            if (uiState.gameCode != null) {
+                Text(
+                    "Game Code: ${uiState.gameCode}",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -856,12 +865,16 @@ fun JoinLobbyScreen(viewModel: MenuViewModel) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Text("Join Game", style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.onBackground)
+            Text(
+                if (uiState.dedicatedCreateMode) "Create Game" else "Join Game",
+                style = MaterialTheme.typography.headlineMedium,
+                color = MaterialTheme.colorScheme.onBackground
+            )
 
             Spacer(modifier = Modifier.height(16.dp))
 
             if (!isConnected) {
-                // Connection form — server mode already set from menu
+                // Connection form
                 OutlinedTextField(
                     value = serverAddress,
                     onValueChange = {
@@ -886,8 +899,8 @@ fun JoinLobbyScreen(viewModel: MenuViewModel) {
                     modifier = Modifier.width(300.dp)
                 )
 
-                // Game code field (dedicated server only)
-                if (isDedicated) {
+                // Game code field (dedicated join only — not shown in create mode)
+                if (isDedicated && !uiState.dedicatedCreateMode) {
                     OutlinedTextField(
                         value = gameCode,
                         onValueChange = {
@@ -898,37 +911,20 @@ fun JoinLobbyScreen(viewModel: MenuViewModel) {
                         placeholder = { Text("e.g. ABC123") },
                         modifier = Modifier.width(300.dp)
                     )
-
-                    OutlinedButton(
-                        onClick = {
-                            viewModel.createGameOnServer { code ->
-                                gameCode = code
-                            }
-                        },
-                        enabled = !uiState.isLoading
-                    ) {
-                        Text("Create New Game")
-                    }
-                }
-
-                // TLS toggle
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Checkbox(
-                        checked = uiState.tlsEnabled,
-                        onCheckedChange = { viewModel.setTlsEnabled(it) }
-                    )
-                    Text("Encrypt connection (TLS)", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onBackground)
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                     Button(
-                        onClick = { viewModel.connectToGame() },
-                        enabled = !uiState.isLoading && (!isDedicated || gameCode.isNotBlank())
+                        onClick = {
+                            if (uiState.dedicatedCreateMode) {
+                                viewModel.hostDedicatedGame()
+                            } else {
+                                viewModel.connectToGame()
+                            }
+                        },
+                        enabled = !uiState.isLoading && (!isDedicated || uiState.dedicatedCreateMode || gameCode.isNotBlank())
                     ) {
                         if (uiState.isLoading) {
                             CircularProgressIndicator(
@@ -936,7 +932,7 @@ fun JoinLobbyScreen(viewModel: MenuViewModel) {
                                 strokeWidth = 2.dp
                             )
                         } else {
-                            Text("Connect")
+                            Text(if (uiState.dedicatedCreateMode) "Create & Join" else "Connect")
                         }
                     }
 
@@ -946,6 +942,15 @@ fun JoinLobbyScreen(viewModel: MenuViewModel) {
                 }
             } else {
                 // Connected - show lobby
+
+                // Show game code if available
+                if (uiState.gameCode != null) {
+                    Text(
+                        "Game Code: ${uiState.gameCode}",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
 
                 // Deck status + load/paste buttons
                 Card(
