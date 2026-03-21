@@ -2715,14 +2715,17 @@ fun SettingsDialog(
     currentPlayerName: String,
     currentServerAddress: String,
     currentServerPort: Int,
+    currentTlsEnabled: Boolean,
     onPlayerNameChange: (String) -> Unit,
     onServerAddressChange: (String) -> Unit,
     onServerPortChange: (Int) -> Unit,
+    onTlsEnabledChange: (Boolean) -> Unit,
     onDismiss: () -> Unit
 ) {
     var playerName by remember { mutableStateOf(currentPlayerName) }
     var serverAddress by remember { mutableStateOf(currentServerAddress) }
     var serverPort by remember { mutableStateOf(currentServerPort.toString()) }
+    var tlsEnabled by remember { mutableStateOf(currentTlsEnabled) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -2775,6 +2778,17 @@ fun SettingsDialog(
                     supportingText = { Text("Valid range: 1024-65535") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                 )
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Checkbox(
+                        checked = tlsEnabled,
+                        onCheckedChange = { tlsEnabled = it }
+                    )
+                    Text("Encrypt connections (TLS)", style = MaterialTheme.typography.bodyMedium)
+                }
             }
         },
         confirmButton = {
@@ -2784,6 +2798,7 @@ fun SettingsDialog(
                     onServerAddressChange(serverAddress)
                     val port = serverPort.toIntOrNull()?.coerceIn(1024, 65535) ?: 8080
                     onServerPortChange(port)
+                    onTlsEnabledChange(tlsEnabled)
                     onDismiss()
                 }
             ) {

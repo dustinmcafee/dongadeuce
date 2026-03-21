@@ -170,9 +170,11 @@ fun MenuScreen(
             playerName = uiState.playerName,
             serverAddress = uiState.serverAddress,
             serverPort = uiState.serverPort,
+            tlsEnabled = uiState.tlsEnabled,
             onPlayerNameChange = { viewModel.setPlayerName(it) },
             onServerAddressChange = { viewModel.setServerAddress(it) },
             onServerPortChange = { viewModel.setServerPort(it) },
+            onTlsEnabledChange = { viewModel.setTlsEnabled(it) },
             onDismiss = { showSettingsDialog = false }
         )
     }
@@ -634,14 +636,17 @@ fun SettingsDialog(
     playerName: String,
     serverAddress: String,
     serverPort: Int,
+    tlsEnabled: Boolean,
     onPlayerNameChange: (String) -> Unit,
     onServerAddressChange: (String) -> Unit,
     onServerPortChange: (Int) -> Unit,
+    onTlsEnabledChange: (Boolean) -> Unit,
     onDismiss: () -> Unit
 ) {
     var name by remember { mutableStateOf(playerName) }
     var address by remember { mutableStateOf(serverAddress) }
     var port by remember { mutableStateOf(serverPort.toString()) }
+    var tls by remember { mutableStateOf(tlsEnabled) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -677,6 +682,34 @@ fun SettingsDialog(
                     label = { Text("Default Server Port") },
                     singleLine = true
                 )
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Checkbox(
+                        checked = tls,
+                        onCheckedChange = {
+                            tls = it
+                            onTlsEnabledChange(it)
+                        }
+                    )
+                    Text("Encrypt connections (TLS)", style = MaterialTheme.typography.bodyMedium)
+                }
+
+                var trustedCount by remember {
+                    mutableStateOf(com.dustinmcafee.dongadeuce.tls.TrustedServersStore().load().servers.size)
+                }
+                OutlinedButton(
+                    onClick = {
+                        val store = com.dustinmcafee.dongadeuce.tls.TrustedServersStore()
+                        val servers = store.load().servers
+                        servers.forEach { store.removeServer(it.host, it.port) }
+                        trustedCount = 0
+                    },
+                    enabled = trustedCount > 0
+                ) {
+                    Text("Clear Trusted Servers ($trustedCount)")
+                }
             }
         },
         confirmButton = {

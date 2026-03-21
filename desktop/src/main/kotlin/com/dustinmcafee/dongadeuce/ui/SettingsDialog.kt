@@ -8,6 +8,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.dustinmcafee.dongadeuce.UiScaleState
 import com.dustinmcafee.dongadeuce.settings.UserSettings
+import com.dustinmcafee.dongadeuce.tls.TrustedServersStore
 import javax.swing.JFileChooser
 import kotlin.math.roundToInt
 
@@ -21,14 +22,17 @@ fun SettingsDialog(
     currentPlayerName: String,
     currentServerAddress: String,
     currentServerPort: Int,
+    currentTlsEnabled: Boolean,
     onPlayerNameChange: (String) -> Unit,
     onServerAddressChange: (String) -> Unit,
     onServerPortChange: (Int) -> Unit,
+    onTlsEnabledChange: (Boolean) -> Unit,
     onDismiss: () -> Unit
 ) {
     var playerName by remember { mutableStateOf(currentPlayerName) }
     var serverAddress by remember { mutableStateOf(currentServerAddress) }
     var serverPort by remember { mutableStateOf(currentServerPort.toString()) }
+    var tlsEnabled by remember { mutableStateOf(currentTlsEnabled) }
     var defaultDeckDir by remember { mutableStateOf(userSettings.getLastDeckDirectory() ?: "") }
     var uiScale by remember { mutableStateOf(userSettings.getUiScale()) }
 
@@ -83,6 +87,32 @@ fun SettingsDialog(
                     modifier = Modifier.fillMaxWidth(),
                     supportingText = { Text("Valid range: 1024-65535") }
                 )
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Checkbox(
+                        checked = tlsEnabled,
+                        onCheckedChange = { tlsEnabled = it }
+                    )
+                    Text("Encrypt connections (TLS)", style = MaterialTheme.typography.bodyMedium)
+                }
+
+                var trustedCount by remember {
+                    mutableStateOf(TrustedServersStore().load().servers.size)
+                }
+                OutlinedButton(
+                    onClick = {
+                        val store = TrustedServersStore()
+                        val servers = store.load().servers
+                        servers.forEach { store.removeServer(it.host, it.port) }
+                        trustedCount = 0
+                    },
+                    enabled = trustedCount > 0
+                ) {
+                    Text("Clear Trusted Servers ($trustedCount)")
+                }
 
                 Divider()
 
@@ -194,6 +224,7 @@ fun SettingsDialog(
                     onServerAddressChange(serverAddress)
                     val port = serverPort.toIntOrNull()?.coerceIn(1024, 65535) ?: 8080
                     onServerPortChange(port)
+                    onTlsEnabledChange(tlsEnabled)
                     userSettings.setLastDeckDirectory(defaultDeckDir.ifBlank { null })
                     userSettings.setUiScale(uiScale)
                     // Apply UI scale immediately

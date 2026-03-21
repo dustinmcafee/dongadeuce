@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.4.0-beta] - 2026-03-20
+
+### Added
+- **TLS in global settings** - TLS toggle moved to Settings dialog on both Android and Desktop
+- **Clear Trusted Servers** - Button in Settings to wipe all saved server certificate fingerprints
+- **TOFU on game creation** - Dedicated server "Create Game" now shows TOFU prompt on certificate mismatch instead of failing
+- **Dedicated Create/Join flow** - "Create Game" and "Join Game" are separate screens with appropriate fields
+
+### Changed
+- **Server address/port removed from main menu** - Dedicated mode only shows Create/Join buttons; address/port entered on the connection screen
+- **TLS checkbox removed from connection screens** - TLS is now a global setting only
+
+### Fixed
+- **P2P TLS hosting** - Host now generates self-signed certificate and starts server with TLS
+- **Port conflict on mode switch** - P2P defaults to 8080, Dedicated to 9090, reset on mode change
+- **Graceful port-in-use error** - P2P hosting shows error instead of crashing when port is taken
+- **Mana UI test fixes** - Read player snapshot after addMana, not before
+- **Instrumented test fixes** - Updated tests for deck-optional hosting and TLS-enabled defaults
+
 ## [6.3.0-beta] - 2026-03-20
 
 ### Added

@@ -130,9 +130,11 @@ fun MenuScreen(
             currentPlayerName = uiState.playerName,
             currentServerAddress = uiState.serverAddress,
             currentServerPort = uiState.serverPort,
+            currentTlsEnabled = uiState.tlsEnabled,
             onPlayerNameChange = { viewModel.setPlayerName(it) },
             onServerAddressChange = { viewModel.setServerAddress(it) },
             onServerPortChange = { viewModel.setServerPort(it) },
+            onTlsEnabledChange = { viewModel.setTlsEnabled(it) },
             onDismiss = { showSettingsDialog = false }
         )
     }

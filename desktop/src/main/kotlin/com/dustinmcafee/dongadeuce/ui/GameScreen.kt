@@ -985,9 +985,11 @@ fun GameScreen(
             currentPlayerName = userSettings.getPlayerName(),
             currentServerAddress = userSettings.getServerAddress(),
             currentServerPort = userSettings.getServerPort(),
+            currentTlsEnabled = userSettings.getTlsEnabled(),
             onPlayerNameChange = { userSettings.setPlayerName(it) },
             onServerAddressChange = { userSettings.setServerAddress(it) },
             onServerPortChange = { userSettings.setServerPort(it) },
+            onTlsEnabledChange = { userSettings.setTlsEnabled(it) },
             onDismiss = { showSettingsDialog = false }
         )
     }

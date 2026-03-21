@@ -12,6 +12,7 @@ import com.dustinmcafee.dongadeuce.models.GameState
 import com.dustinmcafee.dongadeuce.network.*
 import com.dustinmcafee.dongadeuce.platform.createHttpClientEngine
 import com.dustinmcafee.dongadeuce.platform.createTlsHttpClientEngine
+import com.dustinmcafee.dongadeuce.platform.probeCertificateFingerprint
 import com.dustinmcafee.dongadeuce.platform.ioDispatcher
 import com.dustinmcafee.dongadeuce.settings.UserSettings
 import com.dustinmcafee.dongadeuce.tls.TofuVerifier
@@ -1141,35 +1142,63 @@ class MenuViewModel {
 
         viewModelScope.launch {
             try {
-                val engine = if (useTls) {
-                    // Use trusted fingerprint if we have one, otherwise trust-all for initial create
-                    val fp = trustedServersStore.getTrustedFingerprint(address, port)
-                    createTlsHttpClientEngine(fp)
-                } else {
-                    createHttpClientEngine()
-                }
-                val scheme = if (useTls) "https" else "http"
-                val client = HttpClient(engine)
-                val response = client.post("$scheme://$address:$port/api/games")
-                client.close()
-
-                if (response.status == HttpStatusCode.Created) {
-                    val body = response.bodyAsText()
-                    val json = Json { ignoreUnknownKeys = true }
-                    val code = json.parseToJsonElement(body).jsonObject["code"]?.jsonPrimitive?.content
-                    if (code != null) {
-                        _uiState.update { it.copy(gameCode = code, isLoading = false) }
-                        onCodeReceived(code)
-                    } else {
-                        _uiState.update { it.copy(isLoading = false, error = "Server returned no game code") }
+                doCreateGameRequest(address, port, useTls, onCodeReceived)
+            } catch (e: Exception) {
+                val msg = e.message ?: ""
+                // On fingerprint mismatch, probe the new cert and show TOFU prompt
+                if (useTls && msg.contains("fingerprint mismatch", ignoreCase = true)) {
+                    try {
+                        val newFp = probeCertificateFingerprint(address, port)
+                        if (newFp != null) {
+                            // Show TOFU prompt and wait for user decision
+                            val decision = tofuVerifier(address, port, newFp)
+                            if (decision == TrustDecision.ACCEPT) {
+                                trustedServersStore.trustServer(address, port, newFp)
+                                // Retry with new fingerprint
+                                doCreateGameRequest(address, port, useTls, onCodeReceived)
+                            } else {
+                                _uiState.update { it.copy(isLoading = false, error = "Connection rejected") }
+                            }
+                        } else {
+                            _uiState.update { it.copy(isLoading = false, error = "Could not retrieve server certificate") }
+                        }
+                    } catch (e2: Exception) {
+                        _uiState.update { it.copy(isLoading = false, error = "Failed to verify server: ${e2.message}") }
                     }
                 } else {
-                    val body = response.bodyAsText()
-                    _uiState.update { it.copy(isLoading = false, error = "Failed to create game: $body") }
+                    val cause = e.cause?.message ?: ""
+                    val detail = if (cause.isNotBlank()) "${e.message} ($cause)" else e.message
+                    _uiState.update { it.copy(isLoading = false, error = "Failed to reach server: $detail") }
                 }
-            } catch (e: Exception) {
-                _uiState.update { it.copy(isLoading = false, error = "Failed to reach server: ${e.message}") }
             }
+        }
+    }
+
+    private suspend fun doCreateGameRequest(address: String, port: Int, useTls: Boolean, onCodeReceived: (String) -> Unit) {
+        val engine = if (useTls) {
+            val fp = trustedServersStore.getTrustedFingerprint(address, port)
+            createTlsHttpClientEngine(fp)
+        } else {
+            createHttpClientEngine()
+        }
+        val scheme = if (useTls) "https" else "http"
+        val client = HttpClient(engine)
+        val response = client.post("$scheme://$address:$port/api/games")
+        client.close()
+
+        if (response.status == HttpStatusCode.Created) {
+            val body = response.bodyAsText()
+            val json = Json { ignoreUnknownKeys = true }
+            val code = json.parseToJsonElement(body).jsonObject["code"]?.jsonPrimitive?.content
+            if (code != null) {
+                _uiState.update { it.copy(gameCode = code, isLoading = false) }
+                onCodeReceived(code)
+            } else {
+                _uiState.update { it.copy(isLoading = false, error = "Server returned no game code") }
+            }
+        } else {
+            val body = response.bodyAsText()
+            _uiState.update { it.copy(isLoading = false, error = "Failed to create game: $body") }
         }
     }
 
